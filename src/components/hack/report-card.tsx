@@ -53,24 +53,24 @@ export function ReportCard({ report }: { report: HackReport }) {
 
         {/* Footer */}
         <div className="px-4 sm:px-5 py-3 border-t border-border/20 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-[12px]">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-toss-red inline-block" />
+          <div className="flex items-center gap-4 text-[12px] leading-none">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-toss-red shrink-0" />
               <span className="font-semibold text-toss-red tabular-nums">{report.agreeCount}</span>
               <span className="text-toss-gray-400">맞음</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
               <span className="font-semibold text-amber-500 tabular-nums">{report.unsureCount}</span>
               <span className="text-toss-gray-400">모름</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-toss-blue inline-block" />
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-toss-blue shrink-0" />
               <span className="font-semibold text-toss-blue tabular-nums">{report.disagreeCount}</span>
               <span className="text-toss-gray-400">아님</span>
             </span>
-            <span className="flex items-center gap-1 text-toss-gray-400">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 5.5a4 4 0 014-4h1a4 4 0 014 4v.5a4 4 0 01-4 4H5L2.5 11.5v-2.3A3.97 3.97 0 011.5 5.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="inline-flex items-center gap-1 text-toss-gray-400">
+              <svg className="shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 5.5a4 4 0 014-4h1a4 4 0 014 4v.5a4 4 0 01-4 4H5L2.5 11.5v-2.3A3.97 3.97 0 011.5 5.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <span className="tabular-nums">{report.commentCount}</span>
             </span>
           </div>
