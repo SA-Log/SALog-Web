@@ -70,7 +70,7 @@ export function ReportCard({ report }: { report: HackReport }) {
               <span className="text-toss-gray-400">아님</span>
             </span>
             <span className="flex items-center gap-1 text-toss-gray-400">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 3.5h9v6a1 1 0 01-1 1h-7a1 1 0 01-1-1v-6zM3 1.5h6M4.5 3.5V6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 5.5a4 4 0 014-4h1a4 4 0 014 4v.5a4 4 0 01-4 4H5L2.5 11.5v-2.3A3.97 3.97 0 011.5 5.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <span className="tabular-nums">{report.commentCount}</span>
             </span>
           </div>
