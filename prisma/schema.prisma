@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== 사용자 ====================
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  role              UserRole  @default(USER)
+  nickname          String?   @unique
+  phone             String?   @unique
+  barracksAddress   String?   @unique
+  barracksVerified  Boolean   @default(false)
+  isProfileComplete Boolean   @default(false)
+  isProfilePublic   Boolean   @default(true)
+  notificationEmail String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  hackReports   HackReport[]
+  votes         Vote[]
+  comments      Comment[]
+  blacklist     BlacklistEntry[]
+  mannerTags    MannerTag[]
+  creatorProfile CreatorProfile?
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  VERIFIED_CREATOR
+  OPERATOR
+  VICE_MASTER
+  MASTER
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ==================== 크리에이터 ====================
+
+model CreatorProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  channelName String
+  channelUrl  String
+  platform    CreatorPlatform
+  verified    Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("creator_profiles")
+}
+
+enum CreatorPlatform {
+  YOUTUBE
+  SOOP
+  TWITCH
+}
+
+// ==================== 핵 유저 신고 ====================
+
+model HackReport {
+  id              String      @id @default(cuid())
+  barracksAddress String
+  nickname        String
+  status          HackStatus  @default(SUSPECT)
+  description     String?     @db.Text
+  evidenceUrl     String?
+  youtubeUrl      String?
+  reporterId      String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  reporter        User        @relation(fields: [reporterId], references: [id])
+  votes           Vote[]
+  comments        Comment[]
+  nicknameHistory NicknameHistory[]
+
+  @@index([barracksAddress])
+  @@index([nickname])
+  @@index([status])
+  @@map("hack_reports")
+}
+
+enum HackStatus {
+  SUSPECT    // 핵 의심
+  PROBABLE   // 핵 유력
+  CONFIRMED  // 핵 확정 (관리자 승인)
+  DISMISSED  // 기각
+}
+
+// ==================== 닉네임 변경 이력 ====================
+
+model NicknameHistory {
+  id            String     @id @default(cuid())
+  hackReportId  String
+  oldNickname   String
+  newNickname   String
+  detectedAt    DateTime   @default(now())
+
+  hackReport    HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+
+  @@map("nickname_histories")
+}
+
+// ==================== 크롤링 상태 ====================
+
+model CrawlStatus {
+  id              String   @id @default(cuid())
+  barracksAddress String   @unique
+  lastCrawledAt   DateTime?
+  lastNickname    String?
+  isActive        Boolean  @default(true)
+  errorCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@map("crawl_statuses")
+}
+
+// ==================== 투표 ====================
+
+model Vote {
+  id           String     @id @default(cuid())
+  hackReportId String
+  userId       String
+  voteType     VoteType
+  createdAt    DateTime   @default(now())
+
+  hackReport   HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@unique([hackReportId, userId])
+  @@map("votes")
+}
+
+enum VoteType {
+  AGREE     // 핵 맞음
+  DISAGREE  // 핵 아님
+}
+
+// ==================== 댓글 ====================
+
+model Comment {
+  id           String     @id @default(cuid())
+  hackReportId String
+  userId       String
+  content      String     @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  hackReport   HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+// ==================== 블랙리스트 (개인) ====================
+
+model BlacklistEntry {
+  id              String   @id @default(cuid())
+  userId          String
+  barracksAddress String
+  memo            String?
+  notifyEmail     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, barracksAddress])
+  @@map("blacklist_entries")
+}
+
+// ==================== 비매너 신고 ====================
+
+model MannerTag {
+  id              String        @id @default(cuid())
+  barracksAddress String
+  nickname        String
+  tagType         MannerTagType
+  description     String?       @db.Text
+  reporterId      String
+  createdAt       DateTime      @default(now())
+
+  reporter User @relation(fields: [reporterId], references: [id])
+
+  @@index([barracksAddress])
+  @@index([nickname])
+  @@map("manner_tags")
+}
+
+enum MannerTagType {
+  BLOCKING     // 길막
+  VERBAL_ABUSE // 욕설
+  GRIEFING     // 고의 트롤링
+  AFK          // 잠수
+  TEAM_KILL    // 섬광탄 방해
+  OTHER        // 기타
+}
