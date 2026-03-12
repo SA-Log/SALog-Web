@@ -22,22 +22,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.barracksVerified = user.barracksVerified ?? false;
       }
 
+      // token.id가 없으면 token.sub에서 가져옴 (NextAuth 기본 필드)
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+      }
+
       // 세션 업데이트 트리거 (회원가입 완료 후 등) — DB 접근 필요
       if (trigger === "update") {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: {
-            role: true,
-            nickname: true,
-            isProfileComplete: true,
-            barracksVerified: true,
-          },
-        });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.nickname = dbUser.nickname;
-          token.isProfileComplete = dbUser.isProfileComplete;
-          token.barracksVerified = dbUser.barracksVerified;
+        const userId = (token.id ?? token.sub) as string | undefined;
+        if (userId) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              role: true,
+              nickname: true,
+              isProfileComplete: true,
+              barracksVerified: true,
+            },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.nickname = dbUser.nickname;
+            token.isProfileComplete = dbUser.isProfileComplete;
+            token.barracksVerified = dbUser.barracksVerified;
+          }
         }
       }
 

@@ -17,10 +17,13 @@ export const authConfig = {
         token.isProfileComplete = user.isProfileComplete ?? false;
         token.barracksVerified = user.barracksVerified ?? false;
       }
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+      }
       return token;
     },
     async session({ session, token }) {
-      session.user.id = token.id;
+      session.user.id = token.id ?? token.sub;
       session.user.role = token.role;
       session.user.nickname = token.nickname;
       session.user.isProfileComplete = token.isProfileComplete;
