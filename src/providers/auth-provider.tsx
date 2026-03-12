@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { SessionProvider, useSession, signOut } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 import type { UserRole } from "@/generated/prisma/client";
 
 interface AuthUser {
@@ -32,10 +33,22 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+const SIGNUP_EXEMPT = ["/signup", "/login", "/terms", "/privacy"];
+
 function AuthInner({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
   const isLoading = status === "loading";
   const isLoggedIn = status === "authenticated" && !!session?.user;
+
+  // 프로필 미완성 유저 → /signup 리다이렉트 (클라이언트 측)
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user) return;
+    if (session.user.isProfileComplete) return;
+    if (SIGNUP_EXEMPT.some((r) => pathname === r || pathname.startsWith(r + "/"))) return;
+    router.replace("/signup");
+  }, [status, session, pathname, router]);
 
   const user: AuthUser | null =
     isLoggedIn && session?.user
