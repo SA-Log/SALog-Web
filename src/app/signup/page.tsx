@@ -27,8 +27,9 @@ function SignupPage() {
   const [step, setStep] = useState(1);
 
   // Step 1: Barracks + Nickname + Email
-  const [barracksUrl, setBarracksUrl] = useState("");
+  const [barracksNickInput, setBarracksNickInput] = useState("");
   const [barracksNickname, setBarracksNickname] = useState("");
+  const [barracksOuid, setBarracksOuid] = useState("");
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [barracksError, setBarracksError] = useState("");
   const [barracksVerified, setBarracksVerified] = useState(false);
@@ -50,11 +51,10 @@ function SignupPage() {
     return null;
   }
 
-  // 병영주소 조회 — 실제 크롤링 API 호출
+  // 넥슨 API로 서든어택 닉네임 검증
   async function handleBarracksLookup() {
-    const pattern = /^https?:\/\/barracks\.sa\.nexon\.com\/\d+/;
-    if (!pattern.test(barracksUrl.trim())) {
-      setBarracksError("올바른 병영주소 URL 형식이 아닙니다");
+    if (barracksNickInput.trim().length < 1) {
+      setBarracksError("서든어택 닉네임을 입력해주세요");
       return;
     }
     setIsLookingUp(true);
@@ -63,15 +63,16 @@ function SignupPage() {
       const res = await fetch("/api/barracks/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: barracksUrl.trim() }),
+        body: JSON.stringify({ nickname: barracksNickInput.trim() }),
       });
       const data = await res.json();
       if (data.found && data.nickname) {
         setBarracksNickname(data.nickname);
+        setBarracksOuid(data.ouid);
         setBarracksVerified(true);
         setNickname(data.nickname);
       } else {
-        setBarracksError(data.error || "닉네임을 가져올 수 없습니다");
+        setBarracksError(data.error || "닉네임을 찾을 수 없습니다");
       }
     } catch {
       setBarracksError("서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -123,7 +124,7 @@ function SignupPage() {
         body: JSON.stringify({
           nickname: finalNickname,
           phone: "",
-          barracksAddress: useBarracks ? barracksUrl.trim() : "",
+          barracksAddress: useBarracks && barracksOuid ? `https://barracks.sa.nexon.com/${barracksOuid}` : "",
           barracksVerified: useBarracks && barracksVerified,
           notificationEmail: email.trim(),
         }),
@@ -193,7 +194,7 @@ function SignupPage() {
           {/* 병영주소 연동 선택 */}
           <div>
             <label className="block text-[13px] font-semibold text-foreground mb-2">
-              병영주소 연동 <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
+              서든어택 계정 연동 <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
             </label>
 
             <div className="flex gap-2 mb-3">
@@ -205,10 +206,10 @@ function SignupPage() {
                     : "bg-secondary text-toss-gray-600 border border-border"
                 }`}
               >
-                병영주소 연동
+                서든어택 연동
               </button>
               <button
-                onClick={() => { setUseBarracks(false); setBarracksUrl(""); setBarracksNickname(""); setBarracksVerified(false); setBarracksError(""); }}
+                onClick={() => { setUseBarracks(false); setBarracksNickInput(""); setBarracksNickname(""); setBarracksOuid(""); setBarracksVerified(false); setBarracksError(""); }}
                 className={`flex-1 h-10 rounded-xl text-[13px] font-medium transition-toss ${
                   !useBarracks
                     ? "bg-primary text-white"
@@ -223,16 +224,16 @@ function SignupPage() {
               <>
                 <div className="flex gap-2">
                   <input
-                    type="url"
-                    value={barracksUrl}
-                    onChange={(e) => { setBarracksUrl(e.target.value); setBarracksVerified(false); setBarracksNickname(""); setBarracksError(""); }}
-                    placeholder="https://barracks.sa.nexon.com/..."
+                    type="text"
+                    value={barracksNickInput}
+                    onChange={(e) => { setBarracksNickInput(e.target.value); setBarracksVerified(false); setBarracksNickname(""); setBarracksOuid(""); setBarracksError(""); }}
+                    placeholder="서든어택 닉네임 입력"
                     disabled={barracksVerified}
-                    className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                    className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                   />
                   <button
                     onClick={handleBarracksLookup}
-                    disabled={!barracksUrl.trim() || isLookingUp || barracksVerified}
+                    disabled={!barracksNickInput.trim() || isLookingUp || barracksVerified}
                     className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 btn-primary shrink-0"
                   >
                     {isLookingUp ? "조회 중..." : "조회"}
@@ -252,7 +253,7 @@ function SignupPage() {
                       </div>
                       <div>
                         <p className="text-[13px] font-semibold text-foreground">닉네임: {barracksNickname}</p>
-                        <p className="text-[11px] text-toss-gray-500">병영수첩에서 자동으로 가져왔습니다</p>
+                        <p className="text-[11px] text-toss-gray-500">넥슨 API에서 확인되었습니다</p>
                       </div>
                     </div>
                   </div>
@@ -261,7 +262,7 @@ function SignupPage() {
                 {!barracksVerified && (
                   <div className="mt-2 rounded-xl p-3 bg-primary/5 dark:bg-primary/10 border border-primary/10">
                     <p className="text-[11px] text-primary leading-relaxed">
-                      병영주소를 연동하면 프로필에 인증 마크가 표시되고, 닉네임이 자동으로 설정됩니다.
+                      서든어택 닉네임을 연동하면 프로필에 인증 마크가 표시되고, SALog 닉네임으로 자동 설정됩니다.
                     </p>
                   </div>
                 )}
