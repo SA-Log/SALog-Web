@@ -31,8 +31,7 @@ export default auth((req) => {
 
   // 로그인 됨 + 프로필 미완성 → /signup으로 리다이렉트
   if (!session.user.isProfileComplete) {
-    if (pathname === "/signup") return NextResponse.next();
-    if (isPublic) return NextResponse.next();
+    if (pathname === "/signup" || pathname === "/terms" || pathname === "/privacy") return NextResponse.next();
     return NextResponse.redirect(new URL("/signup", req.url));
   }
 

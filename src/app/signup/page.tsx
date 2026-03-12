@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 export default function SignupPageWrapper() {
   return (
     <Suspense fallback={
-      <div className="mx-auto max-w-sm px-5 py-10 text-center">
+      <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col items-center justify-center">
         <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
           <span className="text-white text-lg font-bold">SA</span>
         </div>
@@ -227,7 +227,7 @@ function SignupPage() {
 
   if (status === "loading") {
     return (
-      <div className="mx-auto max-w-sm px-5 py-10 text-center">
+      <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col items-center justify-center">
         <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
           <span className="text-white text-lg font-bold">SA</span>
         </div>
@@ -239,7 +239,7 @@ function SignupPage() {
   const providerName = session?.user?.image ? null : null; // provider info not easily available in session
 
   return (
-    <div className="mx-auto max-w-sm px-5 py-10">
+    <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col justify-center">
       {/* Header */}
       <div className="text-center mb-8">
         <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
