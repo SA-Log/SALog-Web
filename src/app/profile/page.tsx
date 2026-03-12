@@ -61,8 +61,8 @@ export default function ProfilePage() {
   const tabs: { value: ProfileTab; label: string; count: number }[] = [
     { value: "activity", label: "활동", count: 0 },
     { value: "blacklist", label: "블랙리스트", count: 0 },
-    { value: "following", label: "팔로잉", count: followingCount },
     { value: "followers", label: "팔로워", count: followerCount },
+    { value: "following", label: "팔로잉", count: followingCount },
   ];
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
