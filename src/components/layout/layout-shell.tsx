@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { SaVerificationPopup } from "@/components/common/sa-verification-popup";
 
 const BARE_ROUTES = ["/signup", "/login"];
 
@@ -19,6 +20,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <SaVerificationPopup />
     </div>
   );
 }

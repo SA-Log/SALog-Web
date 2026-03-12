@@ -26,14 +26,15 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  hackReports   HackReport[]
-  votes         Vote[]
-  comments      Comment[]
-  blacklist     BlacklistEntry[]
-  mannerTags    MannerTag[]
-  creatorProfile CreatorProfile?
+  accounts         Account[]
+  sessions         Session[]
+  hackReports      HackReport[]
+  votes            Vote[]
+  comments         Comment[]
+  blacklist        BlacklistEntry[]
+  mannerTags       MannerTag[]
+  creatorProfile   CreatorProfile?
+  saVerifications  SaVerification[]
 
   @@map("users")
 }
@@ -84,6 +85,34 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ==================== 서든어택 계정 인증 ====================
+
+enum SaVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model SaVerification {
+  id               String               @id @default(cuid())
+  userId           String
+  verificationCode String
+  screenshotUrl    String?
+  saNickname       String?
+  status           SaVerificationStatus  @default(PENDING)
+  adminNote        String?              @db.Text
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("sa_verifications")
 }
 
 // ==================== 크리에이터 ====================
