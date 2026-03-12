@@ -6,8 +6,17 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/terms", "/privacy"];
 
+// 악성 봇 User-Agent 패턴 (robots.txt 무시하는 봇 대응)
+const BLOCKED_BOTS = /meta-externalagent|facebookexternalhit|FacebookBot|GPTBot|ChatGPT-User|CCBot|ClaudeBot|anthropic-ai|PerplexityBot|Amazonbot|Bytespider|AhrefsBot|SemrushBot|MJ12bot|DotBot|PetalBot|BLEXBot/i;
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
+
+  // 봇 차단 — 서버리스 함수 비용 보호
+  const ua = req.headers.get("user-agent") ?? "";
+  if (BLOCKED_BOTS.test(ua)) {
+    return new NextResponse("Blocked", { status: 403 });
+  }
 
   // 정적 파일, API, _next 등은 무시
   if (
