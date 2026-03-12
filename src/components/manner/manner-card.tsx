@@ -17,52 +17,61 @@ export function MannerCard({ tag }: { tag: MannerTag }) {
   return (
     <div
       onClick={() => router.push(`/manner/${tag.id}`)}
-      className="block cursor-pointer"
+      className="block cursor-pointer group"
     >
-      <div className="bg-card rounded-2xl border border-border/50 shadow-toss hover:shadow-toss-md transition-toss active:scale-[0.99] overflow-hidden">
-        {/* Header — 작성자 정보 */}
-        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3" onClick={(e) => e.stopPropagation()}>
-          <Link href={`/profile/${tag.reporterId}`} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-toss-orange/20 to-amber-400/20 flex items-center justify-center shrink-0 ring-2 ring-border/50 hover:ring-primary/30 transition-all">
-            <span className="text-[11px] sm:text-[12px] font-bold text-toss-orange">{tag.reporterName.charAt(0)}</span>
+      <div className="bg-card rounded-3xl border border-border/40 shadow-toss transition-all duration-200 hover:shadow-toss-md hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 sm:px-5 pt-4 pb-2" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/profile/${tag.reporterId}`} className="w-9 h-9 rounded-full bg-gradient-to-br from-toss-orange/15 to-amber-400/15 flex items-center justify-center shrink-0 ring-1 ring-border/30 hover:ring-primary/40 transition-all">
+            <span className="text-[12px] font-bold text-toss-orange/80">{tag.reporterName.charAt(0)}</span>
           </Link>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <Link href={`/profile/${tag.reporterId}`} className="text-[12px] sm:text-[13px] font-semibold text-foreground truncate hover:underline">
+            <div className="flex items-center gap-1.5">
+              <Link href={`/profile/${tag.reporterId}`} className="text-[13px] font-semibold text-foreground truncate hover:underline">
                 {tag.reporterName}
               </Link>
               <span className="hidden sm:inline-flex"><RankBadge rank={tag.reporterRank} /></span>
               <span className="hidden sm:inline-flex"><TitleBadge title={tag.reporterTitle} /></span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-toss-gray-400">{formatRelativeTime(tag.createdAt)}</p>
+            <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatRelativeTime(tag.createdAt)}</p>
           </div>
-          <span className={`shrink-0 inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold ${info.bg} ${info.color}`}>
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${info.bg} ${info.color}`}>
             {info.emoji} {info.label}
           </span>
         </div>
 
-        {/* Body — 신고 대상 + 설명 */}
-        <div className="px-3 sm:px-4 pb-2.5 sm:pb-3">
-          <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-            <h3 className="text-[14px] sm:text-[16px] font-bold text-foreground truncate">{tag.nickname}</h3>
+        {/* Body */}
+        <div className="px-4 sm:px-5 pb-3.5">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-[16px] sm:text-[17px] font-bold text-foreground tracking-tight truncate">{tag.nickname}</h3>
             {tag.nicknameHistory.length > 0 && (
-              <span className="shrink-0 inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-toss-orange/10 text-toss-orange text-[10px] sm:text-[11px] font-bold">
-                닉변 {tag.nicknameHistory.length}회
+              <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-toss-orange/8 text-toss-orange text-[10px] font-bold tabular-nums">
+                닉변 {tag.nicknameHistory.length}
               </span>
             )}
           </div>
-          <p className="text-[12px] sm:text-[13px] text-toss-gray-700 dark:text-toss-gray-300 line-clamp-2 leading-relaxed">{tag.description}</p>
+          <p className="text-[13px] text-toss-gray-500 dark:text-toss-gray-400 line-clamp-2 leading-[1.6]">{tag.description}</p>
         </div>
 
-        {/* Footer — 투표 + 날짜 */}
-        <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-t border-border/30 flex items-center justify-between text-[10px] sm:text-[11px]">
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            <span className="text-toss-green font-medium">동의 {tag.agreeCount}</span>
-            <span className="text-toss-gray-300">&middot;</span>
-            <span className="text-toss-red font-medium">반대 {tag.disagreeCount}</span>
-            <span className="text-toss-gray-300">&middot;</span>
-            <span className="text-toss-gray-500 font-medium">{tag.commentCount}</span>
+        {/* Footer */}
+        <div className="px-4 sm:px-5 py-3 border-t border-border/20 flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[12px]">
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-toss-green inline-block" />
+              <span className="font-semibold text-toss-green tabular-nums">{tag.agreeCount}</span>
+              <span className="text-toss-gray-400">동의</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-toss-red inline-block" />
+              <span className="font-semibold text-toss-red tabular-nums">{tag.disagreeCount}</span>
+              <span className="text-toss-gray-400">반대</span>
+            </span>
+            <span className="flex items-center gap-1 text-toss-gray-400">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 3.5h9v6a1 1 0 01-1 1h-7a1 1 0 01-1-1v-6zM3 1.5h6M4.5 3.5V6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="tabular-nums">{tag.commentCount}</span>
+            </span>
           </div>
-          <span className="text-toss-gray-400 shrink-0 ml-2">{formatDateTime(tag.createdAt)}</span>
+          <span className="text-[11px] text-toss-gray-300 tabular-nums">{formatDateTime(tag.createdAt)}</span>
         </div>
       </div>
     </div>

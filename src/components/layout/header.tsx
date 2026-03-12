@@ -59,27 +59,27 @@ export function Header() {
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
 
-          {/* Auth-aware right section */}
-          {!isLoading && (
-            isLoggedIn && user ? (
-              <Link
-                href="/profile"
-                className={`hidden sm:flex w-8 h-8 rounded-lg items-center justify-center shrink-0 btn-ghost ${
-                  pathname.startsWith("/profile")
-                    ? "bg-primary/10 ring-2 ring-primary/30"
-                    : "bg-secondary"
-                }`}
-              >
-                <span className="text-[11px] font-bold text-primary">{displayChar}</span>
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="hidden sm:flex h-8 px-3 rounded-lg items-center text-[13px] font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-toss"
-              >
-                로그인
-              </Link>
-            )
+          {/* Desktop: Auth button — 로딩 시 스켈레톤 표시 */}
+          {isLoading ? (
+            <div className="hidden sm:flex w-8 h-8 rounded-lg bg-secondary animate-pulse" />
+          ) : isLoggedIn && user ? (
+            <Link
+              href="/profile"
+              className={`hidden sm:flex w-8 h-8 rounded-lg items-center justify-center shrink-0 transition-all ${
+                pathname.startsWith("/profile")
+                  ? "bg-primary/10 ring-2 ring-primary/30"
+                  : "bg-secondary hover:bg-secondary/80"
+              }`}
+            >
+              <span className="text-[11px] font-bold text-primary">{displayChar}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden sm:flex h-8 px-3 rounded-lg items-center text-[13px] font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-toss"
+            >
+              로그인
+            </Link>
           )}
 
           {/* Mobile menu button */}
@@ -122,7 +122,12 @@ export function Header() {
             );
           })}
           <div className="mt-2 pt-2 border-t border-border">
-            {isLoggedIn && user ? (
+            {isLoading ? (
+              <div className="flex items-center gap-2.5 py-2.5">
+                <div className="w-6 h-6 rounded-md bg-secondary animate-pulse" />
+                <div className="w-16 h-4 rounded bg-secondary animate-pulse" />
+              </div>
+            ) : isLoggedIn && user ? (
               <Link
                 href="/profile"
                 onClick={() => setMobileOpen(false)}
