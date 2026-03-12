@@ -5,16 +5,22 @@ import { useAuth } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 
 const DISMISS_KEY = "salog_sa_popup_dismissed_until";
+const DISMISS_COUNT_KEY = "salog_sa_popup_dismiss_count";
+
+// 점진적 백오프: 1회→3일, 2회→7일, 3회→30일, 4회+→영구
+const BACKOFF_DAYS = [3, 7, 30];
 
 export function SaVerificationPopup() {
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
   const [show, setShow] = useState(false);
-  const [dontShowFor7Days, setDontShowFor7Days] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn || !user) return;
     if (user.barracksVerified) return;
+
+    const dismissCount = Number(localStorage.getItem(DISMISS_COUNT_KEY) || "0");
+    if (dismissCount >= 4) return; // 4회 이상 닫으면 더 이상 표시하지 않음
 
     const dismissedUntil = localStorage.getItem(DISMISS_KEY);
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
@@ -24,18 +30,27 @@ export function SaVerificationPopup() {
     return () => clearTimeout(timer);
   }, [isLoggedIn, user]);
 
-  function handleDismiss() {
-    if (dontShowFor7Days) {
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  function dismiss() {
+    const dismissCount = Number(localStorage.getItem(DISMISS_COUNT_KEY) || "0");
+    const newCount = dismissCount + 1;
+    localStorage.setItem(DISMISS_COUNT_KEY, String(newCount));
+
+    if (newCount >= 4) {
+      // 4회 이상: 영구 숨김 (먼 미래 날짜)
+      localStorage.setItem(DISMISS_KEY, String(Date.now() + 365 * 24 * 60 * 60 * 1000));
+    } else {
+      const days = BACKOFF_DAYS[Math.min(newCount - 1, BACKOFF_DAYS.length - 1)];
+      localStorage.setItem(DISMISS_KEY, String(Date.now() + days * 24 * 60 * 60 * 1000));
     }
     setShow(false);
   }
 
+  function handleDismiss() {
+    dismiss();
+  }
+
   function handleVerify() {
-    if (dontShowFor7Days) {
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
-    }
-    setShow(false);
+    dismiss();
     router.push("/profile?verify=true");
   }
 
@@ -81,7 +96,7 @@ export function SaVerificationPopup() {
         </div>
 
         {/* Actions */}
-        <div className="px-5 pb-4 space-y-3">
+        <div className="px-5 pb-5 space-y-3">
           <button
             onClick={handleVerify}
             className="w-full h-11 rounded-xl bg-primary text-white text-[13px] font-semibold btn-primary"
@@ -94,19 +109,6 @@ export function SaVerificationPopup() {
           >
             나중에 하기
           </button>
-        </div>
-
-        {/* Don't show for 7 days */}
-        <div className="px-5 pb-4 border-t border-border/30 pt-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={dontShowFor7Days}
-              onChange={(e) => setDontShowFor7Days(e.target.checked)}
-              className="w-4 h-4 rounded border-border accent-primary"
-            />
-            <span className="text-[11px] text-toss-gray-400">7일동안 보지 않기</span>
-          </label>
         </div>
       </div>
     </div>
