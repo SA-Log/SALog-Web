@@ -33,10 +33,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "이미 사용 중인 닉네임입니다" }, { status: 409 });
   }
 
-  // 전화번호 중복 확인
-  const existingPhone = await prisma.user.findUnique({ where: { phone } });
-  if (existingPhone && existingPhone.id !== session.user.id) {
-    return NextResponse.json({ error: "이미 등록된 전화번호입니다" }, { status: 409 });
+  // 전화번호 중복 확인 (입력된 경우만)
+  if (phone) {
+    const existingPhone = await prisma.user.findUnique({ where: { phone } });
+    if (existingPhone && existingPhone.id !== session.user.id) {
+      return NextResponse.json({ error: "이미 등록된 전화번호입니다" }, { status: 409 });
+    }
   }
 
   // 프로필 업데이트
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
     where: { id: session.user.id },
     data: {
       nickname,
-      phone,
+      phone: phone || null,
       barracksAddress: barracksAddress || null,
       barracksVerified: !!barracksAddress && barracksVerified,
       notificationEmail: notificationEmail || null,

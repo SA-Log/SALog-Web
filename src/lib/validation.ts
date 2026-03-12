@@ -12,7 +12,7 @@ export const phoneSchema = z
 
 export const completeSignupSchema = z.object({
   nickname: nicknameSchema,
-  phone: phoneSchema,
+  phone: z.string().optional().or(z.literal("")),
   barracksAddress: z.string().url().optional().or(z.literal("")),
   barracksVerified: z.boolean().default(false),
   notificationEmail: z.string().email("올바른 이메일 형식이 아닙니다").optional().or(z.literal("")),

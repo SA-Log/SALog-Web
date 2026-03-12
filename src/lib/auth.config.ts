@@ -1,6 +1,4 @@
-import Google from "next-auth/providers/google";
 import Kakao from "next-auth/providers/kakao";
-import Naver from "next-auth/providers/naver";
 import type { NextAuthConfig } from "next-auth";
 
 /**
@@ -8,11 +6,7 @@ import type { NextAuthConfig } from "next-auth";
  * 미들웨어에서 사용됩니다.
  */
 export const authConfig = {
-  providers: [
-    Google,
-    ...(process.env.AUTH_KAKAO_ID ? [Kakao] : []),
-    ...(process.env.AUTH_NAVER_ID ? [Naver] : []),
-  ],
+  providers: [Kakao],
   session: { strategy: "jwt" },
   callbacks: {
     async jwt({ token, user }) {

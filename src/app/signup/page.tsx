@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -26,18 +26,7 @@ function SignupPage() {
 
   const [step, setStep] = useState(1);
 
-  // Step 1: Phone verification
-  const [phone, setPhone] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
-  const [timer, setTimer] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Step 2: Barracks + Nickname + Email
+  // Step 1: Barracks + Nickname + Email
   const [barracksUrl, setBarracksUrl] = useState("");
   const [barracksNickname, setBarracksNickname] = useState("");
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -51,78 +40,14 @@ function SignupPage() {
   const [isCheckingNickname, setIsCheckingNickname] = useState(false);
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
 
-  // Step 3: Complete
+  // Step 2: Complete
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   // 미로그인 상태면 로그인으로
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login");
-    }
-  }, [status, router]);
-
-  // Timer for verification code
-  useEffect(() => {
-    if (timer > 0) {
-      timerRef.current = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timerRef.current!);
-    }
-  }, [codeSent]);
-
-  function formatPhone(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-  }
-
-  function handlePhoneChange(value: string) {
-    setPhone(formatPhone(value));
-    setCodeSent(false);
-    setPhoneVerified(false);
-    setPhoneError("");
-    setCode("");
-  }
-
-  const rawPhone = phone.replace(/-/g, "");
-  const isPhoneValid = /^01[016789]\d{7,8}$/.test(rawPhone);
-
-  // TODO: SMS 서비스 연동 시 실제 발송으로 교체
-  function handleSendCode() {
-    if (!isPhoneValid) return;
-    setIsSending(true);
-    setPhoneError("");
-    setTimeout(() => {
-      setCodeSent(true);
-      setIsSending(false);
-      setTimer(180);
-    }, 1000);
-  }
-
-  // TODO: SMS 서비스 연동 시 실제 검증으로 교체
-  function handleVerifyCode() {
-    if (code.length !== 6) return;
-    setIsVerifying(true);
-    setPhoneError("");
-    setTimeout(() => {
-      if (code === "123456") {
-        setPhoneVerified(true);
-        setPhoneError("");
-        clearInterval(timerRef.current!);
-      } else {
-        setPhoneError("인증번호가 올바르지 않습니다");
-      }
-      setIsVerifying(false);
-    }, 800);
+  if (status === "unauthenticated") {
+    router.replace("/login");
+    return null;
   }
 
   // 병영주소 조회 — 실제 크롤링 API 호출
@@ -183,9 +108,7 @@ function SignupPage() {
     }
   }
 
-  const canProceedStep1 = phoneVerified;
-
-  const canProceedStep2 = useBarracks
+  const canSubmit = useBarracks
     ? barracksVerified
     : (nickname.trim().length >= 2 && nicknameAvailable === true);
 
@@ -199,7 +122,7 @@ function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nickname: finalNickname,
-          phone: rawPhone,
+          phone: "",
           barracksAddress: useBarracks ? barracksUrl.trim() : "",
           barracksVerified: useBarracks && barracksVerified,
           notificationEmail: email.trim(),
@@ -211,17 +134,14 @@ function SignupPage() {
         setIsSubmitting(false);
         return;
       }
-      // 세션 갱신 → JWT에 isProfileComplete=true 반영
       await updateSession();
-      setStep(3);
+      setStep(2);
     } catch {
       setSubmitError("서버 연결에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsSubmitting(false);
     }
   }
-
-  const formatTimer = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const displayNickname = useBarracks ? barracksNickname : nickname;
 
@@ -236,8 +156,6 @@ function SignupPage() {
     );
   }
 
-  const providerName = session?.user?.image ? null : null; // provider info not easily available in session
-
   return (
     <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col justify-center">
       {/* Header */}
@@ -246,140 +164,31 @@ function SignupPage() {
           <span className="text-white text-lg font-bold">SA</span>
         </div>
         <h1 className="text-[22px] font-bold text-foreground">
-          {step === 3 ? "가입 완료!" : "회원가입"}
+          {step === 2 ? "가입 완료!" : "회원가입"}
         </h1>
-        {step < 3 && (
+        {step === 1 && (
           <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-400 mt-2">
-            소셜 계정으로 연동되었습니다. 추가 정보를 입력해주세요.
+            카카오 계정으로 연동되었습니다. 추가 정보를 입력해주세요.
           </p>
         )}
       </div>
 
       {/* 소셜 연동 완료 배너 */}
-      {step < 3 && session?.user && (
+      {step === 1 && session?.user && (
         <div className="rounded-xl p-3 border bg-toss-green-light dark:bg-toss-green/10 border-toss-green/20 mb-6 flex items-center gap-3">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <circle cx="9" cy="9" r="9" fill="#30b87e" fillOpacity="0.15"/>
             <path d="M5 9L8 12L13 6" stroke="#30b87e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <div>
-            <p className="text-[12px] font-semibold text-foreground">소셜 계정 연동 완료</p>
-            <p className="text-[11px] text-toss-gray-500">{session.user.email ?? "소셜 로그인이 설정되었습니다"}</p>
+            <p className="text-[12px] font-semibold text-foreground">카카오 계정 연동 완료</p>
+            <p className="text-[11px] text-toss-gray-500">{session.user.name ?? "카카오 로그인이 설정되었습니다"}</p>
           </div>
         </div>
       )}
 
-      {/* Progress */}
-      {step < 3 && (
-        <div className="flex items-center mb-8">
-          {[1, 2].map((s) => (
-            <div key={s} className={`flex items-center ${s < 2 ? "flex-1" : ""}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 transition-toss ${
-                step >= s ? "bg-primary text-white" : "bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-400"
-              }`}>
-                {step > s ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                ) : s}
-              </div>
-              {s < 2 && <div className={`flex-1 h-0.5 mx-2 rounded-full transition-toss ${step > s ? "bg-primary" : "bg-toss-gray-100 dark:bg-toss-gray-700"}`} />}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Step 1: Phone verification */}
+      {/* Step 1: Barracks + Nickname + Email */}
       {step === 1 && (
-        <div className="space-y-5">
-          <div>
-            <label className="block text-[13px] font-semibold text-foreground mb-2">
-              휴대폰 번호 <span className="text-toss-red">*</span>
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => handlePhoneChange(e.target.value)}
-                placeholder="010-1234-5678"
-                disabled={phoneVerified}
-                className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 disabled:opacity-50"
-              />
-              <button
-                onClick={handleSendCode}
-                disabled={!isPhoneValid || isSending || phoneVerified || (codeSent && timer > 0)}
-                className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 btn-primary shrink-0"
-              >
-                {isSending ? "전송 중..." : codeSent ? "재전송" : "인증번호 전송"}
-              </button>
-            </div>
-            <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
-              본인 확인을 위해 휴대폰 번호를 인증해주세요
-            </p>
-          </div>
-
-          {/* Verification code input */}
-          {codeSent && !phoneVerified && (
-            <div>
-              <label className="block text-[13px] font-semibold text-foreground mb-2">
-                인증번호
-                {timer > 0 && (
-                  <span className="font-normal text-toss-red ml-2">{formatTimer(timer)}</span>
-                )}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => { setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setPhoneError(""); }}
-                  placeholder="6자리 인증번호"
-                  maxLength={6}
-                  className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] text-center tracking-[0.3em] font-mono placeholder:text-toss-gray-400 placeholder:tracking-normal outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-                  autoFocus
-                />
-                <button
-                  onClick={handleVerifyCode}
-                  disabled={code.length !== 6 || isVerifying}
-                  className="h-11 px-5 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 btn-primary shrink-0"
-                >
-                  {isVerifying ? "확인 중..." : "확인"}
-                </button>
-              </div>
-              {phoneError && (
-                <p className="text-[11px] text-toss-red mt-1.5">{phoneError}</p>
-              )}
-              {timer === 0 && (
-                <p className="text-[11px] text-toss-red mt-1.5">인증 시간이 만료되었습니다. 재전송해주세요.</p>
-              )}
-            </div>
-          )}
-
-          {/* Phone verified */}
-          {phoneVerified && (
-            <div className="rounded-xl p-4 border bg-toss-green-light dark:bg-toss-green/10 border-toss-green/20">
-              <div className="flex items-center gap-3">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="10" r="10" fill="#30b87e" fillOpacity="0.15"/>
-                  <path d="M6 10L9 13L14 7" stroke="#30b87e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <div>
-                  <p className="text-[13px] font-semibold text-foreground">휴대폰 인증 완료</p>
-                  <p className="text-[12px] text-toss-gray-600 dark:text-toss-gray-400">{phone}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={() => setStep(2)}
-            disabled={!canProceedStep1}
-            className="w-full h-12 rounded-xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary"
-          >
-            다음
-          </button>
-        </div>
-      )}
-
-      {/* Step 2: Barracks + Nickname + Email */}
-      {step === 2 && (
         <div className="space-y-5">
           {/* 병영주소 연동 선택 */}
           <div>
@@ -387,7 +196,6 @@ function SignupPage() {
               병영주소 연동 <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
             </label>
 
-            {/* 연동 토글 */}
             <div className="flex gap-2 mb-3">
               <button
                 onClick={() => { setUseBarracks(true); setNickname(""); setNicknameAvailable(null); setNicknameError(""); }}
@@ -413,7 +221,6 @@ function SignupPage() {
 
             {useBarracks ? (
               <>
-                {/* 병영주소 입력 */}
                 <div className="flex gap-2">
                   <input
                     type="url"
@@ -435,7 +242,6 @@ function SignupPage() {
                   <p className="text-[11px] text-toss-red mt-1.5">{barracksError}</p>
                 )}
 
-                {/* 조회 성공 */}
                 {barracksVerified && (
                   <div className="mt-3 rounded-xl p-4 border bg-toss-green-light dark:bg-toss-green/10 border-toss-green/20">
                     <div className="flex items-center gap-3">
@@ -462,7 +268,6 @@ function SignupPage() {
               </>
             ) : (
               <>
-                {/* 닉네임 직접 입력 */}
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -487,7 +292,6 @@ function SignupPage() {
                   <p className="text-[11px] text-toss-green mt-1.5">사용 가능한 닉네임입니다</p>
                 )}
 
-                {/* 병영주소 미연동 안내 */}
                 <div className="mt-2 rounded-xl p-4 border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10">
                   <div className="flex gap-2.5 items-start">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
@@ -543,24 +347,18 @@ function SignupPage() {
             <p className="text-[12px] text-toss-red text-center">{submitError}</p>
           )}
 
-          <div className="flex gap-2">
-            <button onClick={() => setStep(1)}
-              className="flex-1 h-12 rounded-xl bg-secondary text-toss-gray-700 dark:text-toss-gray-300 text-[14px] font-semibold btn-secondary">
-              이전
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!canProceedStep2 || isSubmitting}
-              className="flex-1 h-12 rounded-xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary"
-            >
-              {isSubmitting ? "가입 중..." : "가입 완료"}
-            </button>
-          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || isSubmitting}
+            className="w-full h-12 rounded-xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary"
+          >
+            {isSubmitting ? "가입 중..." : "가입 완료"}
+          </button>
         </div>
       )}
 
-      {/* Step 3: Complete */}
-      {step === 3 && (
+      {/* Step 2: Complete */}
+      {step === 2 && (
         <div className="text-center space-y-6">
           <div className="w-20 h-20 rounded-full bg-toss-green/10 flex items-center justify-center mx-auto">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -635,7 +433,7 @@ function SignupPage() {
       )}
 
       {/* Terms */}
-      {step < 3 && (
+      {step === 1 && (
         <p className="text-[11px] text-toss-gray-500 dark:text-toss-gray-400 text-center mt-8 leading-relaxed">
           가입 시 <Link href="/terms" className="underline">이용약관</Link> 및{" "}
           <Link href="/privacy" className="underline">개인정보처리방침</Link>에 동의하게 됩니다.
