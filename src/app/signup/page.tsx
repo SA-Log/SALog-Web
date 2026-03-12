@@ -83,13 +83,16 @@ function SignupPage() {
         setIsSubmitting(false);
         return;
       }
-      // 세션 갱신 후 홈으로 이동
-      try {
-        await updateSession();
-      } catch {
-        // updateSession 실패해도 DB는 이미 업데이트됨
+      // JWT 쿠키를 직접 갱신 (DB에서 isProfileComplete=true 반영)
+      const refreshRes = await fetch("/api/auth/refresh-session", {
+        method: "POST",
+      });
+      if (!refreshRes.ok) {
+        // 쿠키 갱신 실패 시 updateSession 폴백
+        try { await updateSession(); } catch { /* ignore */ }
       }
-      window.location.replace("/");
+      // 홈으로 이동 (full page reload로 새 JWT 쿠키 적용)
+      window.location.href = "/";
       return;
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "서버 연결에 실패했습니다. 다시 시도해주세요.");

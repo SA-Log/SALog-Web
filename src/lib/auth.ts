@@ -27,8 +27,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = token.sub;
       }
 
-      // 세션 업데이트 트리거 (회원가입 완료 후 등) — DB 접근 필요
-      if (trigger === "update") {
+      // 세션 업데이트 트리거 또는 프로필 미완성 시 DB에서 최신 정보 조회
+      // isProfileComplete가 false이면 매 요청마다 DB 확인 (가입 완료 감지용)
+      if (trigger === "update" || token.isProfileComplete === false) {
         const userId = (token.id ?? token.sub) as string | undefined;
         if (userId) {
           const dbUser = await prisma.user.findUnique({
