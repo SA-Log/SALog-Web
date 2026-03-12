@@ -135,8 +135,10 @@ function SignupPage() {
         setIsSubmitting(false);
         return;
       }
+      // 세션 갱신 후 풀 리로드로 홈 이동 (미들웨어가 새 JWT를 읽도록)
       await updateSession();
-      setStep(2);
+      window.location.replace("/");
+      return;
     } catch {
       setSubmitError("서버 연결에 실패했습니다. 다시 시도해주세요.");
     } finally {
