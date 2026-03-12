@@ -124,7 +124,7 @@ export default function RankingPage() {
             {/* 병사 */}
             <div className="mb-4">
               <p className="text-[12px] font-semibold text-toss-gray-600 dark:text-toss-gray-400 mb-2">병사</p>
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                 {MILITARY_RANKS.filter((r) => r.category === "enlisted").reverse().map((rank) => (
                   <div key={rank.id} className="rounded-lg p-2 text-center bg-secondary border border-border/30">
                     <RankBadge rank={rank} size="md" />
@@ -155,7 +155,7 @@ export default function RankingPage() {
             {/* 장교 */}
             <div className="mb-4">
               <p className="text-[12px] font-semibold text-toss-blue mb-2">장교 (소위 ~ 대령)</p>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                 {(["소위", "중위", "대위", "소령", "중령", "대령"] as const).map((baseName) => {
                   const ranks = MILITARY_RANKS.filter((r) => r.category === "officer" && r.shortName === baseName);
                   const first = ranks[ranks.length - 1];
@@ -230,7 +230,7 @@ export default function RankingPage() {
       </div>
 
       {/* Top 3 podium */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
         {[top3[1], top3[0], top3[2]].filter(Boolean).map((user, i) => {
           const actualRank = i === 0 ? 2 : i === 1 ? 1 : 3;
           const isFirst = actualRank === 1;
@@ -239,22 +239,22 @@ export default function RankingPage() {
 
           return (
             <Link key={user.id} href={`/profile/${user.id}`}
-              className={`bg-card rounded-2xl border border-border/50 shadow-toss p-4 text-center hover:opacity-80 transition-opacity ${isFirst ? "shadow-toss-md -mt-2" : "mt-2"}`}>
-              <span className="text-[24px]">{emoji}</span>
-              <div className={`w-12 h-12 rounded-full mx-auto mt-2 flex items-center justify-center ring-2 ${
+              className={`bg-card rounded-2xl border border-border/50 shadow-toss p-2.5 sm:p-4 text-center hover:opacity-80 transition-opacity ${isFirst ? "shadow-toss-md -mt-2" : "mt-2"}`}>
+              <span className="text-[18px] sm:text-[24px]">{emoji}</span>
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full mx-auto mt-1.5 sm:mt-2 flex items-center justify-center ring-2 ${
                 isFirst ? "ring-amber-400 bg-amber-50 dark:bg-amber-950" : "ring-toss-gray-200 bg-toss-gray-100"
               }`}>
-                <span className={`text-[16px] font-bold ${isFirst ? "text-amber-600 dark:text-amber-400" : "text-toss-gray-500"}`}>{user.name.charAt(0)}</span>
+                <span className={`text-[13px] sm:text-[16px] font-bold ${isFirst ? "text-amber-600 dark:text-amber-400" : "text-toss-gray-500"}`}>{user.name.charAt(0)}</span>
               </div>
-              <p className="text-[14px] font-semibold text-foreground mt-2 truncate">{user.name}</p>
-              <div className="flex items-center justify-center gap-1 mt-1">
+              <p className="text-[12px] sm:text-[14px] font-semibold text-foreground mt-1.5 sm:mt-2 truncate">{user.name}</p>
+              <div className="flex items-center justify-center gap-0.5 sm:gap-1 mt-1 flex-wrap">
                 <RankBadge rank={user.rank} />
                 <TitleBadge title={user.title} />
               </div>
-              <p className={`text-[16px] font-bold mt-2 ${getAccuracyColor(user.accuracy)}`}>
+              <p className={`text-[14px] sm:text-[16px] font-bold mt-1.5 sm:mt-2 ${getAccuracyColor(user.accuracy)}`}>
                 {user.accuracy}%
               </p>
-              <div className="flex justify-center gap-2 text-[11px] text-toss-gray-500 mt-0.5">
+              <div className="hidden sm:flex justify-center gap-2 text-[11px] text-toss-gray-500 mt-0.5">
                 <span className="text-toss-red">{user.kills}K</span>
                 <span>/</span>
                 <span className="text-toss-blue">{user.deaths}D</span>
@@ -262,11 +262,11 @@ export default function RankingPage() {
                 <span className="text-toss-green">{user.assists}A</span>
               </div>
               {/* EXP bar */}
-              <div className="mt-2">
+              <div className="mt-1.5 sm:mt-2">
                 <div className="h-1 rounded-full bg-toss-gray-100 overflow-hidden">
                   <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${progress * 100}%` }} />
                 </div>
-                <p className="text-[11px] text-toss-gray-500 mt-0.5">{user.exp.toLocaleString()} EXP</p>
+                <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">{user.exp.toLocaleString()} EXP</p>
               </div>
             </Link>
           );
@@ -286,32 +286,28 @@ export default function RankingPage() {
 
           return (
             <Link key={user.id} href={`/profile/${user.id}`}
-              className={`flex items-center gap-3 px-5 py-4 ${i < sortedUsers.length - 1 ? "border-b border-border/30" : ""} hover:bg-secondary transition-toss`}>
-              <div className="w-8 text-center shrink-0">
-                {emoji ? <span className="text-[18px]">{emoji}</span> : <span className="text-[14px] font-bold text-toss-gray-400">{rankNum}</span>}
+              className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 ${i < sortedUsers.length - 1 ? "border-b border-border/30" : ""} hover:bg-secondary transition-toss`}>
+              <div className="w-6 sm:w-8 text-center shrink-0">
+                {emoji ? <span className="text-[16px] sm:text-[18px]">{emoji}</span> : <span className="text-[13px] sm:text-[14px] font-bold text-toss-gray-400">{rankNum}</span>}
               </div>
-              <div className="w-10 h-10 rounded-full bg-toss-gray-200 flex items-center justify-center shrink-0">
-                <span className="text-[14px] font-bold text-toss-gray-500">{user.name.charAt(0)}</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-toss-gray-200 flex items-center justify-center shrink-0">
+                <span className="text-[12px] sm:text-[14px] font-bold text-toss-gray-500">{user.name.charAt(0)}</span>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[14px] font-semibold text-foreground truncate">{user.name}</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                  <span className="text-[13px] sm:text-[14px] font-semibold text-foreground truncate">{user.name}</span>
                   <RankBadge rank={user.rank} />
-                  <TitleBadge title={user.title} />
+                  <span className="hidden sm:inline"><TitleBadge title={user.title} /></span>
                 </div>
-                <div className="flex items-center gap-3 mt-0.5 text-[12px] text-toss-gray-500">
+                <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[11px] sm:text-[12px] text-toss-gray-500">
                   <AccuracyBadge accuracy={user.accuracy} kills={user.kills} deaths={user.deaths} />
-                  <span className="text-toss-green">{user.assists}A</span>
-                  <span>{user.exp.toLocaleString()} EXP</span>
-                  {user.streak >= 3 && <span className="text-toss-orange">🔥 {user.streak}일</span>}
-                </div>
-                {/* Tiny EXP bar */}
-                <div className="mt-1 h-0.5 w-24 rounded-full bg-toss-gray-100 overflow-hidden">
-                  <div className="h-full rounded-full bg-primary/50" style={{ width: `${progress * 100}%` }} />
+                  <span className="hidden sm:inline text-toss-green">{user.assists}A</span>
+                  <span className="hidden sm:inline">{user.exp.toLocaleString()} EXP</span>
+                  {user.streak >= 3 && <span className="hidden sm:inline text-toss-orange">🔥 {user.streak}일</span>}
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-[18px] font-bold ${getAccuracyColor(user.accuracy)}`}>{user.accuracy}%</p>
+                <p className={`text-[16px] sm:text-[18px] font-bold ${getAccuracyColor(user.accuracy)}`}>{user.accuracy}%</p>
               </div>
             </Link>
           );

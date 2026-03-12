@@ -29,7 +29,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full bg-card/80 backdrop-blur-xl border-b border-border">
       <div className="mx-auto max-w-screen-lg flex h-14 items-center px-5">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 mr-8">
+        <Link href="/" className="flex items-center gap-2 mr-4 sm:mr-8">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-white text-xs font-bold">SA</span>
           </div>

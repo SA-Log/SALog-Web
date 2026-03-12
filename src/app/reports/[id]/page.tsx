@@ -54,11 +54,11 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
       </Link>
 
       {/* Main info */}
-      <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-toss mb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+      <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border/50 shadow-toss mb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <StatusBadge status={report.status} />
-            <h1 className="text-[22px] font-bold text-foreground mt-2">{report.nickname}</h1>
+            <h1 className="text-[18px] sm:text-[22px] font-bold text-foreground mt-2 truncate">{report.nickname}</h1>
             <a href={report.barracksAddress} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[12px] font-medium hover:bg-primary/20 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
               병영주소 바로가기
@@ -205,7 +205,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               <p className="text-[11px] text-toss-gray-400 mt-0.5">투표는 수정할 수 없습니다</p>
             </div>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button onClick={() => handleVote("AGREE")}
                 className="flex-1 h-10 rounded-xl text-[13px] font-semibold btn-vote bg-toss-red text-white hover:opacity-80">
                 핵 맞음

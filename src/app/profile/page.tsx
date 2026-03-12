@@ -216,22 +216,22 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-3 mt-5 pt-5 border-t border-border/50">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-5 pt-5 border-t border-border/50">
             <div className="text-center">
-              <p className={`text-[20px] font-bold ${getAccuracyColor(user.accuracy)}`}>{user.accuracy}%</p>
-              <p className="text-[11px] text-toss-gray-500 mt-0.5">명중률</p>
+              <p className={`text-[16px] sm:text-[20px] font-bold ${getAccuracyColor(user.accuracy)}`}>{user.accuracy}%</p>
+              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">명중률</p>
             </div>
             <div className="text-center">
-              <p className="text-[20px] font-bold text-foreground">{user.totalReports}</p>
-              <p className="text-[11px] text-toss-gray-500 mt-0.5">신고</p>
+              <p className="text-[16px] sm:text-[20px] font-bold text-foreground">{user.totalReports}</p>
+              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">신고</p>
             </div>
             <div className="text-center">
-              <p className="text-[20px] font-bold text-foreground">{mockFollowers.length}</p>
-              <p className="text-[11px] text-toss-gray-500 mt-0.5">팔로워</p>
+              <p className="text-[16px] sm:text-[20px] font-bold text-foreground">{mockFollowers.length}</p>
+              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">팔로워</p>
             </div>
             <div className="text-center">
-              <p className="text-[20px] font-bold text-foreground">{mockFollowing.length}</p>
-              <p className="text-[11px] text-toss-gray-500 mt-0.5">팔로잉</p>
+              <p className="text-[16px] sm:text-[20px] font-bold text-foreground">{mockFollowing.length}</p>
+              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">팔로잉</p>
             </div>
           </div>
 

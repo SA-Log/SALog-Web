@@ -181,7 +181,7 @@ export default function SearchPage() {
         <button
           onClick={handleSearch}
           disabled={!query.trim() || isSearching}
-          className="h-12 px-6 rounded-2xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary shrink-0"
+          className="h-12 px-4 sm:px-6 rounded-2xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary shrink-0"
         >
           {isSearching ? "검색 중..." : "검색"}
         </button>
@@ -233,16 +233,16 @@ export default function SearchPage() {
                   {/* Profile card */}
                   <Link href={`/search/player?ouid=${saResult.ouid}&name=${encodeURIComponent(saResult.basic.user_name)}`}
                     className="block bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden hover:shadow-toss-md transition-shadow">
-                    <div className="h-20 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent relative">
-                      <div className="absolute -bottom-6 left-5">
-                        <div className="w-16 h-16 rounded-2xl bg-card border-4 border-card shadow-toss flex items-center justify-center">
-                          <span className="text-[24px] font-bold text-primary">{saResult.basic.user_name.charAt(0)}</span>
+                    <div className="h-16 sm:h-20 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent relative">
+                      <div className="absolute -bottom-5 sm:-bottom-6 left-4 sm:left-5">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-card border-3 sm:border-4 border-card shadow-toss flex items-center justify-center">
+                          <span className="text-[18px] sm:text-[24px] font-bold text-primary">{saResult.basic.user_name.charAt(0)}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-8 px-5 pb-5">
-                      <div className="flex items-start justify-between">
+                    <div className="pt-7 sm:pt-8 px-4 sm:px-5 pb-4 sm:pb-5">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
                           <h2 className="text-[20px] font-bold text-foreground">{saResult.basic.user_name}</h2>
                           <div className="flex items-center gap-2 mt-1">

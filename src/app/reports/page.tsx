@@ -128,7 +128,7 @@ export default function ReportsPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="h-8 px-3 rounded-lg border border-border bg-card text-[12px] text-toss-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
+                className="h-10 sm:h-8 px-3 rounded-lg border border-border bg-card text-[13px] sm:text-[12px] text-toss-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>

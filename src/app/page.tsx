@@ -17,16 +17,16 @@ export default function HomePage() {
           병영주소 기반 추적으로 닉네임을 바꿔도 놓치지 않습니다.<br className="hidden sm:block" />
           핵 유저 신고부터 비매너 유저 정보까지 한곳에서 관리하세요.
         </p>
-        <div className="mt-8 flex justify-center gap-3">
+        <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3 px-4 sm:px-0">
           <Link
             href="/reports"
-            className="inline-flex h-11 items-center px-6 rounded-xl bg-primary text-white text-[14px] font-semibold btn-primary shadow-toss-md"
+            className="inline-flex h-11 items-center justify-center px-6 rounded-xl bg-primary text-white text-[14px] font-semibold btn-primary shadow-toss-md"
           >
             핵 유저 목록 보기
           </Link>
           <Link
             href="/search"
-            className="inline-flex h-11 items-center px-6 rounded-xl bg-card text-foreground text-[14px] font-semibold border border-border btn-secondary shadow-toss"
+            className="inline-flex h-11 items-center justify-center px-6 rounded-xl bg-card text-foreground text-[14px] font-semibold border border-border btn-secondary shadow-toss"
           >
             병영주소 검색
           </Link>
