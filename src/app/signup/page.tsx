@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -84,11 +83,16 @@ function SignupPage() {
         setIsSubmitting(false);
         return;
       }
-      await updateSession();
+      // 세션 갱신 후 홈으로 이동
+      try {
+        await updateSession();
+      } catch {
+        // updateSession 실패해도 DB는 이미 업데이트됨
+      }
       window.location.replace("/");
       return;
-    } catch {
-      setSubmitError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "서버 연결에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsSubmitting(false);
     }
@@ -214,8 +218,8 @@ function SignupPage() {
       </div>
 
       <p className="text-[11px] text-toss-gray-500 dark:text-toss-gray-400 text-center mt-8 leading-relaxed">
-        가입 시 <Link href="/terms" className="underline">이용약관</Link> 및{" "}
-        <Link href="/privacy" className="underline">개인정보처리방침</Link>에 동의하게 됩니다.
+        가입 시 <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">이용약관</a> 및{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">개인정보처리방침</a>에 동의하게 됩니다.
       </p>
     </div>
   );
