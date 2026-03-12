@@ -424,12 +424,12 @@ function SignupPage() {
             </div>
           )}
 
-          <Link
-            href="/"
+          <button
+            onClick={() => window.location.href = "/"}
             className="inline-flex h-12 items-center justify-center w-full rounded-xl bg-primary text-white text-[14px] font-semibold btn-primary"
           >
             SALog 시작하기
-          </Link>
+          </button>
         </div>
       )}
 
