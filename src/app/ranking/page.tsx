@@ -239,19 +239,19 @@ export default function RankingPage() {
 
           return (
             <Link key={user.id} href={`/profile/${user.id}`}
-              className={`bg-card rounded-2xl border border-border/50 shadow-toss p-2.5 sm:p-4 text-center hover:opacity-80 transition-opacity ${isFirst ? "shadow-toss-md -mt-2" : "mt-2"}`}>
-              <span className="text-[18px] sm:text-[24px]">{emoji}</span>
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full mx-auto mt-1.5 sm:mt-2 flex items-center justify-center ring-2 ${
+              className={`bg-card rounded-2xl border border-border/50 shadow-toss p-2 sm:p-4 text-center hover:opacity-80 transition-opacity ${isFirst ? "shadow-toss-md -mt-2" : "mt-2"}`}>
+              <span className="text-[16px] sm:text-[24px]">{emoji}</span>
+              <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full mx-auto mt-1 sm:mt-2 flex items-center justify-center ring-2 ${
                 isFirst ? "ring-amber-400 bg-amber-50 dark:bg-amber-950" : "ring-toss-gray-200 bg-toss-gray-100"
               }`}>
-                <span className={`text-[13px] sm:text-[16px] font-bold ${isFirst ? "text-amber-600 dark:text-amber-400" : "text-toss-gray-500"}`}>{user.name.charAt(0)}</span>
+                <span className={`text-[11px] sm:text-[16px] font-bold ${isFirst ? "text-amber-600 dark:text-amber-400" : "text-toss-gray-500"}`}>{user.name.charAt(0)}</span>
               </div>
-              <p className="text-[12px] sm:text-[14px] font-semibold text-foreground mt-1.5 sm:mt-2 truncate">{user.name}</p>
-              <div className="flex items-center justify-center gap-0.5 sm:gap-1 mt-1 flex-wrap">
+              <p className="text-[11px] sm:text-[14px] font-semibold text-foreground mt-1 sm:mt-2 truncate">{user.name}</p>
+              <div className="hidden sm:flex items-center justify-center gap-1 mt-1 flex-wrap">
                 <RankBadge rank={user.rank} />
                 <TitleBadge title={user.title} />
               </div>
-              <p className={`text-[14px] sm:text-[16px] font-bold mt-1.5 sm:mt-2 ${getAccuracyColor(user.accuracy)}`}>
+              <p className={`text-[13px] sm:text-[16px] font-bold mt-1 sm:mt-2 ${getAccuracyColor(user.accuracy)}`}>
                 {user.accuracy}%
               </p>
               <div className="hidden sm:flex justify-center gap-2 text-[11px] text-toss-gray-500 mt-0.5">
@@ -262,11 +262,11 @@ export default function RankingPage() {
                 <span className="text-toss-green">{user.assists}A</span>
               </div>
               {/* EXP bar */}
-              <div className="mt-1.5 sm:mt-2">
+              <div className="mt-1 sm:mt-2">
                 <div className="h-1 rounded-full bg-toss-gray-100 overflow-hidden">
                   <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${progress * 100}%` }} />
                 </div>
-                <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">{user.exp.toLocaleString()} EXP</p>
+                <p className="text-[9px] sm:text-[11px] text-toss-gray-500 mt-0.5">{user.exp.toLocaleString()} EXP</p>
               </div>
             </Link>
           );
