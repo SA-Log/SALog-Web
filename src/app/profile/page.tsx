@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
-import { TitleBadge, RankBadge, AccuracyBadge } from "@/components/common/title-badge";
+import { TitleBadge, RankBadge } from "@/components/common/title-badge";
 import { AuthGuard } from "@/components/common/auth-guard";
 import {
   getExpProgress,
@@ -36,7 +36,6 @@ export default function ProfilePage() {
   });
   const [editIsPublic, setEditIsPublic] = useState(isProfilePublic);
 
-  // 실제 유저 데이터 (아직 활동 데이터 없으므로 0)
   const name = authUser?.nickname ?? authUser?.name ?? "유저";
   const role = (authUser?.role ?? "USER") as UserRole;
   const hasBarracks = authUser?.barracksVerified ?? false;
@@ -46,7 +45,6 @@ export default function ProfilePage() {
   const roleInfo = ROLE_MAP[role];
   const effectiveIsPublic = isCreator ? true : isProfilePublic;
 
-  // 초기 스탯 (DB 연동 시 교체)
   const kills = 0;
   const deaths = 0;
   const assists = 0;
@@ -71,9 +69,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        setAvatarPreview(ev.target?.result as string);
-      };
+      reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -87,399 +83,381 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
+  const avatarSrc = avatarPreview ?? authUser?.image ?? null;
+
   return (
     <AuthGuard>
-    <div className="mx-auto max-w-screen-lg px-5 py-6">
-      {/* Profile Header */}
-      <div className={`bg-card rounded-2xl border shadow-toss overflow-hidden ${
-        isSpecialRole ? `border-${roleInfo.color.replace("text-", "")}/30` : "border-border/50"
-      }`}>
-        {/* Special Role Banner */}
+    <div className="mx-auto max-w-screen-md px-5 py-8">
+
+      {/* ─── Hero Card ─── */}
+      <div className="bg-card rounded-3xl border border-border/40 shadow-toss overflow-hidden">
+
+        {/* Role Banner */}
         {isSpecialRole && (
-          <div className={`px-5 py-2.5 ${roleInfo.bg} border-b border-border/30 flex items-center gap-2`}>
-            <span className={`text-[12px] font-bold ${roleInfo.color}`}>{roleInfo.label}</span>
-            {isStaff && <span className="text-[11px] text-toss-gray-500">SALog 운영팀</span>}
-            {isCreator && <span className="text-[11px] text-toss-gray-500">공식 인증 크리에이터</span>}
+          <div className={`px-6 py-2 ${roleInfo.bg} flex items-center gap-2`}>
+            <span className={`text-[11px] font-bold tracking-wide uppercase ${roleInfo.color}`}>{roleInfo.label}</span>
+            <span className="text-[11px] text-toss-gray-500">{isStaff ? "SALog 운영팀" : "공식 인증 크리에이터"}</span>
           </div>
         )}
 
-        <div className="px-5 sm:px-6 py-5">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-            {/* Left: Avatar + Name stacked vertically */}
-            <div className="flex flex-col items-center sm:items-start gap-2 shrink-0">
-              {/* Name + Badges above avatar */}
-              <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-                <h1 className="text-[20px] sm:text-[22px] font-bold text-foreground truncate">{name}</h1>
-                {/* 인증 마크 (트위터 스타일) — 인증된 경우에만 */}
-                {hasBarracks && (
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0" title="서든어택 인증됨">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M3 6.5l2 2 4-4.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                )}
-                {/* 역할 뱃지 */}
-                {role !== "USER" && (
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${roleInfo.bg} ${roleInfo.color}`}>{roleInfo.label}</span>
-                )}
-                {!effectiveIsPublic && (
-                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-500">
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="2" y="5" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1"/><path d="M3 5V3.5a2 2 0 014 0V5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/></svg>
-                    비공개
-                  </span>
-                )}
-              </div>
-
-              {/* Avatar */}
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-card border-4 border-card shadow-toss-md flex items-center justify-center overflow-hidden">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="프로필" className="w-full h-full object-cover" />
-                ) : authUser?.image ? (
-                  <img src={authUser.image} alt="프로필" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[28px] sm:text-[32px] font-bold text-primary">{name.charAt(0)}</span>
-                )}
-              </div>
+        {/* Profile Identity */}
+        <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
+          {/* Avatar */}
+          <div className="relative mb-4">
+            <div className="w-24 h-24 rounded-full bg-secondary ring-4 ring-card shadow-toss-md flex items-center justify-center overflow-hidden">
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="프로필" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[34px] font-bold text-primary/80">{name.charAt(0)}</span>
+              )}
             </div>
-
-            {/* Right: Info */}
-            <div className="flex-1 min-w-0 text-center sm:text-left">
-              {/* Rank + Title badges */}
-              <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start mb-2">
-                <RankBadge rank={rank} size="md" />
-                <TitleBadge title={title} size="md" />
+            {/* 인증 마크 — avatar 우하단 */}
+            {hasBarracks && (
+              <div className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-primary ring-[3px] ring-card flex items-center justify-center" title="서든어택 인증됨">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-
-              {bio && <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-500 mt-1">{bio}</p>}
-
-              {/* Buttons */}
-              <div className="flex gap-2 mt-3 justify-center sm:justify-start">
-                {!isCreator && (
-                  <Link href="/creator/apply"
-                    className="h-9 px-4 rounded-xl bg-toss-green/10 text-toss-green text-[13px] font-medium border border-toss-green/20 flex items-center gap-1.5 btn-chip">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M7 1.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z" stroke="currentColor" strokeWidth="1.2"/>
-                    </svg>
-                    크리에이터 신청
-                  </Link>
-                )}
-                <button
-                  onClick={() => { setEditBio(bio); setEditIsPublic(isProfilePublic); setIsEditing(true); }}
-                  className="h-9 px-4 rounded-xl bg-secondary text-[13px] font-medium text-foreground border border-border btn-secondary"
-                >
-                  프로필 수정
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Stats Row: 명중률, 신고, 팔로워, 팔로잉 */}
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-5 pt-5 border-t border-border/50">
-            <div className="text-center">
-              <p className={`text-[16px] sm:text-[20px] font-bold ${getAccuracyColor(accuracy)}`}>
-                {accuracy}%
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">명중률</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[16px] sm:text-[20px] font-bold text-foreground">{totalReports}</p>
-              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">신고</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[16px] sm:text-[20px] font-bold text-foreground">{followerCount}</p>
-              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">팔로워</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[16px] sm:text-[20px] font-bold text-foreground">{followingCount}</p>
-              <p className="text-[10px] sm:text-[11px] text-toss-gray-500 mt-0.5">팔로잉</p>
-            </div>
+          {/* Name row */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <h1 className="text-[22px] font-bold tracking-tight text-foreground">{name}</h1>
+            {role !== "USER" && (
+              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${roleInfo.bg} ${roleInfo.color}`}>{roleInfo.label}</span>
+            )}
+            {!effectiveIsPublic && (
+              <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-500">
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><rect x="2" y="5" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/><path d="M3 5V3.5a2 2 0 014 0V5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                비공개
+              </span>
+            )}
           </div>
 
-          {/* K/D/A + EXP */}
-          <div className="flex flex-wrap items-center gap-4 mt-4 text-[12px]">
-            <div className="flex items-center gap-2">
-              <span className="text-toss-red font-semibold">{kills}K</span>
-              <span className="text-toss-gray-300">/</span>
-              <span className="text-toss-blue font-semibold">{deaths}D</span>
-              <span className="text-toss-gray-300">/</span>
-              <span className="text-toss-green font-semibold">{assists}A</span>
-            </div>
-            <div className="flex items-center gap-2 flex-1 min-w-[120px]">
-              <span className="text-toss-gray-500">{exp.toLocaleString()} EXP</span>
-              <div className="flex-1 h-1.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-200 overflow-hidden max-w-[100px]">
-                <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${progress * 100}%` }} />
+          {/* Rank + Title */}
+          <div className="flex items-center gap-1.5 mt-2">
+            <RankBadge rank={rank} size="md" />
+            <TitleBadge title={title} size="md" />
+          </div>
+
+          {/* Bio */}
+          {bio && (
+            <p className="text-[13px] text-toss-gray-500 mt-3 max-w-xs leading-relaxed">{bio}</p>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2.5 mt-5">
+            {!isCreator && (
+              <Link href="/creator/apply"
+                className="h-9 px-5 rounded-full bg-toss-green/10 text-toss-green text-[12px] font-semibold border border-toss-green/20 flex items-center gap-1.5 transition-all hover:bg-toss-green/15 active:scale-[0.97]">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 1.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+                크리에이터 신청
+              </Link>
+            )}
+            <button
+              onClick={() => { setEditBio(bio); setEditIsPublic(isProfilePublic); setIsEditing(true); }}
+              className="h-9 px-5 rounded-full bg-secondary text-[12px] font-semibold text-foreground border border-border/60 transition-all hover:bg-secondary/80 active:scale-[0.97]"
+            >
+              프로필 수정
+            </button>
+          </div>
+        </div>
+
+        {/* ─── Stats Grid ─── */}
+        <div className="border-t border-border/30">
+          <div className="grid grid-cols-4 divide-x divide-border/30">
+            {[
+              { value: `${accuracy}%`, label: "명중률", color: getAccuracyColor(accuracy) },
+              { value: totalReports, label: "신고", color: "text-foreground" },
+              { value: followerCount, label: "팔로워", color: "text-foreground" },
+              { value: followingCount, label: "팔로잉", color: "text-foreground" },
+            ].map((stat) => (
+              <div key={stat.label} className="py-4 text-center">
+                <p className={`text-[18px] sm:text-[20px] font-bold tabular-nums ${stat.color}`}>{stat.value}</p>
+                <p className="text-[10px] sm:text-[11px] text-toss-gray-400 mt-0.5 tracking-wide">{stat.label}</p>
               </div>
-              {next && <span className="text-toss-gray-400 text-[11px]">{next.name}까지</span>}
+            ))}
+          </div>
+        </div>
+
+        {/* ─── Combat Stats (K/D/A + EXP) ─── */}
+        <div className="border-t border-border/30 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-[13px]">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-toss-red inline-block" />
+                <span className="font-semibold text-foreground">{kills}</span>
+                <span className="text-toss-gray-400">킬</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-toss-blue inline-block" />
+                <span className="font-semibold text-foreground">{deaths}</span>
+                <span className="text-toss-gray-400">데스</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-toss-green inline-block" />
+                <span className="font-semibold text-foreground">{assists}</span>
+                <span className="text-toss-gray-400">어시</span>
+              </div>
             </div>
+            <span className="text-[12px] text-toss-gray-400 tabular-nums">{exp.toLocaleString()} EXP</span>
+          </div>
+          {/* EXP progress bar */}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex-1 h-2 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary/70 to-primary transition-all duration-500"
+                style={{ width: `${Math.max(progress * 100, 2)}%` }}
+              />
+            </div>
+            {next && (
+              <span className="text-[11px] text-toss-gray-400 shrink-0">{next.name}</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mt-5 mb-5 bg-secondary rounded-xl p-1">
+      {/* ─── Tabs ─── */}
+      <div className="flex mt-6 mb-1 border-b border-border/40">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium btn-chip ${
+            className={`flex-1 pb-3 text-[13px] font-medium transition-colors relative ${
               activeTab === tab.value
-                ? "bg-card text-foreground shadow-toss"
-                : "text-toss-gray-500"
+                ? "text-foreground"
+                : "text-toss-gray-400 hover:text-toss-gray-600"
             }`}
           >
             {tab.label}
-            <span className={`ml-1 text-[11px] ${activeTab === tab.value ? "text-primary" : "text-toss-gray-400"}`}>
+            <span className={`ml-1 text-[11px] tabular-nums ${activeTab === tab.value ? "text-primary" : "text-toss-gray-300"}`}>
               {tab.count}
             </span>
+            {activeTab === tab.value && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-primary" />
+            )}
           </button>
         ))}
       </div>
 
-      {/* Tab Content — Empty States */}
-      {activeTab === "activity" && (
-        <div className="text-center py-16">
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM10 6v4M10 13h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/>
-            </svg>
-          </div>
-          <p className="text-[15px] text-foreground font-semibold">아직 신고 활동이 없습니다</p>
-          <p className="text-[13px] text-toss-gray-500 mt-1">핵 유저를 발견하면 신고해주세요</p>
-        </div>
-      )}
-      {activeTab === "blacklist" && (
-        <div className="text-center py-16">
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/>
-            </svg>
-          </div>
-          <p className="text-[15px] text-foreground font-semibold">블랙리스트가 비어있습니다</p>
-          <p className="text-[13px] text-toss-gray-500 mt-1">의심 유저를 블랙리스트에 추가해보세요</p>
-        </div>
-      )}
-      {activeTab === "following" && (
-        <div className="text-center py-16">
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
-              <path d="M3 17a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/>
-            </svg>
-          </div>
-          <p className="text-[15px] text-foreground font-semibold">팔로잉이 없습니다</p>
-          <p className="text-[13px] text-toss-gray-500 mt-1">다른 유저를 팔로잉해보세요</p>
-        </div>
-      )}
-      {activeTab === "followers" && (
-        <div className="text-center py-16">
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
-              <path d="M3 17a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/>
-            </svg>
-          </div>
-          <p className="text-[15px] text-foreground font-semibold">팔로워가 없습니다</p>
-          <p className="text-[13px] text-toss-gray-500 mt-1">활동을 시작하면 팔로워가 늘어납니다</p>
-        </div>
-      )}
+      {/* ─── Tab Content ─── */}
+      <div className="py-12">
+        {activeTab === "activity" && (
+          <EmptyState
+            icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>}
+            title="아직 신고 활동이 없습니다"
+            description="핵 유저를 발견하면 신고해주세요"
+          />
+        )}
+        {activeTab === "blacklist" && (
+          <EmptyState
+            icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+            title="블랙리스트가 비어있습니다"
+            description="의심 유저를 블랙리스트에 추가해보세요"
+          />
+        )}
+        {activeTab === "following" && (
+          <EmptyState
+            icon={<><circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+            title="팔로잉이 없습니다"
+            description="다른 유저를 팔로잉해보세요"
+          />
+        )}
+        {activeTab === "followers" && (
+          <EmptyState
+            icon={<><circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+            title="팔로워가 없습니다"
+            description="활동을 시작하면 팔로워가 늘어납니다"
+          />
+        )}
+      </div>
 
-      {/* 로그아웃 */}
-      <div className="mt-8 pt-6 border-t border-border/50">
+      {/* ─── Footer Actions ─── */}
+      <div className="pt-6 border-t border-border/30">
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          className="h-9 px-4 rounded-xl bg-secondary text-[13px] font-medium text-toss-gray-600 dark:text-toss-gray-400 border border-border btn-secondary">
+          className="text-[13px] font-medium text-toss-gray-400 hover:text-toss-gray-600 transition-colors">
           로그아웃
         </button>
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* ─── Edit Profile Modal ─── */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
-          <div className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-toss-lg p-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-[18px] font-bold text-foreground mb-5">프로필 수정</h2>
+          <div className="relative w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border/40 shadow-toss-lg animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto">
+            {/* Handle bar (mobile) */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-toss-gray-200 dark:bg-toss-gray-700" />
+            </div>
 
-            {/* Avatar edit */}
-            <div className="flex items-center gap-4 mb-5">
-              <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="프로필" className="w-full h-full object-cover" />
-                ) : authUser?.image ? (
-                  <img src={authUser.image} alt="프로필" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[22px] font-bold text-primary">{name.charAt(0)}</span>
-                )}
-              </div>
-              <div className="space-y-1">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-8 px-3 rounded-lg bg-primary/10 text-[12px] font-medium text-primary btn-chip">
-                  사진 변경
-                </button>
-                {avatarPreview && (
+            <div className="px-6 pt-4 sm:pt-6 pb-6">
+              <h2 className="text-[20px] font-bold text-foreground mb-6">프로필 수정</h2>
+
+              {/* Avatar */}
+              <div className="flex flex-col items-center gap-3 mb-6">
+                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden ring-4 ring-border/20">
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt="프로필" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[26px] font-bold text-primary/80">{name.charAt(0)}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                   <button
-                    onClick={() => { setAvatarPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                    className="h-8 px-3 rounded-lg text-[12px] font-medium text-toss-gray-500 hover:text-toss-red transition-toss ml-1">
-                    제거
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-[13px] font-semibold text-primary hover:text-primary/80 transition-colors">
+                    사진 변경
                   </button>
+                  {avatarPreview && (
+                    <>
+                      <span className="text-toss-gray-300">|</span>
+                      <button
+                        onClick={() => { setAvatarPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                        className="text-[13px] font-medium text-toss-gray-400 hover:text-toss-red transition-colors">
+                        제거
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Bio */}
+              <div className="mb-6">
+                <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">소개</label>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value.slice(0, 100))}
+                  rows={3}
+                  placeholder="자기소개를 입력해주세요"
+                  className="w-full px-4 py-3 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/50 text-[14px] outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 resize-none leading-relaxed placeholder:text-toss-gray-400"
+                  maxLength={100}
+                />
+                <p className="text-[11px] text-toss-gray-400 mt-1.5 text-right tabular-nums">{editBio.length}/100</p>
+              </div>
+
+              {/* Privacy */}
+              <div className="mb-6">
+                <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-3">공개 설정</label>
+                {isCreator ? (
+                  <div className="p-4 rounded-2xl bg-toss-green/5 border border-toss-green/15">
+                    <p className="text-[13px] font-semibold text-toss-green">항상 공개</p>
+                    <p className="text-[11px] text-toss-gray-500 mt-1">인증 크리에이터는 프로필이 모든 유저에게 공개됩니다</p>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[14px] font-medium text-foreground">프로필 공개</p>
+                        <p className="text-[12px] text-toss-gray-400 mt-0.5">
+                          {editIsPublic ? "모든 유저가 내 활동을 볼 수 있습니다" : "나만 내 활동을 볼 수 있습니다"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditIsPublic(!editIsPublic)}
+                        className={`w-[50px] h-[30px] rounded-full p-[3px] transition-colors duration-200 ${editIsPublic ? "bg-primary" : "bg-toss-gray-300 dark:bg-toss-gray-600"}`}
+                      >
+                        <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${editIsPublic ? "translate-x-5" : "translate-x-0"}`} />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
 
-            {/* Bio */}
-            <div className="mb-5">
-              <label className="block text-[13px] font-semibold text-foreground mb-1.5">소개</label>
-              <textarea
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value.slice(0, 100))}
-                rows={3}
-                placeholder="자기소개를 입력해주세요"
-                className="w-full px-3 py-2.5 rounded-xl bg-toss-gray-50 dark:bg-secondary border border-border text-[13px] outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 resize-none leading-relaxed placeholder:text-toss-gray-400"
-                maxLength={100}
-              />
-              <p className="text-[11px] text-toss-gray-400 mt-1">{editBio.length}/100</p>
-            </div>
-
-            {/* Profile Privacy */}
-            <div className="mb-5">
-              <p className="text-[13px] font-semibold text-foreground mb-2">프로필 공개 설정</p>
-              {isCreator ? (
-                <div className="p-3 rounded-xl bg-toss-green/5 border border-toss-green/20">
-                  <div className="flex items-center gap-2">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#22c55e" strokeWidth="1.2"/><path d="M4.5 7l2 2 3.5-3.5" stroke="#22c55e" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <p className="text-[13px] font-medium text-toss-green">항상 공개</p>
-                  </div>
-                  <p className="text-[11px] text-toss-gray-500 mt-1">
-                    인증 크리에이터는 활동, 블랙리스트, 팔로잉/팔로워가 모든 유저에게 공개됩니다
-                  </p>
-                </div>
-              ) : (
-                <div className="p-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[13px] font-medium text-foreground">프로필 공개</p>
-                      <p className="text-[11px] text-toss-gray-500 mt-0.5">
-                        {editIsPublic
-                          ? "모든 유저가 내 활동을 볼 수 있습니다"
-                          : "나만 내 활동을 볼 수 있습니다"}
-                      </p>
+              {/* Notifications */}
+              <div className="mb-8">
+                <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-3">이메일 알림</label>
+                <div className="space-y-2">
+                  <div className="p-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[14px] font-medium text-foreground">블랙리스트 닉변 알림</p>
+                        <p className="text-[12px] text-toss-gray-400 mt-0.5">등록한 유저가 닉네임을 변경하면 알림</p>
+                      </div>
+                      <div className="w-[50px] h-[30px] rounded-full bg-primary p-[3px] cursor-pointer">
+                        <div className="w-6 h-6 rounded-full bg-white shadow-sm translate-x-5 transition-transform duration-200" />
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditIsPublic(!editIsPublic)}
-                      className={`w-10 h-6 rounded-full p-0.5 transition-colors ${editIsPublic ? "bg-primary" : "bg-toss-gray-300 dark:bg-toss-gray-600"}`}
-                    >
-                      <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${editIsPublic ? "translate-x-4" : "translate-x-0"}`} />
-                    </button>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Email notifications */}
-            <div className="mb-6 space-y-2">
-              <p className="text-[13px] font-semibold text-foreground mb-2">이메일 알림</p>
-              <div className="p-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border border-border/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[13px] font-medium text-foreground">블랙리스트 닉변 알림</p>
-                    <p className="text-[11px] text-toss-gray-500 mt-0.5">블랙리스트 유저가 닉네임을 변경하면 알림</p>
-                  </div>
-                  <div className="w-10 h-6 rounded-full bg-primary p-0.5 cursor-pointer">
-                    <div className="w-5 h-5 rounded-full bg-white shadow-sm translate-x-4 transition-transform" />
+                  <div className="p-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[14px] font-medium text-foreground">팔로잉 블랙리스트 알림</p>
+                        <p className="text-[12px] text-toss-gray-400 mt-0.5">팔로잉한 유저가 블랙리스트를 추가하면 알림</p>
+                      </div>
+                      <div className="w-[50px] h-[30px] rounded-full bg-toss-gray-300 dark:bg-toss-gray-600 p-[3px] cursor-pointer">
+                        <div className="w-6 h-6 rounded-full bg-white shadow-sm translate-x-0 transition-transform duration-200" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border border-border/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[13px] font-medium text-foreground">팔로잉 블랙리스트 알림</p>
-                    <p className="text-[11px] text-toss-gray-500 mt-0.5">팔로잉한 유저가 블랙리스트를 추가하면 알림</p>
-                  </div>
-                  <div className="w-10 h-6 rounded-full bg-toss-gray-300 dark:bg-toss-gray-600 p-0.5 cursor-pointer">
-                    <div className="w-5 h-5 rounded-full bg-white shadow-sm translate-x-0 transition-transform" />
-                  </div>
-                </div>
+
+              {/* Save / Cancel */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all hover:bg-secondary/80 active:scale-[0.98]"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex-1 h-12 rounded-2xl bg-primary text-white text-[15px] font-semibold transition-all hover:bg-primary/90 active:scale-[0.98]"
+                >
+                  저장
+                </button>
               </div>
-            </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="flex-1 h-11 rounded-xl bg-secondary text-[14px] font-semibold text-toss-gray-600 btn-secondary"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex-1 h-11 rounded-xl bg-primary text-white text-[14px] font-semibold btn-primary"
-              >
-                저장
-              </button>
-            </div>
-
-            {/* 회원탈퇴 */}
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => { setIsEditing(false); setShowDeleteConfirm(true); }}
-                className="text-[11px] text-toss-gray-400 underline hover:text-toss-gray-600 transition-colors"
-              >
-                회원탈퇴
-              </button>
+              {/* 회원탈퇴 */}
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => { setIsEditing(false); setShowDeleteConfirm(true); }}
+                  className="text-[12px] text-toss-gray-400 hover:text-toss-gray-500 transition-colors"
+                >
+                  회원탈퇴
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 로그아웃 확인 모달 */}
+      {/* ─── Logout Confirm ─── */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
-          <div className="relative w-full max-w-sm bg-card rounded-2xl border border-border shadow-toss-lg p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-[18px] font-bold text-foreground mb-2">로그아웃</h2>
-            <p className="text-[14px] text-toss-gray-500 mb-6">정말 로그아웃 하시겠습니까?</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 h-11 rounded-xl bg-secondary text-[14px] font-semibold text-toss-gray-600 btn-secondary">
-                취소
-              </button>
-              <button
-                onClick={() => { logout(); router.push("/login"); }}
-                className="flex-1 h-11 rounded-xl bg-toss-gray-800 dark:bg-toss-gray-200 text-white dark:text-toss-gray-800 text-[14px] font-semibold btn-primary">
-                로그아웃
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmModal
+          title="로그아웃"
+          description="정말 로그아웃 하시겠습니까?"
+          cancelText="취소"
+          confirmText="로그아웃"
+          onCancel={() => setShowLogoutConfirm(false)}
+          onConfirm={() => { logout(); router.push("/login"); }}
+        />
       )}
 
-      {/* 회원탈퇴 확인 모달 */}
+      {/* ─── Delete Account ─── */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative w-full max-w-sm bg-card rounded-2xl border border-border shadow-toss-lg p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-[18px] font-bold text-toss-red mb-2">회원탈퇴</h2>
+          <div className="relative w-full max-w-sm bg-card rounded-3xl border border-border/40 shadow-toss-lg p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-[20px] font-bold text-toss-red mb-3">회원탈퇴</h2>
             <div className="space-y-2 mb-5">
-              <p className="text-[14px] text-toss-gray-600 dark:text-toss-gray-400">탈퇴 시 아래 데이터가 모두 삭제됩니다.</p>
-              <ul className="text-[12px] text-toss-gray-500 space-y-1">
-                <li>• 프로필, 신고 기록, 투표 기록</li>
-                <li>• 블랙리스트, 팔로우/팔로워</li>
-                <li>• 경험치, 계급, 칭호</li>
+              <p className="text-[14px] text-toss-gray-500 leading-relaxed">탈퇴 시 모든 데이터가 영구 삭제됩니다.</p>
+              <ul className="text-[13px] text-toss-gray-400 space-y-1.5 pl-1">
+                <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-toss-gray-300 inline-block" />프로필, 신고 기록, 투표 기록</li>
+                <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-toss-gray-300 inline-block" />블랙리스트, 팔로우/팔로워</li>
+                <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-toss-gray-300 inline-block" />경험치, 계급, 칭호</li>
               </ul>
-              <p className="text-[13px] text-toss-red font-semibold mt-3">이 작업은 되돌릴 수 없습니다.</p>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-[12px] font-semibold text-toss-gray-500 mb-1.5">
+            <div className="mb-5">
+              <label className="block text-[12px] font-semibold text-toss-gray-400 mb-2">
                 확인을 위해 &quot;탈퇴합니다&quot;를 입력하세요
               </label>
               <input
@@ -487,21 +465,21 @@ export default function ProfilePage() {
                 value={deleteInput}
                 onChange={(e) => setDeleteInput(e.target.value)}
                 placeholder="탈퇴합니다"
-                className="w-full h-10 px-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border border-border text-[14px] outline-none focus:ring-2 focus:ring-toss-red/20 placeholder:text-toss-gray-400" />
+                className="w-full h-11 px-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/50 text-[14px] outline-none focus:ring-2 focus:ring-toss-red/20 placeholder:text-toss-gray-400" />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}
-                className="flex-1 h-11 rounded-xl bg-secondary text-[14px] font-semibold text-toss-gray-600 btn-secondary">
+                className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all active:scale-[0.98]">
                 취소
               </button>
               <button
                 disabled={deleteInput !== "탈퇴합니다"}
                 onClick={() => { logout(); router.push("/login"); }}
-                className={`flex-1 h-11 rounded-xl text-[14px] font-semibold transition-toss ${
+                className={`flex-1 h-12 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.98] ${
                   deleteInput === "탈퇴합니다"
-                    ? "bg-toss-red text-white btn-primary"
+                    ? "bg-toss-red text-white"
                     : "bg-toss-gray-200 dark:bg-toss-gray-700 text-toss-gray-400 cursor-not-allowed"
                 }`}>
                 회원탈퇴
@@ -512,5 +490,44 @@ export default function ProfilePage() {
       )}
     </div>
     </AuthGuard>
+  );
+}
+
+/* ─── Shared Components ─── */
+
+function EmptyState({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center">
+      <div className="w-14 h-14 rounded-full bg-toss-gray-50 dark:bg-secondary flex items-center justify-center mb-4">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-toss-gray-300">
+          {icon}
+        </svg>
+      </div>
+      <p className="text-[15px] font-semibold text-foreground">{title}</p>
+      <p className="text-[13px] text-toss-gray-400 mt-1">{description}</p>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, description, cancelText, confirmText, onCancel, onConfirm }: {
+  title: string; description: string; cancelText: string; confirmText: string;
+  onCancel: () => void; onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full max-w-xs bg-card rounded-3xl border border-border/40 shadow-toss-lg p-6 animate-in zoom-in-95 duration-200 text-center">
+        <h2 className="text-[18px] font-bold text-foreground mb-2">{title}</h2>
+        <p className="text-[14px] text-toss-gray-500 mb-6">{description}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 h-11 rounded-2xl bg-secondary text-[14px] font-semibold text-toss-gray-600 transition-all active:scale-[0.98]">
+            {cancelText}
+          </button>
+          <button onClick={onConfirm} className="flex-1 h-11 rounded-2xl bg-toss-gray-800 dark:bg-toss-gray-200 text-white dark:text-toss-gray-800 text-[14px] font-semibold transition-all active:scale-[0.98]">
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
