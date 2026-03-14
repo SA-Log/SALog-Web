@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   function handleKakaoLogin() {
     setLoading(true);
-    signIn("kakao", { callbackUrl: "/" });
+    signIn("kakao", { callbackUrl: "/signup" });
   }
 
   return (
