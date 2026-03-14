@@ -122,9 +122,12 @@ export default function ProfilePage() {
     return false;
   })();
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!hasChanges || isSaving) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
       const fd = new FormData();
       fd.append("bio", editBio);
@@ -139,8 +142,12 @@ export default function ProfilePage() {
       }
 
       const res = await fetch("/api/profile/me", { method: "PATCH", body: fd });
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data) {
+        setSaveError(data?.error ?? "저장에 실패했습니다");
+        return;
+      }
 
       setBio(data.bio ?? "");
       if (!isCreator) setIsProfilePublic(data.isProfilePublic ?? true);
@@ -148,9 +155,10 @@ export default function ProfilePage() {
       setAvatarPreview(null);
       setAvatarFile(null);
       setRemoveAvatar(false);
+      setSaveError(null);
       setIsEditing(false);
     } catch {
-      // silently fail
+      setSaveError("네트워크 오류가 발생했습니다");
     } finally {
       setIsSaving(false);
     }
@@ -460,9 +468,15 @@ export default function ProfilePage() {
               </div>
 
               {/* Save / Cancel */}
+              {saveError && (
+                <div className="mb-4 p-3 rounded-2xl bg-toss-red/10 border border-toss-red/20">
+                  <p className="text-[13px] text-toss-red font-medium">{saveError}</p>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => { setIsEditing(false); setSaveError(null); }}
                   className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all hover:bg-secondary/80 active:scale-[0.98]"
                 >
                   취소

@@ -63,8 +63,7 @@ export async function PATCH(req: Request) {
 
   // Bio 업데이트
   if (bio !== null) {
-    const trimmed = bio.trim().slice(0, 100);
-    updateData.bio = trimmed || null;
+    updateData.bio = bio.trim().slice(0, 100);
   }
 
   // 프로필 공개 설정
@@ -124,10 +123,6 @@ export async function PATCH(req: Request) {
   // 프로필 사진 제거
   if (formData.get("removeAvatar") === "true") {
     updateData.image = null;
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: "변경사항이 없습니다" }, { status: 400 });
   }
 
   try {
