@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/providers/auth-provider";
 import { TitleBadge, RankBadge, AccuracyBadge } from "@/components/common/title-badge";
 import { AuthGuard } from "@/components/common/auth-guard";
 import {
@@ -24,7 +25,17 @@ type ProfileTab = "activity" | "following" | "followers";
 
 export default function UserProfilePage() {
   const params = useParams();
+  const router = useRouter();
+  const { user: authUser } = useAuth();
   const userId = params.id as string;
+
+  // 자기 프로필이면 /profile로 리다이렉트
+  useEffect(() => {
+    if (authUser?.id && authUser.id === userId) {
+      router.replace("/profile");
+    }
+  }, [authUser?.id, userId, router]);
+
   const user = mockUsers.find((u) => u.id === userId);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("activity");
@@ -41,21 +52,9 @@ export default function UserProfilePage() {
   })();
   const canViewContent = !isUserPrivate || isFollowing;
 
+  // Mock 유저가 없으면 DB에서 조회
   if (!user) {
-    return (
-      <div className="mx-auto max-w-screen-lg px-5 py-6">
-        <div className="text-center py-20">
-          <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-3">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
-              <path d="M5 20C5 16.134 8.134 13 12 13C15.866 13 19 16.134 19 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/>
-            </svg>
-          </div>
-          <p className="text-[15px] text-foreground font-semibold">존재하지 않는 유저입니다</p>
-          <Link href="/" className="text-[13px] text-primary mt-2 inline-block">홈으로 돌아가기</Link>
-        </div>
-      </div>
-    );
+    return <DbProfileView userId={userId} />;
   }
 
   const { progress, next } = getExpProgress(user.exp);
@@ -428,5 +427,303 @@ function FollowSection({ users, type }: { users: FollowUser[]; type: "following"
         </div>
       )}
     </div>
+  );
+}
+
+// ─── DB Profile View (실제 유저) ───
+
+interface DbProfile {
+  id: string;
+  nickname: string | null;
+  image: string | null;
+  role: string;
+  isPrivate: boolean;
+  isProfilePublic?: boolean;
+  barracksAddress?: string | null;
+  createdAt?: string;
+  reportCount?: number;
+  recentReports?: {
+    id: string;
+    nickname: string;
+    status: string;
+    hackTypes: string[];
+    createdAt: string;
+  }[];
+  isOwn?: boolean;
+}
+
+const DB_STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  SUSPECT: { label: "핵 의심", color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-500/20" },
+  PROBABLE: { label: "핵 유력", color: "text-orange-700 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-500/20" },
+  CONFIRMED: { label: "핵 확정", color: "text-white", bg: "bg-toss-red" },
+  DISMISSED: { label: "기각", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-500/20" },
+};
+
+function formatDateShort(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}
+
+function DbProfileView({ userId }: { userId: string }) {
+  const { user: authUser } = useAuth();
+  const [profile, setProfile] = useState<DbProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/profile/${userId}`)
+      .then((res) => {
+        if (!res.ok) { setNotFound(true); return null; }
+        return res.json();
+      })
+      .then((data) => { if (data) setProfile(data); })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <AuthGuard>
+        <div className="mx-auto max-w-screen-md px-5 py-8">
+          <div className="bg-card rounded-3xl border border-border/40 shadow-toss overflow-hidden">
+            <div className="px-6 pt-6 pb-5 flex flex-col items-center">
+              <div className="w-24 h-24 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse mb-4" />
+              <div className="h-6 w-32 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse mb-2" />
+              <div className="h-4 w-24 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />
+            </div>
+            <div className="border-t border-border/30">
+              <div className="grid grid-cols-3 divide-x divide-border/30">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="py-4 flex flex-col items-center gap-1.5">
+                    <div className="h-5 w-8 rounded bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />
+                    <div className="h-3 w-10 rounded bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </AuthGuard>
+    );
+  }
+
+  if (notFound || !profile) {
+    return (
+      <AuthGuard>
+        <div className="mx-auto max-w-screen-md px-5 py-8">
+          <div className="text-center py-20">
+            <div className="w-14 h-14 rounded-full bg-toss-gray-50 dark:bg-secondary flex items-center justify-center mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-toss-gray-300">
+                <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M5 20C5 16.134 8.134 13 12 13C15.866 13 19 16.134 19 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <p className="text-[15px] text-foreground font-semibold">존재하지 않는 유저입니다</p>
+            <Link href="/" className="text-[13px] text-primary mt-2 inline-block">홈으로 돌아가기</Link>
+          </div>
+        </div>
+      </AuthGuard>
+    );
+  }
+
+  const isOwn = authUser?.id === profile.id;
+  const roleLabel = profile.role === "MASTER" ? "마스터" : profile.role === "VICE_MASTER" ? "부마스터" : profile.role === "OPERATOR" ? "운영자" : profile.role === "VERIFIED_CREATOR" ? "인증 크리에이터" : null;
+  const isStaff = profile.role === "MASTER" || profile.role === "VICE_MASTER" || profile.role === "OPERATOR";
+  const isCreator = profile.role === "VERIFIED_CREATOR";
+  const isSpecialRole = isStaff || isCreator;
+
+  return (
+    <AuthGuard>
+      <div className="mx-auto max-w-screen-md px-5 py-8">
+
+        {/* ─── Hero Card (matches /profile design) ─── */}
+        <div className="bg-card rounded-3xl border border-border/40 shadow-toss overflow-hidden">
+
+          {/* Role Banner */}
+          {isSpecialRole && (
+            <div className={`px-6 py-2 ${isCreator ? "bg-purple-50 dark:bg-purple-500/10" : "bg-primary/5 dark:bg-primary/10"} flex items-center gap-2`}>
+              <span className={`text-[11px] font-bold tracking-wide uppercase ${isCreator ? "text-purple-600 dark:text-purple-400" : "text-primary"}`}>
+                {roleLabel}
+              </span>
+              <span className="text-[11px] text-toss-gray-500">
+                {isStaff ? "SALog 운영팀" : "공식 인증 크리에이터"}
+              </span>
+            </div>
+          )}
+
+          {/* Profile Identity — centered */}
+          <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
+            {/* Avatar */}
+            <div className="relative mb-4">
+              <div className="w-24 h-24 rounded-full bg-secondary ring-4 ring-card shadow-toss-md flex items-center justify-center overflow-hidden">
+                {profile.image ? (
+                  <img src={profile.image} alt="프로필" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[34px] font-bold text-primary/80">
+                    {(profile.nickname || "?").charAt(0)}
+                  </span>
+                )}
+              </div>
+              {/* 병영수첩 인증 마크 */}
+              {profile.barracksAddress && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-primary ring-[3px] ring-card flex items-center justify-center" title="병영수첩 인증됨">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            {/* Name row */}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <h1 className="text-[22px] font-bold tracking-tight text-foreground">
+                {profile.nickname || "익명"}
+              </h1>
+              {roleLabel && (
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                  isCreator ? "bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                    : "bg-primary/10 text-primary"
+                }`}>
+                  {roleLabel}
+                </span>
+              )}
+              {profile.isPrivate && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-500">
+                  <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><rect x="2" y="5" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.1"/><path d="M3 5V3.5a2 2 0 014 0V5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                  비공개
+                </span>
+              )}
+            </div>
+
+            {/* Join date */}
+            {profile.createdAt && (
+              <p className="text-[13px] text-toss-gray-500 mt-1.5">
+                {formatDateShort(profile.createdAt)} 가입
+              </p>
+            )}
+
+            {/* 병영수첩 바로가기 */}
+            {profile.barracksAddress && (
+              <a
+                href={profile.barracksAddress}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[12px] text-primary hover:text-primary/80 transition-colors mt-2"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 1H2.5C1.67 1 1 1.67 1 2.5V9.5C1 10.33 1.67 11 2.5 11H9.5C10.33 11 11 10.33 11 9.5V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M7 1H11V5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 1L5.5 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                병영수첩 바로가기
+              </a>
+            )}
+
+            {/* Action button */}
+            {isOwn && (
+              <Link
+                href="/profile"
+                className="mt-4 h-9 px-5 rounded-full bg-secondary text-[12px] font-semibold text-foreground border border-border/60 transition-all hover:bg-secondary/80 active:scale-[0.97] inline-flex items-center"
+              >
+                내 프로필로 이동
+              </Link>
+            )}
+          </div>
+
+          {/* ─── Stats Grid ─── */}
+          {!profile.isPrivate && (
+            <div className="border-t border-border/30">
+              <div className="grid grid-cols-3 divide-x divide-border/30">
+                <div className="py-4 text-center">
+                  <p className="text-[18px] sm:text-[20px] font-bold tabular-nums text-foreground">{profile.reportCount ?? 0}</p>
+                  <p className="text-[10px] sm:text-[11px] text-toss-gray-400 mt-0.5 tracking-wide">신고</p>
+                </div>
+                <div className="py-4 text-center">
+                  <p className="text-[18px] sm:text-[20px] font-bold tabular-nums text-foreground">0</p>
+                  <p className="text-[10px] sm:text-[11px] text-toss-gray-400 mt-0.5 tracking-wide">팔로워</p>
+                </div>
+                <div className="py-4 text-center">
+                  <p className="text-[18px] sm:text-[20px] font-bold tabular-nums text-foreground">0</p>
+                  <p className="text-[10px] sm:text-[11px] text-toss-gray-400 mt-0.5 tracking-wide">팔로잉</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Private notice ─── */}
+        {profile.isPrivate && (
+          <div className="mt-6 bg-card rounded-3xl border border-border/40 shadow-toss p-8 text-center">
+            <div className="w-14 h-14 rounded-full bg-toss-gray-50 dark:bg-secondary flex items-center justify-center mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
+                <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/>
+              </svg>
+            </div>
+            <p className="text-[15px] font-semibold text-foreground mb-1">비공개 프로필</p>
+            <p className="text-[13px] text-toss-gray-500 leading-relaxed">
+              이 유저의 활동 정보는 비공개입니다.
+            </p>
+          </div>
+        )}
+
+        {/* ─── Recent reports ─── */}
+        {!profile.isPrivate && profile.recentReports && profile.recentReports.length > 0 && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-1 border-b border-border/40 pb-3">
+              <span className="text-[13px] font-medium text-foreground">최근 신고</span>
+              <span className="text-[12px] text-toss-gray-400 tabular-nums">{profile.recentReports.length}건</span>
+            </div>
+
+            {/* Grid style like activity feed */}
+            <div className="grid grid-cols-3 gap-1 sm:gap-1.5 mt-3">
+              {profile.recentReports.map((r) => {
+                const status = DB_STATUS_STYLE[r.status] || DB_STATUS_STYLE.SUSPECT;
+                return (
+                  <Link
+                    key={r.id}
+                    href={`/reports/${r.id}`}
+                    className="group relative aspect-square bg-card rounded-xl sm:rounded-2xl border border-border/50 overflow-hidden shadow-toss hover:shadow-toss-md transition-all duration-200 hover:-translate-y-0.5"
+                  >
+                    {/* Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-toss-red/5 to-toss-red/10 dark:from-toss-red/10 dark:to-toss-red/5" />
+
+                    {/* Content */}
+                    <div className="relative h-full flex flex-col justify-between p-2.5 sm:p-3.5">
+                      {/* Top */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[16px] sm:text-[20px]">🎯</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${status.bg} ${status.color}`}>
+                          {status.label}
+                        </span>
+                      </div>
+
+                      {/* Bottom */}
+                      <div>
+                        <p className="text-[12px] sm:text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
+                        <p className="text-[10px] sm:text-[11px] text-toss-gray-500 truncate mt-0.5">신고</p>
+                        <p className="text-[9px] sm:text-[10px] text-toss-gray-400 mt-0.5">{formatDateShort(r.createdAt)}</p>
+                      </div>
+                    </div>
+
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors duration-200 rounded-xl sm:rounded-2xl" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* No reports */}
+        {!profile.isPrivate && (!profile.recentReports || profile.recentReports.length === 0) && (
+          <div className="mt-6 py-12 text-center">
+            <div className="w-14 h-14 rounded-full bg-toss-gray-50 dark:bg-secondary flex items-center justify-center mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-toss-gray-300">
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <p className="text-[15px] font-semibold text-foreground">아직 신고 활동이 없습니다</p>
+            <p className="text-[13px] text-toss-gray-400 mt-1">핵 유저를 발견하면 신고해주세요</p>
+          </div>
+        )}
+      </div>
+    </AuthGuard>
   );
 }

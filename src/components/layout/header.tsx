@@ -1,19 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ThemeToggle } from "@/components/common/theme-toggle";
+
 import { useAuth } from "@/providers/auth-provider";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isLoggedIn, isLoading } = useAuth();
+  const { user, isLoggedIn, isLoading, logout } = useAuth();
 
   const isAdmin = isLoggedIn && user && (
     user.role === "MASTER" || user.role === "VICE_MASTER" || user.role === "OPERATOR"
   );
+  const isCreator = isLoggedIn && user?.role === "VERIFIED_CREATOR";
 
   const navItems = [
     { href: "/reports", label: "핵 유저" },
@@ -57,7 +59,18 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
+          {/* 크리에이터 신청 (데스크탑) */}
+          {isLoggedIn && !isCreator && (
+            <Link
+              href="/creator/apply"
+              className="hidden sm:flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-sm hover:shadow-md hover:brightness-110 active:scale-[0.97] transition-all"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1l1.76 3.57L12.8 5.2l-2.9 2.83.68 3.97L7 10.17 3.42 12l.68-3.97L1.2 5.2l4.04-.63L7 1z" fill="currentColor" opacity="0.9"/>
+              </svg>
+              크리에이터
+            </Link>
+          )}
 
           {/* Desktop: Auth button — 로딩 시 스켈레톤 표시 */}
           {isLoading ? (
@@ -150,6 +163,29 @@ export function Header() {
               </Link>
             )}
           </div>
+          {/* 크리에이터 신청 + 로그아웃 (모바일) */}
+          {isLoggedIn && (
+            <div className="pt-2 border-t border-border flex items-center justify-between">
+              {!isCreator ? (
+                <Link
+                  href="/creator/apply"
+                  onClick={() => setMobileOpen(false)}
+                  className="inline-flex items-center gap-1.5 py-2 px-3.5 -ml-1 rounded-full text-[12px] font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+                >
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 1l1.76 3.57L12.8 5.2l-2.9 2.83.68 3.97L7 10.17 3.42 12l.68-3.97L1.2 5.2l4.04-.63L7 1z" fill="currentColor" opacity="0.9"/>
+                  </svg>
+                  크리에이터 신청
+                </Link>
+              ) : <span />}
+              <button
+                onClick={() => { setMobileOpen(false); logout(); router.push("/login"); }}
+                className="py-2.5 text-[13px] font-medium text-toss-gray-400 hover:text-toss-gray-600 transition-colors"
+              >
+                로그아웃
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

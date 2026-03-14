@@ -21,6 +21,7 @@ model User {
   barracksAddress   String?   @unique
   barracksVerified  Boolean   @default(false)
   isProfileComplete Boolean   @default(false)
+  bio               String?
   isProfilePublic   Boolean   @default(true)
   notificationEmail String?
   createdAt         DateTime  @default(now())
@@ -144,9 +145,11 @@ model HackReport {
   barracksAddress String
   nickname        String
   status          HackStatus  @default(SUSPECT)
+  hackTypes       String[]
   description     String?     @db.Text
-  evidenceUrl     String?
-  youtubeUrl      String?
+  evidences       Json?       // [{type, url, name}]
+  evidenceUrl     String?     // legacy
+  youtubeUrl      String?     // legacy
   reporterId      String
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
@@ -24,17 +24,37 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState("");
   const [bio, setBio] = useState("");
+  const [savedImage, setSavedImage] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+  const [showBarracksPrompt, setShowBarracksPrompt] = useState(false);
+  const [barracksDoNotShow, setBarracksDoNotShow] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  const [isProfilePublic, setIsProfilePublic] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return localStorage.getItem("salog_profile_public") !== "false";
-  });
-  const [editIsPublic, setEditIsPublic] = useState(isProfilePublic);
+  const [isProfilePublic, setIsProfilePublic] = useState(true);
+  const [editIsPublic, setEditIsPublic] = useState(true);
+
+  // DB에서 프로필 정보 로드
+  useEffect(() => {
+    fetch("/api/profile/me")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data) {
+          setBio(data.bio ?? "");
+          setIsProfilePublic(data.isProfilePublic ?? true);
+          setEditIsPublic(data.isProfilePublic ?? true);
+          if (data.image) setSavedImage(data.image);
+        }
+        setProfileLoaded(true);
+      })
+      .catch(() => setProfileLoaded(true));
+  }, []);
 
   const name = authUser?.nickname ?? authUser?.name ?? "유저";
   const role = (authUser?.role ?? "USER") as UserRole;
@@ -58,6 +78,23 @@ export default function ProfilePage() {
   const title = getTitleForAccuracy(accuracy);
   const { progress, next } = getExpProgress(exp);
 
+  // 병영수첩 미인증 시 팝업 표시 (7일간 보지 않기 체크 시 7일 후 다시 표시)
+  useEffect(() => {
+    if (!hasBarracks) {
+      const dismissedUntil = localStorage.getItem("salog_barracks_dismiss_until");
+      if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
+      setShowBarracksPrompt(true);
+    }
+  }, [hasBarracks]);
+
+  const dismissBarracksPrompt = () => {
+    if (barracksDoNotShow) {
+      localStorage.setItem("salog_barracks_dismiss_until", String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    }
+    setShowBarracksPrompt(false);
+    setBarracksDoNotShow(false);
+  };
+
   const tabs: { value: ProfileTab; label: string; count: number }[] = [
     { value: "activity", label: "활동", count: 0 },
     { value: "blacklist", label: "블랙리스트", count: 0 },
@@ -68,22 +105,48 @@ export default function ProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setAvatarFile(file);
+      setRemoveAvatar(false);
       const reader = new FileReader();
       reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSave = () => {
-    setBio(editBio);
-    if (!isCreator) {
-      setIsProfilePublic(editIsPublic);
-      localStorage.setItem("salog_profile_public", String(editIsPublic));
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("bio", editBio);
+      if (!isCreator) {
+        formData.append("isProfilePublic", String(editIsPublic));
+      }
+      if (avatarFile) {
+        formData.append("avatar", avatarFile);
+      }
+      if (removeAvatar) {
+        formData.append("removeAvatar", "true");
+      }
+
+      const res = await fetch("/api/profile/me", { method: "PATCH", body: formData });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+
+      if (res.ok && data) {
+        setBio(data.bio ?? "");
+        if (!isCreator) setIsProfilePublic(data.isProfilePublic ?? true);
+        if (data.image !== undefined) setSavedImage(data.image);
+        setAvatarPreview(null);
+        setAvatarFile(null);
+        setRemoveAvatar(false);
+        setIsEditing(false);
+      }
+    } finally {
+      setIsSaving(false);
     }
-    setIsEditing(false);
   };
 
-  const avatarSrc = avatarPreview ?? authUser?.image ?? null;
+  const avatarSrc = avatarPreview ?? savedImage ?? authUser?.image ?? null;
 
   return (
     <AuthGuard>
@@ -91,14 +154,6 @@ export default function ProfilePage() {
 
       {/* ─── Hero Card ─── */}
       <div className="bg-card rounded-3xl border border-border/40 shadow-toss overflow-hidden">
-
-        {/* Role Banner */}
-        {isSpecialRole && (
-          <div className={`px-6 py-2 ${roleInfo.bg} flex items-center gap-2`}>
-            <span className={`text-[11px] font-bold tracking-wide uppercase ${roleInfo.color}`}>{roleInfo.label}</span>
-            <span className="text-[11px] text-toss-gray-500">{isStaff ? "SALog 운영팀" : "공식 인증 크리에이터"}</span>
-          </div>
-        )}
 
         {/* Profile Identity */}
         <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
@@ -148,15 +203,17 @@ export default function ProfilePage() {
 
           {/* Action Buttons */}
           <div className="flex gap-2.5 mt-5">
-            {!isCreator && (
-              <Link href="/creator/apply"
-                className="h-9 px-5 rounded-full bg-toss-green/10 text-toss-green text-[12px] font-semibold border border-toss-green/20 flex items-center gap-1.5 transition-all hover:bg-toss-green/15 active:scale-[0.97]">
+            {!hasBarracks && (
+              <button
+                onClick={() => setShowBarracksPrompt(true)}
+                className="h-9 px-5 rounded-full bg-primary text-white text-[12px] font-semibold flex items-center gap-1.5 transition-all hover:bg-primary/90 active:scale-[0.97]"
+              >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M7 1.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M7 1.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M4.5 7.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                크리에이터 신청
-              </Link>
+                병영수첩 인증
+              </button>
             )}
             <button
               onClick={() => { setEditBio(bio); setEditIsPublic(isProfilePublic); setIsEditing(true); }}
@@ -276,15 +333,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* ─── Footer Actions ─── */}
-      <div className="pt-6 border-t border-border/30">
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="text-[13px] font-medium text-toss-gray-400 hover:text-toss-gray-600 transition-colors">
-          로그아웃
-        </button>
-      </div>
-
       {/* ─── Edit Profile Modal ─── */}
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -301,8 +349,10 @@ export default function ProfilePage() {
               {/* Avatar */}
               <div className="flex flex-col items-center gap-3 mb-6">
                 <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden ring-4 ring-border/20">
-                  {avatarSrc ? (
-                    <img src={avatarSrc} alt="프로필" className="w-full h-full object-cover" />
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="프로필" className="w-full h-full object-cover" />
+                  ) : !removeAvatar && (savedImage || authUser?.image) ? (
+                    <img src={(savedImage || authUser?.image)!} alt="프로필" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-[26px] font-bold text-primary/80">{name.charAt(0)}</span>
                   )}
@@ -314,11 +364,11 @@ export default function ProfilePage() {
                     className="text-[13px] font-semibold text-primary hover:text-primary/80 transition-colors">
                     사진 변경
                   </button>
-                  {avatarPreview && (
+                  {(avatarPreview || savedImage || authUser?.image) && (
                     <>
                       <span className="text-toss-gray-300">|</span>
                       <button
-                        onClick={() => { setAvatarPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                        onClick={() => { setAvatarPreview(null); setAvatarFile(null); setRemoveAvatar(true); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                         className="text-[13px] font-medium text-toss-gray-400 hover:text-toss-red transition-colors">
                         제거
                       </button>
@@ -409,19 +459,28 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex-1 h-12 rounded-2xl bg-primary text-white text-[15px] font-semibold transition-all hover:bg-primary/90 active:scale-[0.98]"
+                  disabled={isSaving}
+                  className={`flex-1 h-12 rounded-2xl text-white text-[15px] font-semibold transition-all active:scale-[0.98] ${
+                    isSaving ? "bg-primary/60 cursor-not-allowed" : "bg-primary hover:bg-primary/90"
+                  }`}
                 >
-                  저장
+                  {isSaving ? "저장 중..." : "저장"}
                 </button>
               </div>
 
-              {/* 회원탈퇴 */}
-              <div className="mt-8 text-center">
+              {/* 계정 관리 */}
+              <div className="mt-8 pt-6 border-t border-border/30 flex items-center justify-between">
                 <button
                   onClick={() => { setIsEditing(false); setShowDeleteConfirm(true); }}
-                  className="text-[12px] text-toss-gray-400 hover:text-toss-gray-500 transition-colors"
+                  className="text-[12px] text-toss-gray-400 hover:text-toss-red transition-colors"
                 >
                   회원탈퇴
+                </button>
+                <button
+                  onClick={() => { setIsEditing(false); setShowLogoutConfirm(true); }}
+                  className="text-[12px] text-toss-gray-500 hover:text-toss-gray-700 dark:hover:text-toss-gray-300 transition-colors font-medium"
+                >
+                  로그아웃
                 </button>
               </div>
             </div>
@@ -484,6 +543,92 @@ export default function ProfilePage() {
                 }`}>
                 회원탈퇴
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Barracks Verification Prompt ─── */}
+      {showBarracksPrompt && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={dismissBarracksPrompt} />
+          <div className="relative w-full max-w-sm bg-card rounded-t-3xl sm:rounded-3xl border border-border/40 shadow-toss-lg animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
+            {/* Handle bar (mobile) */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-toss-gray-200 dark:bg-toss-gray-700" />
+            </div>
+
+            <div className="px-6 pt-4 sm:pt-6 pb-6 text-center">
+              {/* Icon */}
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                  <path d="M14 3.5C8.2 3.5 3.5 8.2 3.5 14S8.2 24.5 14 24.5 24.5 19.8 24.5 14 19.8 3.5 14 3.5Z" stroke="currentColor" strokeWidth="1.8" className="text-primary"/>
+                  <path d="M9 14.5l3 3 7-7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/>
+                </svg>
+              </div>
+
+              <h2 className="text-[20px] font-bold text-foreground mb-2">병영수첩 인증</h2>
+              <p className="text-[14px] text-toss-gray-500 leading-relaxed mb-2">
+                서든어택 계정을 인증하면 신뢰도가 높아집니다.
+              </p>
+
+              {/* Benefits */}
+              <div className="text-left bg-toss-gray-50 dark:bg-secondary rounded-2xl p-4 mb-6 space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/></svg>
+                  </div>
+                  <span className="text-[13px] text-foreground">프로필에 인증 마크 표시</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/></svg>
+                  </div>
+                  <span className="text-[13px] text-foreground">신고 시 신뢰도 가중치 부여</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/></svg>
+                  </div>
+                  <span className="text-[13px] text-foreground">병영수첩 바로가기 링크 노출</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={dismissBarracksPrompt}
+                  className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all hover:bg-secondary/80 active:scale-[0.98]"
+                >
+                  나중에
+                </button>
+                <button
+                  onClick={() => { setShowBarracksPrompt(false); router.push("/signup?step=barracks"); }}
+                  className="flex-1 h-12 rounded-2xl bg-primary text-white text-[15px] font-semibold transition-all hover:bg-primary/90 active:scale-[0.98]"
+                >
+                  인증하기
+                </button>
+              </div>
+
+              {/* 7일간 보지 않기 */}
+              <label className="flex items-center gap-2 justify-center mt-4 cursor-pointer select-none">
+                <button
+                  type="button"
+                  onClick={() => setBarracksDoNotShow(!barracksDoNotShow)}
+                  className={`w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-colors shrink-0 ${
+                    barracksDoNotShow
+                      ? "bg-primary border-primary"
+                      : "border-toss-gray-300 dark:border-toss-gray-600"
+                  }`}
+                >
+                  {barracksDoNotShow && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5.5l2 2 4-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+                <span className="text-[12px] text-toss-gray-500">7일간 보지 않기</span>
+              </label>
             </div>
           </div>
         </div>
