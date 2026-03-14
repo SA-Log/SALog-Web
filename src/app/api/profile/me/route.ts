@@ -101,8 +101,9 @@ export async function PATCH(req: Request) {
         });
 
       if (error) {
+        console.error("[profile/me] Supabase upload error:", error);
         return NextResponse.json(
-          { error: "사진 업로드에 실패했습니다" },
+          { error: `사진 업로드 실패: ${error.message}` },
           { status: 500 }
         );
       }
@@ -112,9 +113,10 @@ export async function PATCH(req: Request) {
         .getPublicUrl(filePath);
 
       updateData.image = urlData.publicUrl;
-    } catch {
+    } catch (e) {
+      console.error("[profile/me] Avatar upload catch:", e);
       return NextResponse.json(
-        { error: "사진 업로드 중 오류가 발생했습니다" },
+        { error: e instanceof Error ? e.message : "사진 업로드 중 오류가 발생했습니다" },
         { status: 500 }
       );
     }
