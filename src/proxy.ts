@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
@@ -9,7 +10,7 @@ const PUBLIC_ROUTES = ["/", "/login", "/signup", "/terms", "/privacy"];
 // 악성 봇 User-Agent 패턴 (robots.txt 무시하는 봇 대응)
 const BLOCKED_BOTS = /meta-externalagent|facebookexternalhit|FacebookBot|GPTBot|ChatGPT-User|CCBot|ClaudeBot|anthropic-ai|PerplexityBot|Amazonbot|Bytespider|AhrefsBot|SemrushBot|MJ12bot|DotBot|PetalBot|BLEXBot/i;
 
-export default auth((req) => {
+const authHandler = auth((req) => {
   const { pathname } = req.nextUrl;
 
   // 봇 차단 — 서버리스 함수 비용 보호
@@ -56,6 +57,10 @@ export default auth((req) => {
 
   return NextResponse.next();
 });
+
+export function proxy(req: NextRequest) {
+  return authHandler(req, {} as never);
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

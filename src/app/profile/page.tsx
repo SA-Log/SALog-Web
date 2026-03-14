@@ -113,34 +113,44 @@ export default function ProfilePage() {
     }
   };
 
+  // 변경사항 감지
+  const hasChanges = (() => {
+    if (editBio !== bio) return true;
+    if (!isCreator && editIsPublic !== isProfilePublic) return true;
+    if (avatarFile) return true;
+    if (removeAvatar) return true;
+    return false;
+  })();
+
   const handleSave = async () => {
+    if (!hasChanges || isSaving) return;
     setIsSaving(true);
     try {
-      const formData = new FormData();
-      formData.append("bio", editBio);
+      const fd = new FormData();
+      fd.append("bio", editBio);
       if (!isCreator) {
-        formData.append("isProfilePublic", String(editIsPublic));
+        fd.append("isProfilePublic", String(editIsPublic));
       }
       if (avatarFile) {
-        formData.append("avatar", avatarFile);
+        fd.append("avatar", avatarFile);
       }
       if (removeAvatar) {
-        formData.append("removeAvatar", "true");
+        fd.append("removeAvatar", "true");
       }
 
-      const res = await fetch("/api/profile/me", { method: "PATCH", body: formData });
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : null;
+      const res = await fetch("/api/profile/me", { method: "PATCH", body: fd });
+      if (!res.ok) return;
+      const data = await res.json();
 
-      if (res.ok && data) {
-        setBio(data.bio ?? "");
-        if (!isCreator) setIsProfilePublic(data.isProfilePublic ?? true);
-        if (data.image !== undefined) setSavedImage(data.image);
-        setAvatarPreview(null);
-        setAvatarFile(null);
-        setRemoveAvatar(false);
-        setIsEditing(false);
-      }
+      setBio(data.bio ?? "");
+      if (!isCreator) setIsProfilePublic(data.isProfilePublic ?? true);
+      setSavedImage(data.image ?? null);
+      setAvatarPreview(null);
+      setAvatarFile(null);
+      setRemoveAvatar(false);
+      setIsEditing(false);
+    } catch {
+      // silently fail
     } finally {
       setIsSaving(false);
     }
@@ -459,9 +469,13 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={isSaving}
-                  className={`flex-1 h-12 rounded-2xl text-white text-[15px] font-semibold transition-all active:scale-[0.98] ${
-                    isSaving ? "bg-primary/60 cursor-not-allowed" : "bg-primary hover:bg-primary/90"
+                  disabled={!hasChanges || isSaving}
+                  className={`flex-1 h-12 rounded-2xl text-[15px] font-semibold transition-all ${
+                    !hasChanges
+                      ? "bg-primary/30 text-white/50 cursor-not-allowed"
+                      : isSaving
+                        ? "bg-primary/60 text-white cursor-not-allowed"
+                        : "bg-primary text-white hover:bg-primary/90 active:scale-[0.98]"
                   }`}
                 >
                   {isSaving ? "저장 중..." : "저장"}
