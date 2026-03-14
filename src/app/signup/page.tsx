@@ -23,11 +23,13 @@ function SignupPage() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
 
+  const [barracksUrl, setBarracksUrl] = useState("");
   const [nickname, setNickname] = useState("");
+  const [nexonSn, setNexonSn] = useState("");
   const [email, setEmail] = useState("");
-  const [nicknameError, setNicknameError] = useState("");
-  const [isCheckingNickname, setIsCheckingNickname] = useState(false);
-  const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
+  const [lookupError, setLookupError] = useState("");
+  const [isLooking, setIsLooking] = useState(false);
+  const [lookupDone, setLookupDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -36,34 +38,48 @@ function SignupPage() {
     return null;
   }
 
-  async function handleCheckNickname() {
-    if (nickname.trim().length < 2) {
-      setNicknameError("닉네임은 2자 이상이어야 합니다");
+  function extractNexonSn(input: string): string | null {
+    const trimmed = input.trim();
+    // 순수 숫자인 경우
+    if (/^\d+$/.test(trimmed)) return trimmed;
+    // URL에서 숫자 추출: https://barracks.sa.nexon.com/1443173862/match
+    const match = trimmed.match(/barracks\.sa\.nexon\.com\/(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  async function handleLookup() {
+    const sn = extractNexonSn(barracksUrl);
+    if (!sn) {
+      setLookupError("올바른 병영주소를 입력해주세요");
       return;
     }
-    if (!/^[가-힣a-zA-Z0-9_]{2,12}$/.test(nickname.trim())) {
-      setNicknameError("한글, 영문, 숫자, 밑줄만 사용 가능 (2~12자)");
-      return;
-    }
-    setIsCheckingNickname(true);
-    setNicknameError("");
+
+    setIsLooking(true);
+    setLookupError("");
+    setLookupDone(false);
+    setNickname("");
+    setNexonSn("");
+
     try {
-      const res = await fetch("/api/auth/check-nickname", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: nickname.trim() }),
-      });
+      const res = await fetch(`/api/barracks/profile?nexonSn=${sn}`);
       const data = await res.json();
-      setNicknameAvailable(data.available);
-      if (!data.available) setNicknameError("이미 사용 중인 닉네임입니다");
+
+      if (!res.ok || !data.found) {
+        setLookupError(data.error || "해당 병영주소의 유저를 찾을 수 없습니다");
+        return;
+      }
+
+      setNickname(data.nickname);
+      setNexonSn(sn);
+      setLookupDone(true);
     } catch {
-      setNicknameError("확인에 실패했습니다. 다시 시도해주세요.");
+      setLookupError("조회 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
-      setIsCheckingNickname(false);
+      setIsLooking(false);
     }
   }
 
-  const canSubmit = nickname.trim().length >= 2 && nicknameAvailable === true;
+  const canSubmit = lookupDone && nickname && !isSubmitting;
 
   async function handleSubmit() {
     setIsSubmitting(true);
@@ -73,7 +89,8 @@ function SignupPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nickname: nickname.trim(),
+          nickname,
+          barracksAddress: nexonSn,
           notificationEmail: email.trim(),
         }),
       });
@@ -83,15 +100,12 @@ function SignupPage() {
         setIsSubmitting(false);
         return;
       }
-      // JWT 쿠키를 직접 갱신 (DB에서 isProfileComplete=true 반영)
       const refreshRes = await fetch("/api/auth/refresh-session", {
         method: "POST",
       });
       if (!refreshRes.ok) {
-        // 쿠키 갱신 실패 시 updateSession 폴백
         try { await updateSession(); } catch { /* ignore */ }
       }
-      // 홈으로 이동 (full page reload로 새 JWT 쿠키 적용)
       window.location.href = "/";
       return;
     } catch (err) {
@@ -121,7 +135,7 @@ function SignupPage() {
         </div>
         <h1 className="text-[22px] font-bold text-foreground">회원가입</h1>
         <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-400 mt-2">
-          카카오 계정으로 연동되었습니다. 추가 정보를 입력해주세요.
+          병영주소를 입력하면 서든어택 닉네임이 자동으로 설정됩니다.
         </p>
       </div>
 
@@ -140,35 +154,51 @@ function SignupPage() {
       )}
 
       <div className="space-y-5">
-        {/* 닉네임 */}
+        {/* 병영주소 */}
         <div>
           <label className="block text-[13px] font-semibold text-foreground mb-2">
-            닉네임 <span className="text-toss-red">*</span>
+            병영주소 <span className="text-toss-red">*</span>
           </label>
           <div className="flex gap-2">
             <input
               type="text"
-              value={nickname}
-              onChange={(e) => { setNickname(e.target.value); setNicknameAvailable(null); setNicknameError(""); }}
-              placeholder="2~12자 (한글, 영문, 숫자, 밑줄)"
-              maxLength={12}
+              value={barracksUrl}
+              onChange={(e) => { setBarracksUrl(e.target.value); setLookupDone(false); setLookupError(""); setNickname(""); }}
+              placeholder="https://barracks.sa.nexon.com/1234567890/match"
               className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
             />
             <button
-              onClick={handleCheckNickname}
-              disabled={nickname.trim().length < 2 || isCheckingNickname}
+              onClick={handleLookup}
+              disabled={!barracksUrl.trim() || isLooking}
               className="h-11 px-4 rounded-xl bg-secondary text-toss-gray-700 dark:text-toss-gray-300 text-[13px] font-semibold disabled:opacity-40 btn-secondary shrink-0"
             >
-              {isCheckingNickname ? "확인 중..." : "중복확인"}
+              {isLooking ? "조회 중..." : "조회"}
             </button>
           </div>
-          {nicknameError && (
-            <p className="text-[11px] text-toss-red mt-1.5">{nicknameError}</p>
-          )}
-          {nicknameAvailable === true && (
-            <p className="text-[11px] text-toss-green mt-1.5">사용 가능한 닉네임입니다</p>
+          <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
+            병영수첩 프로필 URL을 입력해주세요
+          </p>
+          {lookupError && (
+            <p className="text-[11px] text-toss-red mt-1.5">{lookupError}</p>
           )}
         </div>
+
+        {/* 조회 결과 */}
+        {lookupDone && nickname && (
+          <div className="rounded-xl p-4 border border-toss-green/20 bg-toss-green/5 dark:bg-toss-green/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-toss-green/10 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M6 10l3 3 5-5" stroke="#30b87e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-[14px] font-bold text-foreground">{nickname}</p>
+                <p className="text-[11px] text-toss-green font-medium">유저 확인 완료 — 이 닉네임으로 가입됩니다</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 이메일 */}
         <div>
@@ -195,25 +225,13 @@ function SignupPage() {
           </div>
         </div>
 
-        {/* 서든어택 인증 안내 */}
-        <div className="rounded-xl p-4 border border-primary/10 bg-primary/5 dark:bg-primary/10">
-          <div className="flex gap-2.5 items-start">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
-              <path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 5v3M8 10h.005" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-primary"/>
-            </svg>
-            <p className="text-[11px] text-primary leading-relaxed">
-              가입 후 서든어택 계정을 인증하면 프로필에 인증 마크가 표시되고, 서든어택 닉네임으로 자동 설정됩니다. 프로필에서 언제든 인증할 수 있습니다.
-            </p>
-          </div>
-        </div>
-
         {submitError && (
           <p className="text-[12px] text-toss-red text-center">{submitError}</p>
         )}
 
         <button
           onClick={handleSubmit}
-          disabled={!canSubmit || isSubmitting}
+          disabled={!canSubmit}
           className="w-full h-12 rounded-xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary"
         >
           {isSubmitting ? "가입 중..." : "가입 완료"}
