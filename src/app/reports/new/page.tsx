@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { EvidenceUpload, type EvidenceItem } from "@/components/common/evidence-upload";
-import { mockHackReports, DAILY_REPORT_LIMIT } from "@/lib/mock-data";
+
+const DAILY_REPORT_LIMIT = 5;
 
 const HACK_TYPES = [
   { value: "aimbot", label: "에임핵 (오토에임)" },
@@ -17,7 +19,9 @@ type DuplicateReport = { id: string; nickname: string; status: string };
 type SubmitMode = "new" | "evidence" | null;
 
 export default function NewReportPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
+  const [nicknameInput, setNicknameInput] = useState("");
   const [barracksAddress, setBarracksAddress] = useState("");
   const [hackTypes, setHackTypes] = useState<string[]>([]);
   const [description, setDescription] = useState("");
@@ -26,15 +30,28 @@ export default function NewReportPage() {
   const [isLooking, setIsLooking] = useState(false);
   const [duplicateReport, setDuplicateReport] = useState<DuplicateReport | null>(null);
   const [submitMode, setSubmitMode] = useState<SubmitMode>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  // TODO: 서버에서 오늘 등록 수 조회 (mock: 2건 등록됨)
-  const todayCount = 2;
+  const [todayCount, setTodayCount] = useState(0);
+  const [isLoadingCount, setIsLoadingCount] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/reports")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.todayCount === "number") setTodayCount(data.todayCount);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingCount(false));
+  }, []);
+
   const remaining = DAILY_REPORT_LIMIT - todayCount;
   const isLimitReached = remaining <= 0;
 
   const canProceedStep1 = !isLimitReached && lookupResult?.found === true && (duplicateReport ? submitMode !== null : true);
   const canProceedStep2 = hackTypes.length > 0;
-  const canSubmit = evidence.length > 0;
+  const canSubmit = !isSubmitting;
 
   function toggleHackType(value: string) {
     setHackTypes((prev) =>
@@ -43,7 +60,7 @@ export default function NewReportPage() {
   }
 
   async function handleLookup() {
-    const trimmed = barracksAddress.trim();
+    const trimmed = nicknameInput.trim();
     if (!trimmed) return;
     setIsLooking(true);
     setLookupResult(null);
@@ -54,28 +71,91 @@ export default function NewReportPage() {
       const res = await fetch("/api/barracks/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify({ nickname: trimmed }),
       });
       const data = await res.json();
 
       if (data.found) {
         setLookupResult({ nickname: data.nickname, found: true });
 
-        // 중복 병영주소 확인
-        const normalizedId = trimmed.match(/\/(\d+)/)?.[1];
-        if (normalizedId) {
-          const existing = mockHackReports.find((r) => r.barracksAddress.includes(normalizedId));
-          if (existing) {
-            setDuplicateReport({ id: existing.id, nickname: existing.nickname, status: existing.status });
+        // 닉네임으로 중복 신고 확인 (DB 조회)
+        try {
+          const dupRes = await fetch("/api/reports/check-duplicate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nickname: data.nickname }),
+          });
+          const dupData = await dupRes.json();
+          if (dupData.duplicate && dupData.report) {
+            setDuplicateReport({
+              id: dupData.report.id,
+              nickname: dupData.report.nickname,
+              status: dupData.report.status,
+            });
           }
+        } catch {
+          // 중복 확인 실패해도 신고 진행 가능
         }
       } else {
-        setLookupResult({ nickname: "", found: false, error: data.error || "해당 병영주소를 찾을 수 없습니다" });
+        setLookupResult({ nickname: "", found: false, error: data.error || "해당 닉네임의 유저를 찾을 수 없습니다" });
       }
     } catch {
       setLookupResult({ nickname: "", found: false, error: "조회 중 오류가 발생했습니다" });
     } finally {
       setIsLooking(false);
+    }
+  }
+
+  async function handleSubmit() {
+    if (!lookupResult?.found || !lookupResult.nickname) return;
+
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      // 파일 증거 업로드
+      const uploadedEvidences: { type: string; url: string; name: string }[] = [];
+
+      for (const item of evidence) {
+        if (item.type === "youtube" || item.type === "link") {
+          uploadedEvidences.push({ type: item.type, url: item.url!, name: item.name });
+        } else if (item.file) {
+          const formData = new FormData();
+          formData.append("file", item.file);
+          const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+          const uploadData = await uploadRes.json();
+          if (!uploadRes.ok) {
+            setSubmitError(uploadData.error || "파일 업로드에 실패했습니다");
+            return;
+          }
+          uploadedEvidences.push({ type: uploadData.type, url: uploadData.url, name: uploadData.name });
+        }
+      }
+
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barracksAddress: barracksAddress.trim(),
+          nickname: lookupResult.nickname,
+          hackTypes,
+          description: description.trim(),
+          evidences: uploadedEvidences.length > 0 ? uploadedEvidences : undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubmitError(data.error || "신고 등록에 실패했습니다");
+        return;
+      }
+
+      router.push(`/reports/${data.id}`);
+    } catch {
+      setSubmitError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -102,11 +182,11 @@ export default function NewReportPage() {
             <path d="M7 4V7.5L9.5 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className={isLimitReached ? "text-toss-red" : "text-toss-gray-400"}/>
           </svg>
           <span className={`text-[12px] font-medium ${isLimitReached ? "text-toss-red" : "text-toss-gray-600 dark:text-toss-gray-400"}`}>
-            {isLimitReached ? "오늘 신고 등록 한도에 도달했습니다" : "오늘 신고 등록"}
+            {isLoadingCount ? "확인 중..." : isLimitReached ? "오늘 신고 등록 한도에 도달했습니다" : "오늘 신고 등록"}
           </span>
         </div>
         <span className={`text-[13px] font-bold ${isLimitReached ? "text-toss-red" : "text-foreground"}`}>
-          {todayCount}/{DAILY_REPORT_LIMIT}
+          {isLoadingCount ? "-" : `${todayCount}/${DAILY_REPORT_LIMIT}`}
         </span>
       </div>
 
@@ -130,25 +210,28 @@ export default function NewReportPage() {
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <label className="block text-[13px] font-semibold text-foreground mb-2">병영주소</label>
+            <label className="block text-[13px] font-semibold text-foreground mb-2">
+              닉네임 <span className="text-toss-red">*</span>
+            </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                value={barracksAddress}
-                onChange={(e) => { setBarracksAddress(e.target.value); setLookupResult(null); setDuplicateReport(null); setSubmitMode(null); }}
-                placeholder="https://barracks.sa.nexon.com/1234567890/match"
+                value={nicknameInput}
+                onChange={(e) => { setNicknameInput(e.target.value); setLookupResult(null); setDuplicateReport(null); setSubmitMode(null); }}
+                placeholder="서든어택 닉네임 입력"
+                maxLength={50}
                 className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
               />
               <button
                 onClick={handleLookup}
-                disabled={!barracksAddress.trim() || isLooking}
+                disabled={!nicknameInput.trim() || isLooking}
                 className="h-11 px-5 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 btn-primary shrink-0"
               >
                 {isLooking ? "조회 중..." : "조회"}
               </button>
             </div>
             <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
-              병영수첩 URL을 입력하세요 (예: https://barracks.sa.nexon.com/1234567890/match)
+              신고 대상의 서든어택 닉네임을 정확히 입력해주세요
             </p>
           </div>
 
@@ -166,10 +249,7 @@ export default function NewReportPage() {
                   </div>
                   <div>
                     <p className="text-[14px] font-semibold text-foreground">{lookupResult.nickname}</p>
-                    <a href={barracksAddress.trim()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-primary hover:opacity-80 transition-opacity">
-                      병영수첩 바로가기
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 7L7 3M7 3H4M7 3V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </a>
+                    <p className="text-[12px] text-toss-green">유저 확인 완료</p>
                   </div>
                   <div className="ml-auto">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -181,6 +261,25 @@ export default function NewReportPage() {
               ) : (
                 <p className="text-[13px] text-toss-red">{lookupResult.error}</p>
               )}
+            </div>
+          )}
+
+          {/* 병영주소 선택 입력 */}
+          {lookupResult?.found && (
+            <div>
+              <label className="block text-[13px] font-semibold text-foreground mb-2">
+                병영주소 URL <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
+              </label>
+              <input
+                type="text"
+                value={barracksAddress}
+                onChange={(e) => setBarracksAddress(e.target.value)}
+                placeholder="https://barracks.sa.nexon.com/1234567890/match"
+                className="w-full h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              />
+              <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
+                병영수첩 URL을 입력하면 신고 상세 페이지에서 바로 확인할 수 있습니다
+              </p>
             </div>
           )}
 
@@ -243,10 +342,12 @@ export default function NewReportPage() {
             </div>
             <div>
               <p className="text-[14px] font-semibold text-foreground">{lookupResult?.nickname}</p>
-              <a href={barracksAddress.trim()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-primary hover:opacity-80 transition-opacity">
-                병영수첩 바로가기
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 7L7 3M7 3H4M7 3V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </a>
+              {barracksAddress.trim() && (
+                <a href={barracksAddress.trim()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-primary hover:opacity-80 transition-opacity">
+                  병영수첩 바로가기
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 7L7 3M7 3H4M7 3V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </a>
+              )}
             </div>
             {duplicateReport && (
               <span className="ml-auto text-[11px] px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-semibold">
@@ -360,19 +461,26 @@ export default function NewReportPage() {
           {/* Evidence */}
           <div>
             <label className="block text-[13px] font-semibold text-foreground mb-2">
-              증거 자료 <span className="text-toss-red">*</span>
+              증거 자료 <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
             </label>
             <EvidenceUpload items={evidence} onChange={setEvidence} />
           </div>
+
+          {submitError && (
+            <p className="text-[12px] text-toss-red text-center">{submitError}</p>
+          )}
 
           <div className="flex gap-2">
             <button onClick={() => setStep(2)}
               className="flex-1 h-12 rounded-xl bg-secondary text-toss-gray-700 dark:text-toss-gray-300 text-[14px] font-semibold btn-secondary">
               이전
             </button>
-            <button disabled={!canSubmit}
-              className="flex-1 h-12 rounded-xl bg-toss-red text-white text-[14px] font-semibold disabled:opacity-40 btn-danger">
-              {submitMode === "evidence" ? "증거 제출" : "신고 제출"}
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className="flex-1 h-12 rounded-xl bg-toss-red text-white text-[14px] font-semibold disabled:opacity-40 btn-danger"
+            >
+              {isSubmitting ? "제출 중..." : submitMode === "evidence" ? "증거 제출" : "신고 제출"}
             </button>
           </div>
 

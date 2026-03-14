@@ -32,8 +32,6 @@ export default function ProfilePage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
-  const [showBarracksPrompt, setShowBarracksPrompt] = useState(false);
-  const [barracksDoNotShow, setBarracksDoNotShow] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -78,22 +76,6 @@ export default function ProfilePage() {
   const title = getTitleForAccuracy(accuracy);
   const { progress, next } = getExpProgress(exp);
 
-  // 병영수첩 미인증 시 팝업 표시 (7일간 보지 않기 체크 시 7일 후 다시 표시)
-  useEffect(() => {
-    if (!hasBarracks) {
-      const dismissedUntil = localStorage.getItem("salog_barracks_dismiss_until");
-      if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
-      setShowBarracksPrompt(true);
-    }
-  }, [hasBarracks]);
-
-  const dismissBarracksPrompt = () => {
-    if (barracksDoNotShow) {
-      localStorage.setItem("salog_barracks_dismiss_until", String(Date.now() + 7 * 24 * 60 * 60 * 1000));
-    }
-    setShowBarracksPrompt(false);
-    setBarracksDoNotShow(false);
-  };
 
   const tabs: { value: ProfileTab; label: string; count: number }[] = [
     { value: "activity", label: "활동", count: 0 },
@@ -222,8 +204,8 @@ export default function ProfilePage() {
           {/* Action Buttons */}
           <div className="flex gap-2.5 mt-5">
             {!hasBarracks && (
-              <button
-                onClick={() => setShowBarracksPrompt(true)}
+              <Link
+                href="/verify"
                 className="h-9 px-5 rounded-full bg-primary text-white text-[12px] font-semibold flex items-center gap-1.5 transition-all hover:bg-primary/90 active:scale-[0.97]"
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -231,7 +213,7 @@ export default function ProfilePage() {
                   <path d="M4.5 7.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 병영수첩 인증
-              </button>
+              </Link>
             )}
             <button
               onClick={() => { setEditBio(bio); setEditIsPublic(isProfilePublic); setIsEditing(true); }}
@@ -576,91 +558,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* ─── Barracks Verification Prompt ─── */}
-      {showBarracksPrompt && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={dismissBarracksPrompt} />
-          <div className="relative w-full max-w-sm bg-card rounded-t-3xl sm:rounded-3xl border border-border/40 shadow-toss-lg animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
-            {/* Handle bar (mobile) */}
-            <div className="flex justify-center pt-3 pb-1 sm:hidden">
-              <div className="w-10 h-1 rounded-full bg-toss-gray-200 dark:bg-toss-gray-700" />
-            </div>
-
-            <div className="px-6 pt-4 sm:pt-6 pb-6 text-center">
-              {/* Icon */}
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                  <path d="M14 3.5C8.2 3.5 3.5 8.2 3.5 14S8.2 24.5 14 24.5 24.5 19.8 24.5 14 19.8 3.5 14 3.5Z" stroke="currentColor" strokeWidth="1.8" className="text-primary"/>
-                  <path d="M9 14.5l3 3 7-7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/>
-                </svg>
-              </div>
-
-              <h2 className="text-[20px] font-bold text-foreground mb-2">병영수첩 인증</h2>
-              <p className="text-[14px] text-toss-gray-500 leading-relaxed mb-2">
-                서든어택 계정을 인증하면 신뢰도가 높아집니다.
-              </p>
-
-              {/* Benefits */}
-              <div className="text-left bg-toss-gray-50 dark:bg-secondary rounded-2xl p-4 mb-6 space-y-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/></svg>
-                  </div>
-                  <span className="text-[13px] text-foreground">프로필에 인증 마크 표시</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/></svg>
-                  </div>
-                  <span className="text-[13px] text-foreground">신고 시 신뢰도 가중치 부여</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2 4-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary"/></svg>
-                  </div>
-                  <span className="text-[13px] text-foreground">병영수첩 바로가기 링크 노출</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  onClick={dismissBarracksPrompt}
-                  className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all hover:bg-secondary/80 active:scale-[0.98]"
-                >
-                  나중에
-                </button>
-                <button
-                  onClick={() => { setShowBarracksPrompt(false); router.push("/signup?step=barracks"); }}
-                  className="flex-1 h-12 rounded-2xl bg-primary text-white text-[15px] font-semibold transition-all hover:bg-primary/90 active:scale-[0.98]"
-                >
-                  인증하기
-                </button>
-              </div>
-
-              {/* 7일간 보지 않기 */}
-              <label className="flex items-center gap-2 justify-center mt-4 cursor-pointer select-none">
-                <button
-                  type="button"
-                  onClick={() => setBarracksDoNotShow(!barracksDoNotShow)}
-                  className={`w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-colors shrink-0 ${
-                    barracksDoNotShow
-                      ? "bg-primary border-primary"
-                      : "border-toss-gray-300 dark:border-toss-gray-600"
-                  }`}
-                >
-                  {barracksDoNotShow && (
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M2 5.5l2 2 4-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </button>
-                <span className="text-[12px] text-toss-gray-500">7일간 보지 않기</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
     </AuthGuard>
   );

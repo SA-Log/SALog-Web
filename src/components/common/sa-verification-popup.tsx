@@ -5,53 +5,35 @@ import { useAuth } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 
 const DISMISS_KEY = "salog_sa_popup_dismissed_until";
-const DISMISS_COUNT_KEY = "salog_sa_popup_dismiss_count";
-
-// 점진적 백오프: 1회→3일, 2회→7일, 3회→30일, 4회+→영구
-const BACKOFF_DAYS = [3, 7, 30];
 
 export function SaVerificationPopup() {
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
   const [show, setShow] = useState(false);
+  const [doNotShow7Days, setDoNotShow7Days] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn || !user) return;
     if (user.barracksVerified) return;
 
-    const dismissCount = Number(localStorage.getItem(DISMISS_COUNT_KEY) || "0");
-    if (dismissCount >= 4) return; // 4회 이상 닫으면 더 이상 표시하지 않음
-
     const dismissedUntil = localStorage.getItem(DISMISS_KEY);
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
 
-    // 약간의 딜레이 후 표시
     const timer = setTimeout(() => setShow(true), 1000);
     return () => clearTimeout(timer);
   }, [isLoggedIn, user]);
 
-  function dismiss() {
-    const dismissCount = Number(localStorage.getItem(DISMISS_COUNT_KEY) || "0");
-    const newCount = dismissCount + 1;
-    localStorage.setItem(DISMISS_COUNT_KEY, String(newCount));
-
-    if (newCount >= 4) {
-      // 4회 이상: 영구 숨김 (먼 미래 날짜)
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + 365 * 24 * 60 * 60 * 1000));
-    } else {
-      const days = BACKOFF_DAYS[Math.min(newCount - 1, BACKOFF_DAYS.length - 1)];
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + days * 24 * 60 * 60 * 1000));
-    }
+  function handleDismiss() {
+    const days = doNotShow7Days ? 7 : 1;
+    localStorage.setItem(DISMISS_KEY, String(Date.now() + days * 24 * 60 * 60 * 1000));
     setShow(false);
   }
 
-  function handleDismiss() {
-    dismiss();
-  }
-
   function handleVerify() {
-    dismiss();
-    router.push("/profile?verify=true");
+    // 인증 페이지로 이동 시에도 1일 숨김 (바로 돌아왔을 때 다시 안 뜨도록)
+    localStorage.setItem(DISMISS_KEY, String(Date.now() + 1 * 24 * 60 * 60 * 1000));
+    setShow(false);
+    router.push("/verify");
   }
 
   if (!show) return null;
@@ -109,6 +91,28 @@ export function SaVerificationPopup() {
           >
             나중에 하기
           </button>
+        </div>
+
+        {/* 7일간 보지 않기 */}
+        <div className="px-5 pb-5">
+          <label className="flex items-center gap-2 justify-center cursor-pointer select-none">
+            <button
+              type="button"
+              onClick={() => setDoNotShow7Days(!doNotShow7Days)}
+              className={`w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-colors shrink-0 ${
+                doNotShow7Days
+                  ? "bg-primary border-primary"
+                  : "border-toss-gray-300 dark:border-toss-gray-600"
+              }`}
+            >
+              {doNotShow7Days && (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5.5l2 2 4-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+            <span className="text-[12px] text-toss-gray-500">7일간 보지 않기</span>
+          </label>
         </div>
       </div>
     </div>

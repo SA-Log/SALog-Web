@@ -198,7 +198,7 @@ export function EvidenceUpload({
 
       {/* Requirement notice */}
       <p className="text-[11px] text-toss-gray-500 dark:text-toss-gray-400 mt-3">
-        증거는 최소 1개 이상 첨부해야 합니다. 영상/스크린샷은 최대 50MB까지 업로드 가능합니다.
+        증거가 있으면 신고 신뢰도가 높아집니다. 영상/스크린샷은 최대 50MB까지 업로드 가능합니다.
       </p>
     </div>
   );

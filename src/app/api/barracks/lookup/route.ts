@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
 const API_KEY = process.env.NEXON_OPEN_API_KEY ?? "";
 const BASE = "https://open.api.nexon.com/suddenattack/v1";
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "로그인이 필요합니다.", found: false }, { status: 401 });
+  }
+
+  const rl = rateLimit(`barracks:${session.user.id}`, { limit: 10, windowSec: 60 });
+  if (!rl.success) {
+    return NextResponse.json({ error: "요청이 너무 많습니다.", found: false }, { status: 429 });
+  }
+
   try {
     const { nickname } = await req.json();
 
-    if (!nickname || typeof nickname !== "string" || nickname.trim().length < 1) {
+    if (!nickname || typeof nickname !== "string" || nickname.trim().length < 1 || nickname.length > 50) {
       return NextResponse.json({ error: "닉네임을 입력해주세요.", found: false }, { status: 400 });
     }
 
