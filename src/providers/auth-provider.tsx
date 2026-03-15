@@ -50,7 +50,7 @@ function AuthInner({ children }: { children: ReactNode }) {
         }
       : null;
 
-  const logout = () => signOut({ callbackUrl: "/" });
+  const logout = () => signOut({ callbackUrl: "/", redirect: true });
 
   return (
     <AuthContext.Provider value={{ user, isLoading, isLoggedIn, logout }}>
