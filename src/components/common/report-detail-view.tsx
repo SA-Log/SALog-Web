@@ -185,15 +185,24 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   }
 
   async function handleBlacklist() {
-    if (!report.barracksAddress || blacklisted) return;
+    if (!report.barracksAddress) return;
     setBlacklistLoading(true);
     try {
-      const res = await fetch("/api/blacklist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ barracksAddress: report.barracksAddress, nickname: report.nickname }),
-      });
-      if (res.ok || res.status === 409) setBlacklisted(true);
+      if (blacklisted) {
+        const res = await fetch("/api/blacklist", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ barracksAddress: report.barracksAddress }),
+        });
+        if (res.ok) setBlacklisted(false);
+      } else {
+        const res = await fetch("/api/blacklist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ barracksAddress: report.barracksAddress, nickname: report.nickname }),
+        });
+        if (res.ok || res.status === 409) setBlacklisted(true);
+      }
     } catch { /* ignore */ }
     finally { setBlacklistLoading(false); }
   }

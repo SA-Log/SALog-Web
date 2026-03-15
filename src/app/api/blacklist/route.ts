@@ -75,16 +75,22 @@ export async function DELETE(req: NextRequest) {
 
   const body = await req.json();
   const entryId = body.id;
+  const barracksAddress = body.barracksAddress;
 
-  if (!entryId) {
-    return NextResponse.json({ error: "id가 필요합니다" }, { status: 400 });
+  // id 또는 barracksAddress로 삭제
+  let entry;
+  if (entryId) {
+    entry = await prisma.blacklistEntry.findUnique({ where: { id: entryId } });
+  } else if (barracksAddress) {
+    entry = await prisma.blacklistEntry.findUnique({
+      where: { userId_barracksAddress: { userId: session.user.id, barracksAddress } },
+    });
   }
 
-  const entry = await prisma.blacklistEntry.findUnique({ where: { id: entryId } });
   if (!entry || entry.userId !== session.user.id) {
     return NextResponse.json({ error: "권한이 없습니다" }, { status: 403 });
   }
 
-  await prisma.blacklistEntry.delete({ where: { id: entryId } });
+  await prisma.blacklistEntry.delete({ where: { id: entry.id } });
   return NextResponse.json({ success: true });
 }
