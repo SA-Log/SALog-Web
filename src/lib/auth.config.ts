@@ -28,6 +28,11 @@ export const authConfig = {
       session.user.nickname = token.nickname;
       session.user.isProfileComplete = token.isProfileComplete;
       session.user.barracksVerified = token.barracksVerified;
+      if (token.banned) {
+        (session as unknown as Record<string, unknown>).banned = true;
+        (session as unknown as Record<string, unknown>).banReason = token.banReason;
+        (session as unknown as Record<string, unknown>).banExpiresAt = token.banExpiresAt;
+      }
       return session;
     },
   },

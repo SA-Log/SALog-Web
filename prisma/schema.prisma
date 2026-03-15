@@ -38,6 +38,7 @@ model User {
   mannerTags       MannerTag[]
   creatorProfile   CreatorProfile?
   saVerifications  SaVerification[]
+  bans             Ban[]
 
   @@map("users")
 }
@@ -280,4 +281,29 @@ enum MannerTagType {
   AFK          // 잠수
   TEAM_KILL    // 섬광탄 방해
   OTHER        // 기타
+}
+
+// ==================== 밴 시스템 ====================
+
+model Ban {
+  id              String    @id @default(cuid())
+  userId          String?
+  barracksAddress String?
+  reason          String
+  type            BanType
+  expiresAt       DateTime?
+  bannedBy        String
+  createdAt       DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([barracksAddress])
+  @@map("bans")
+}
+
+enum BanType {
+  WARNING
+  TEMP
+  PERMANENT
 }

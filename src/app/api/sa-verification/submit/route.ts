@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { checkBarracksBan } from "@/lib/ban";
 import { z } from "zod";
 
 const CRAWLER_URL = process.env.CRAWLER_URL ?? "http://localhost:3001";
@@ -42,6 +43,12 @@ export async function POST(req: Request) {
 
   if (user.barracksVerified) {
     return NextResponse.json({ verified: true });
+  }
+
+  // 병영주소 밴 확인
+  const barracksBan = await checkBarracksBan(nexonSn);
+  if (barracksBan.banned) {
+    return NextResponse.json({ error: "차단된 병영주소입니다. 사유: " + barracksBan.reason }, { status: 403 });
   }
 
   // 동일 병영주소로 이미 인증된 유저가 있는지 확인

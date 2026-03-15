@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/terms", "/privacy"];
+const PUBLIC_ROUTES = ["/", "/login", "/signup", "/terms", "/privacy", "/banned"];
 
 // 악성 봇 User-Agent 패턴 (robots.txt 무시하는 봇 대응)
 const BLOCKED_BOTS = /meta-externalagent|facebookexternalhit|FacebookBot|GPTBot|ChatGPT-User|CCBot|ClaudeBot|anthropic-ai|PerplexityBot|Amazonbot|Bytespider|AhrefsBot|SemrushBot|MJ12bot|DotBot|PetalBot|BLEXBot/i;
@@ -39,6 +39,12 @@ export async function proxy(req: NextRequest) {
     if (!session) {
       if (isPublic) return NextResponse.next();
       return NextResponse.redirect(new URL("/login", authReq.url));
+    }
+
+    // 밴된 유저 → /banned로 리다이렉트
+    if ((session as unknown as Record<string, unknown>).banned) {
+      if (pathname === "/banned") return NextResponse.next();
+      return NextResponse.redirect(new URL("/banned", authReq.url));
     }
 
     // 로그인 됨 + 프로필 미완성 → /signup으로 리다이렉트

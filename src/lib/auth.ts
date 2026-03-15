@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
+import { checkUserBan } from "@/lib/ban";
 
 /**
  * 전체 auth 설정 (Prisma adapter 포함).
@@ -46,6 +47,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // 탈퇴한 유저는 세션 무효화
             if (dbUser.deletedAt) {
               return { ...token, isProfileComplete: false, deletedAt: true };
+            }
+            // 밴 체크
+            const banInfo = await checkUserBan(userId!);
+            if (banInfo.banned) {
+              return { ...token, banned: true, banReason: banInfo.reason, banExpiresAt: banInfo.expiresAt?.toISOString() ?? null };
             }
             token.role = dbUser.role;
             token.nickname = dbUser.nickname;
