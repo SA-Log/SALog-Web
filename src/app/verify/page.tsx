@@ -182,8 +182,8 @@ export default function VerifyPage() {
             <div className="space-y-2.5">
               {[
                 { step: 1, text: <>위 <span className="font-semibold text-primary">인증 코드</span>를 복사하세요</> },
-                { step: 2, text: <><a href="https://barracks.sa.nexon.com" target="_blank" rel="noopener noreferrer" className="underline text-primary">병영수첩</a>에 로그인 후 <span className="font-semibold">프로필 편집</span>으로 이동하세요</> },
-                { step: 3, text: <><span className="font-semibold">자기소개</span>에 인증 코드를 붙여넣고 <span className="font-semibold">저장</span>하세요</> },
+                { step: 2, text: <><a href="https://barracks.sa.nexon.com" target="_blank" rel="noopener noreferrer" className="underline text-primary">병영수첩</a>에 로그인 후 <span className="font-semibold">내 정보</span>를 클릭하세요</> },
+                { step: 3, text: <><span className="font-semibold">자기소개</span>에 코드를 붙여넣고 <span className="font-semibold">저장</span>을 누르세요</> },
                 { step: 4, text: <>아래에 병영주소를 입력하고 <span className="font-semibold">인증 확인</span>을 누르세요</> },
               ].map(({ step, text }) => (
                 <div key={step} className="flex items-start gap-3">

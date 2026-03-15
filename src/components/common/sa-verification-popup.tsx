@@ -55,7 +55,7 @@ export function SaVerificationPopup() {
         <div className="px-5 pb-4 space-y-2.5">
           {[
             { step: 1, text: "인증 페이지에서 고유 코드를 복사합니다" },
-            { step: 2, text: "병영수첩 자기소개에 코드를 붙여넣고 저장합니다" },
+            { step: 2, text: "병영수첩 → 내 정보 → 자기소개에 코드를 붙여넣고 저장합니다" },
             { step: 3, text: "병영주소를 입력하면 자동으로 인증됩니다" },
           ].map(({ step, text }) => (
             <div key={step} className="flex items-start gap-3">
