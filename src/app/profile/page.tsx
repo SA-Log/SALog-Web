@@ -697,7 +697,7 @@ function ProfileFollowTab({ type }: { type: "followers" | "following" }) {
               disabled={togglingId === user.id}
               className={`shrink-0 h-8 px-4 rounded-full text-[12px] font-semibold transition-all active:scale-[0.97] ${
                 (type === "following" || user.isFollowingBack)
-                  ? "bg-secondary text-toss-gray-600 border border-border/60 hover:bg-secondary/80"
+                  ? "bg-primary/10 text-primary border border-primary/20 hover:bg-red-50 hover:text-red-500 hover:border-red-200 dark:hover:bg-red-500/10 dark:hover:border-red-500/20"
                   : "bg-primary text-white hover:bg-primary/90"
               }`}
             >
