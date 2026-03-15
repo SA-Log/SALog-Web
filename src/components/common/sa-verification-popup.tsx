@@ -19,7 +19,7 @@ export function SaVerificationPopup() {
     const dismissedUntil = localStorage.getItem(DISMISS_KEY);
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
 
-    const timer = setTimeout(() => setShow(true), 1000);
+    const timer = setTimeout(() => setShow(true), 500);
     return () => clearTimeout(timer);
   }, [isLoggedIn, user]);
 
@@ -30,7 +30,6 @@ export function SaVerificationPopup() {
   }
 
   function handleVerify() {
-    // 인증 페이지로 이동 시에도 1일 숨김 (바로 돌아왔을 때 다시 안 뜨도록)
     localStorage.setItem(DISMISS_KEY, String(Date.now() + 1 * 24 * 60 * 60 * 1000));
     setShow(false);
     router.push("/verify");
@@ -55,9 +54,9 @@ export function SaVerificationPopup() {
         {/* Tutorial steps */}
         <div className="px-5 pb-4 space-y-2.5">
           {[
-            { step: 1, text: "프로필에서 인증 코드를 발급받습니다" },
-            { step: 2, text: "메모장에 코드를 적고, 병영수첩 프로필과 함께 스크린샷을 찍습니다" },
-            { step: 3, text: "스크린샷 업로드 후 관리자 승인을 기다립니다" },
+            { step: 1, text: "인증 페이지에서 고유 코드를 복사합니다" },
+            { step: 2, text: "병영수첩 자기소개에 코드를 붙여넣고 저장합니다" },
+            { step: 3, text: "병영주소를 입력하면 자동으로 인증됩니다" },
           ].map(({ step, text }) => (
             <div key={step} className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
