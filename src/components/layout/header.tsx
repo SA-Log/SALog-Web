@@ -78,13 +78,17 @@ export function Header() {
           ) : isLoggedIn && user ? (
             <Link
               href="/profile"
-              className={`hidden sm:flex w-8 h-8 rounded-lg items-center justify-center shrink-0 transition-all ${
+              className={`hidden sm:flex w-8 h-8 rounded-full items-center justify-center shrink-0 transition-all overflow-hidden ${
                 pathname.startsWith("/profile")
-                  ? "bg-primary/10 ring-2 ring-primary/30"
-                  : "bg-secondary hover:bg-secondary/80"
+                  ? "ring-2 ring-primary/30"
+                  : "ring-1 ring-border/40 hover:ring-primary/20"
               }`}
             >
-              <span className="text-[11px] font-bold text-primary">{displayChar}</span>
+              {user.image ? (
+                <img src={user.image} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[11px] font-bold text-primary bg-secondary w-full h-full flex items-center justify-center">{displayChar}</span>
+              )}
             </Link>
           ) : (
             <Link

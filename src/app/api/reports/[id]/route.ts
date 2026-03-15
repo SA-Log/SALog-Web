@@ -22,7 +22,7 @@ export async function GET(
 
   const { id } = await params;
 
-  if (!id || typeof id !== "string" || id.length > 30) {
+  if (!id || typeof id !== "string" || id.length > 50) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
