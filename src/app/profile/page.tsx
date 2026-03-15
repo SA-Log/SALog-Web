@@ -50,6 +50,9 @@ export default function ProfilePage() {
           setIsProfilePublic(data.isProfilePublic ?? true);
           setEditIsPublic(data.isProfilePublic ?? true);
           if (data.image) setSavedImage(data.image);
+          setFollowerCount(data.followerCount ?? 0);
+          setFollowingCount(data.followingCount ?? 0);
+          setTotalReports(data.reportCount ?? 0);
         }
         setProfileLoaded(true);
       })
@@ -70,9 +73,9 @@ export default function ProfilePage() {
   const assists = 0;
   const exp = 0;
   const accuracy = 0;
-  const totalReports = 0;
-  const followerCount = 0;
-  const followingCount = 0;
+  const [totalReports, setTotalReports] = useState(0);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   const rank = getRankForExp(exp);
   const title = getTitleForAccuracy(accuracy);

@@ -49,6 +49,11 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("activity");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowedBy, setIsFollowedBy] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [liveFollowerCount, setLiveFollowerCount] = useState(0);
+  const [liveFollowingCount, setLiveFollowingCount] = useState(0);
 
   // 자기 프로필이면 /profile로 리다이렉트
   useEffect(() => {
@@ -63,10 +68,42 @@ export default function UserProfilePage() {
         if (!res.ok) { setNotFound(true); return null; }
         return res.json();
       })
-      .then((data) => { if (data) setProfile(data); })
+      .then((data) => {
+        if (data) {
+          setProfile(data);
+          setLiveFollowerCount(data.followerCount ?? 0);
+          setLiveFollowingCount(data.followingCount ?? 0);
+        }
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
+
+    // 팔로우 상태 조회
+    fetch(`/api/follow?userId=${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setIsFollowing(data.following ?? false);
+        setIsFollowedBy(data.followedBy ?? false);
+      })
+      .catch(() => {});
   }, [userId]);
+
+  async function handleFollow() {
+    setFollowLoading(true);
+    try {
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsFollowing(data.following);
+        setLiveFollowerCount((c) => data.following ? c + 1 : c - 1);
+      }
+    } catch { /* ignore */ }
+    finally { setFollowLoading(false); }
+  }
 
   if (loading) {
     return (
@@ -112,7 +149,8 @@ export default function UserProfilePage() {
   // 임시 값 (추후 DB 연동)
   const kills = 0, deaths = 0, assists = 0, exp = 0, accuracy = 0;
   const totalReports = profile.reportCount ?? 0;
-  const followerCount = 0, followingCount = 0;
+  const followerCount = liveFollowerCount;
+  const followingCount = liveFollowingCount;
   const rank = getRankForExp(exp);
   const title = getTitleForAccuracy(accuracy);
   const { progress, next } = getExpProgress(exp);
@@ -227,10 +265,24 @@ export default function UserProfilePage() {
           )}
 
           {/* 팔로우 버튼 */}
-          <div className="flex gap-2.5 mt-5">
-            <button className="h-9 px-5 rounded-full bg-primary text-white text-[12px] font-semibold transition-all hover:bg-primary/90 active:scale-[0.97]">
-              팔로우
+          <div className="flex flex-col items-center gap-2 mt-5">
+            <button
+              onClick={handleFollow}
+              disabled={followLoading}
+              className={`h-9 px-6 rounded-full text-[12px] font-semibold transition-all active:scale-[0.97] ${
+                isFollowing
+                  ? "bg-secondary text-foreground border border-border/60 hover:bg-secondary/80"
+                  : "bg-primary text-white hover:bg-primary/90"
+              }`}
+            >
+              {isFollowing ? "팔로잉" : "팔로우"}
             </button>
+            {isFollowedBy && !isFollowing && (
+              <p className="text-[11px] text-primary font-medium">나를 팔로우하고 있습니다</p>
+            )}
+            {isFollowing && isFollowedBy && (
+              <p className="text-[11px] text-primary font-medium">서로 팔로우</p>
+            )}
           </div>
         </div>
 

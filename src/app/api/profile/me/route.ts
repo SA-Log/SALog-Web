@@ -30,6 +30,13 @@ export async function GET() {
       isProfilePublic: true,
       barracksVerified: true,
       barracksAddress: true,
+      _count: {
+        select: {
+          followers: true,
+          following: true,
+          hackReports: true,
+        },
+      },
     },
   });
 
@@ -37,7 +44,12 @@ export async function GET() {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(user);
+  return NextResponse.json({
+    ...user,
+    followerCount: user._count.followers,
+    followingCount: user._count.following,
+    reportCount: user._count.hackReports,
+  });
 }
 
 export async function PATCH(req: Request) {

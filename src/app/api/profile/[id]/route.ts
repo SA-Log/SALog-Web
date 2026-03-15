@@ -40,6 +40,8 @@ export async function GET(
       _count: {
         select: {
           hackReports: true,
+          followers: true,
+          following: true,
         },
       },
     },
@@ -87,6 +89,8 @@ export async function GET(
     barracksVerified: user.barracksVerified,
     createdAt: user.createdAt,
     reportCount: user._count.hackReports,
+    followerCount: user._count.followers,
+    followingCount: user._count.following,
     recentReports,
     isOwn,
     isPrivate: false,

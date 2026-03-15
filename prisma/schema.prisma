@@ -39,6 +39,8 @@ model User {
   creatorProfile   CreatorProfile?
   saVerifications  SaVerification[]
   bans             Ban[]
+  following        Follow[]  @relation("follower")
+  followers        Follow[]  @relation("following")
 
   @@map("users")
 }
@@ -306,4 +308,21 @@ enum BanType {
   WARNING
   TEMP
   PERMANENT
+}
+
+// ==================== 팔로우 ====================
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
 }
