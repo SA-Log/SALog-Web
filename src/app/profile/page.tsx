@@ -83,7 +83,7 @@ export default function ProfilePage() {
 
 
   const tabs: { value: ProfileTab; label: string; count: number }[] = [
-    { value: "activity", label: "활동", count: 0 },
+    { value: "activity", label: "활동", count: totalReports },
     { value: "blacklist", label: "블랙리스트", count: 0 },
     { value: "followers", label: "팔로워", count: followerCount },
     { value: "following", label: "팔로잉", count: followingCount },
@@ -283,59 +283,37 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ─── Tabs ─── */}
+      {/* ─── Tabs — Apple style underline ─── */}
       <div className="flex mt-6 mb-1 border-b border-border/40">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`flex-1 pb-3 text-[13px] font-medium transition-colors relative ${
+            className={`relative pb-3 px-1 text-[13px] font-medium transition-colors flex-1 ${
               activeTab === tab.value
                 ? "text-foreground"
                 : "text-toss-gray-400 hover:text-toss-gray-600"
             }`}
           >
-            {tab.label}
-            <span className={`ml-1 text-[11px] tabular-nums ${activeTab === tab.value ? "text-primary" : "text-toss-gray-300"}`}>
-              {tab.count}
+            <span className="relative inline-block">
+              {tab.label}
+              <span className={`ml-1 text-[11px] tabular-nums ${activeTab === tab.value ? "text-primary" : "text-toss-gray-300"}`}>
+                {tab.count}
+              </span>
+              {activeTab === tab.value && (
+                <span className="absolute -bottom-3 left-0 right-0 h-[2px] rounded-full bg-primary" />
+              )}
             </span>
-            {activeTab === tab.value && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-primary" />
-            )}
           </button>
         ))}
       </div>
 
       {/* ─── Tab Content ─── */}
-      <div className="py-12">
-        {activeTab === "activity" && (
-          <EmptyState
-            icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>}
-            title="아직 신고 활동이 없습니다"
-            description="핵 유저를 발견하면 신고해주세요"
-          />
-        )}
-        {activeTab === "blacklist" && (
-          <EmptyState
-            icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
-            title="블랙리스트가 비어있습니다"
-            description="의심 유저를 블랙리스트에 추가해보세요"
-          />
-        )}
-        {activeTab === "following" && (
-          <EmptyState
-            icon={<><circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
-            title="팔로잉이 없습니다"
-            description="다른 유저를 팔로잉해보세요"
-          />
-        )}
-        {activeTab === "followers" && (
-          <EmptyState
-            icon={<><circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
-            title="팔로워가 없습니다"
-            description="활동을 시작하면 팔로워가 늘어납니다"
-          />
-        )}
+      <div className="py-6">
+        {activeTab === "activity" && <ProfileActivityTab />}
+        {activeTab === "blacklist" && <ProfileBlacklistTab />}
+        {activeTab === "followers" && <ProfileFollowTab type="followers" />}
+        {activeTab === "following" && <ProfileFollowTab type="following" />}
       </div>
 
       {/* ─── Edit Profile Modal ─── */}
@@ -593,6 +571,144 @@ export default function ProfilePage() {
 }
 
 /* ─── Shared Components ─── */
+
+// ─── Tab Components ───
+
+type FollowUser = {
+  id: string;
+  nickname: string | null;
+  image: string | null;
+  barracksVerified: boolean;
+  followedAt: string;
+  isFollowingBack: boolean;
+};
+
+function ProfileActivityTab() {
+  return (
+    <EmptyState
+      icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>}
+      title="아직 신고 활동이 없습니다"
+      description="핵 유저를 발견하면 신고해주세요"
+    />
+  );
+}
+
+function ProfileBlacklistTab() {
+  return (
+    <EmptyState
+      icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+      title="블랙리스트가 비어있습니다"
+      description="의심 유저를 블랙리스트에 추가해보세요"
+    />
+  );
+}
+
+function ProfileFollowTab({ type }: { type: "followers" | "following" }) {
+  const [users, setUsers] = useState<FollowUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/follow/list?type=${type}`)
+      .then((res) => res.json())
+      .then((data) => { if (data.users) setUsers(data.users); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [type]);
+
+  async function handleToggleFollow(userId: string) {
+    setTogglingId(userId);
+    try {
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === userId ? { ...u, isFollowingBack: data.following } : u
+          )
+        );
+      }
+    } catch { /* ignore */ }
+    finally { setTogglingId(null); }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1,2,3].map((i) => (
+          <div key={i} className="flex items-center gap-3 animate-pulse">
+            <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-4 w-24 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" />
+              <div className="h-3 w-16 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <EmptyState
+        icon={<><circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+        title={type === "followers" ? "팔로워가 없습니다" : "팔로잉이 없습니다"}
+        description={type === "followers" ? "활동을 시작하면 팔로워가 늘어납니다" : "다른 유저를 팔로잉해보세요"}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {users.map((user) => {
+        const displayName = user.nickname ?? "유저";
+        return (
+          <div key={user.id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-secondary/50 transition-colors">
+            <Link href={`/profile/${user.id}`} className="shrink-0">
+              <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center overflow-hidden">
+                {user.image ? (
+                  <img src={user.image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[15px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
+                )}
+              </div>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Link href={`/profile/${user.id}`} className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">
+                  {displayName}
+                </Link>
+                {user.barracksVerified && (
+                  <span className="w-[16px] h-[16px] rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <svg width="9" height="9" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                )}
+              </div>
+              {user.isFollowingBack && type === "followers" && (
+                <p className="text-[11px] text-primary font-medium mt-0.5">서로 팔로우</p>
+              )}
+            </div>
+            <button
+              onClick={() => handleToggleFollow(user.id)}
+              disabled={togglingId === user.id}
+              className={`shrink-0 h-8 px-4 rounded-full text-[12px] font-semibold transition-all active:scale-[0.97] ${
+                (type === "following" || user.isFollowingBack)
+                  ? "bg-secondary text-toss-gray-600 border border-border/60 hover:bg-secondary/80"
+                  : "bg-primary text-white hover:bg-primary/90"
+              }`}
+            >
+              {type === "following" || user.isFollowingBack ? "팔로잉" : "팔로우"}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function EmptyState({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
