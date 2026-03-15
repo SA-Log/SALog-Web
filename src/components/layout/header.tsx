@@ -152,8 +152,12 @@ export function Header() {
                   pathname.startsWith("/profile") ? "text-primary" : "text-toss-gray-600"
                 }`}
               >
-                <div className="w-6 h-6 rounded-md bg-secondary flex items-center justify-center">
-                  <span className="text-[9px] font-bold text-primary">{displayChar}</span>
+                <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                  {user.image ? (
+                    <img src={user.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[9px] font-bold text-primary">{displayChar}</span>
+                  )}
                 </div>
                 내 프로필
               </Link>
