@@ -189,11 +189,20 @@ export default function BansPage() {
                           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white">활성</span>
                         )}
                       </div>
-                      <p className="text-[11px] text-toss-gray-400 mt-0.5">
-                        {formatDate(ban.createdAt)}
-                        {ban.barracksAddress && ` · 병영주소 ${ban.barracksAddress}`}
-                        {ban.type === "TEMP" && ban.expiresAt && ` · 만료 ${formatDate(ban.expiresAt)}`}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-[11px]">
+                        <span className="text-toss-gray-400">{formatDate(ban.createdAt)} 제재</span>
+                        {ban.type === "TEMP" && ban.expiresAt && (
+                          <>
+                            <span className="text-toss-gray-300">→</span>
+                            <span className={`font-medium ${new Date(ban.expiresAt) > new Date() ? "text-orange-500" : "text-toss-gray-400"}`}>
+                              {formatDate(ban.expiresAt)} 만료
+                            </span>
+                          </>
+                        )}
+                        {ban.type === "PERMANENT" && (
+                          <span className="font-medium text-red-500">무기한</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* 해제 */}

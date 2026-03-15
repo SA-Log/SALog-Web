@@ -242,10 +242,10 @@ export default function AdminUsersPage() {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${chip.bg} ${chip.text}`}>
                         {chip.label}
                       </span>
-                      {/* 인증 뱃지 */}
+                      {/* 인증 뱃지 — 프로필과 동일 */}
                       {user.barracksVerified && (
-                        <span className="w-4 h-4 rounded-full bg-toss-green flex items-center justify-center" title="인증됨">
-                          <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2.5 5.5l2 2 3.5-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <span className="w-[18px] h-[18px] rounded-full bg-primary flex items-center justify-center" title="서든어택 인증됨">
+                          <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </span>
                       )}
                       {/* 제재 상태 */}
@@ -256,7 +256,7 @@ export default function AdminUsersPage() {
                       )}
                     </div>
                     <p className="text-[11px] text-toss-gray-400 mt-0.5">
-                      {formatDate(user.createdAt)} 가입{user.barracksAddress ? ` · ${user.barracksAddress}` : ""}
+                      {formatDate(user.createdAt)} 가입
                     </p>
                   </div>
 
