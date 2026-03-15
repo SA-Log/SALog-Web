@@ -97,11 +97,12 @@ export async function PATCH(
 
   const body = await req.json();
   const updateData: Record<string, unknown> = {};
-  if (body.description !== undefined) updateData.description = body.description?.trim() || null;
+  if (body.description !== undefined) updateData.description = (body.description?.trim() || "").slice(0, 1000) || null;
   if (body.tagTypes !== undefined) {
     updateData.tagTypes = body.tagTypes;
     updateData.tagType = body.tagTypes[0];
   }
+  if (body.evidences !== undefined) updateData.evidences = body.evidences;
 
   await prisma.mannerTag.update({ where: { id }, data: updateData });
   return NextResponse.json({ success: true });

@@ -383,11 +383,11 @@ export default function NewReportPage() {
           {/* Description */}
           <div>
             <label className="block text-[13px] font-semibold text-foreground mb-2">
-              상세 설명 <span className="font-normal text-toss-gray-500 dark:text-toss-gray-400">({description.length}/500)</span>
+              상세 설명 <span className="font-normal text-toss-gray-500 dark:text-toss-gray-400">({description.length}/1,000)</span>
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+              onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
               placeholder="어떤 상황에서 핵 사용이 의심되었는지 구체적으로 작성해주세요&#10;(예: 킬캠에서 벽 뒤의 적을 정확히 조준, 비정상적인 에임 스냅 등)"
               rows={4}
               className="w-full px-4 py-3 rounded-xl bg-card border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 resize-none leading-relaxed"

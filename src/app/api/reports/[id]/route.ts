@@ -154,8 +154,9 @@ export async function PATCH(
 
   const body = await req.json();
   const updateData: Record<string, unknown> = {};
-  if (body.description !== undefined) updateData.description = body.description?.trim() || null;
+  if (body.description !== undefined) updateData.description = (body.description?.trim() || "").slice(0, 1000) || null;
   if (body.hackTypes !== undefined) updateData.hackTypes = body.hackTypes;
+  if (body.evidences !== undefined) updateData.evidences = body.evidences;
 
   const updated = await prisma.hackReport.update({
     where: { id },

@@ -155,6 +155,9 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
 
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState(report.description ?? "");
+  const [editHackTypes, setEditHackTypes] = useState<string[]>(report.hackTypes ?? []);
+  const [editTagTypes, setEditTagTypes] = useState<string[]>(report.tagTypes ?? (report.tagType ? [report.tagType] : []));
+  const [editEvidences, setEditEvidences] = useState<Evidence[]>((report.evidences ?? []) as Evidence[]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const listPath = type === "hack" ? "/reports" : "/manner";
@@ -178,13 +181,32 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
     } catch { /* ignore */ }
   }
 
+  function openEdit() {
+    setEditDescription(report.description ?? "");
+    setEditHackTypes(report.hackTypes ?? []);
+    setEditTagTypes(report.tagTypes ?? (report.tagType ? [report.tagType] : []));
+    setEditEvidences((report.evidences ?? []) as Evidence[]);
+    setIsEditing(true);
+  }
+
+  function moveEvidence(from: number, to: number) {
+    const arr = [...editEvidences];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    setEditEvidences(arr);
+  }
+
   async function handleSaveEdit() {
     setIsSavingEdit(true);
     try {
+      const body: Record<string, unknown> = { description: editDescription.trim(), evidences: editEvidences };
+      if (type === "hack") body.hackTypes = editHackTypes;
+      if (type === "manner") body.tagTypes = editTagTypes;
+
       const res = await fetch(apiPath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: editDescription.trim() }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         window.location.reload();
@@ -247,7 +269,7 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
         </Link>
         {isAuthor && (
           <div className="flex items-center gap-2">
-            <button onClick={() => { setEditDescription(report.description ?? ""); setIsEditing(true); }} className="h-8 px-3 rounded-lg text-[12px] font-medium text-toss-gray-500 hover:text-foreground hover:bg-secondary transition-colors">편집</button>
+            <button onClick={openEdit} className="h-8 px-3 rounded-lg text-[12px] font-medium text-toss-gray-500 hover:text-foreground hover:bg-secondary transition-colors">편집</button>
             <button
               onClick={async () => {
                 if (!confirm("이 게시글을 삭제하시겠습니까? 되돌릴 수 없습니다.")) return;
@@ -460,23 +482,103 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
-          <div className="relative w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border/40 shadow-toss-lg animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-card rounded-t-3xl sm:rounded-3xl border border-border/40 shadow-toss-lg animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-center pt-3 pb-1 sm:hidden">
               <div className="w-10 h-1 rounded-full bg-toss-gray-200 dark:bg-toss-gray-700" />
             </div>
-            <div className="px-6 pt-4 sm:pt-6 pb-6">
-              <h2 className="text-[20px] font-bold text-foreground mb-5">게시글 수정</h2>
-              <div className="mb-5">
+            <div className="px-6 pt-4 sm:pt-6 pb-6 space-y-5">
+              <h2 className="text-[20px] font-bold text-foreground">게시글 수정</h2>
+
+              {/* 카테고리 */}
+              {type === "hack" && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">핵 유형</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(HACK_TYPE_LABELS).map(([key, info]) => (
+                      <button key={key}
+                        onClick={() => setEditHackTypes((prev) => prev.includes(key) ? prev.filter(t => t !== key) : [...prev, key])}
+                        className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all ${
+                          editHackTypes.includes(key) ? "bg-primary/10 text-primary ring-1 ring-primary/30" : "bg-secondary text-toss-gray-600"
+                        }`}
+                      >{info.icon} {info.label}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {type === "manner" && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">비매너 유형</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(MANNER_TAG_MAP).map(([key, info]) => (
+                      <button key={key}
+                        onClick={() => setEditTagTypes((prev) => prev.includes(key) ? prev.filter(t => t !== key) : [...prev, key])}
+                        className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all ${
+                          editTagTypes.includes(key) ? "bg-toss-orange/10 text-toss-orange ring-1 ring-toss-orange/30" : "bg-secondary text-toss-gray-600"
+                        }`}
+                      >{info.emoji} {info.label}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 신고 사유 */}
+              <div>
                 <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">신고 사유</label>
                 <textarea
                   value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value.slice(0, 500))}
+                  onChange={(e) => setEditDescription(e.target.value.slice(0, 1000))}
                   rows={5}
                   className="w-full px-4 py-3 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/50 text-[14px] outline-none focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed placeholder:text-toss-gray-400"
                   placeholder="신고 사유를 입력해주세요"
                 />
-                <p className="text-[11px] text-toss-gray-400 mt-1.5 text-right tabular-nums">{editDescription.length}/500</p>
+                <p className="text-[11px] text-toss-gray-400 mt-1.5 text-right tabular-nums">{editDescription.length}/1,000</p>
               </div>
+
+              {/* 증거자료 */}
+              <div>
+                <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">
+                  증거 자료 <span className="text-toss-gray-400 font-normal normal-case">{editEvidences.length}개</span>
+                </label>
+                {editEvidences.length > 0 ? (
+                  <div className="space-y-2">
+                    {editEvidences.map((ev, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-toss-gray-50 dark:bg-secondary">
+                        {/* 썸네일 미니 */}
+                        <div className="w-10 h-10 rounded-lg bg-toss-gray-200 dark:bg-toss-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
+                          {ev.type === "screenshot" ? (
+                            <img src={ev.url} alt="" className="w-full h-full object-cover" />
+                          ) : ev.type === "youtube" ? (
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4V4z" fill="#f04452"/></svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="#6b7684" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-medium text-foreground truncate">{ev.name}</p>
+                          <p className="text-[10px] text-toss-gray-400 truncate">{ev.type === "screenshot" ? "스크린샷" : ev.type === "youtube" ? "YouTube" : "링크"}</p>
+                        </div>
+                        {/* 순서 변경 */}
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <button disabled={i === 0} onClick={() => moveEvidence(i, i - 1)} className="w-6 h-5 rounded flex items-center justify-center hover:bg-toss-gray-200 dark:hover:bg-toss-gray-600 disabled:opacity-20">
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 6.5L5 3.5L8 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-toss-gray-500"/></svg>
+                          </button>
+                          <button disabled={i === editEvidences.length - 1} onClick={() => moveEvidence(i, i + 1)} className="w-6 h-5 rounded flex items-center justify-center hover:bg-toss-gray-200 dark:hover:bg-toss-gray-600 disabled:opacity-20">
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-toss-gray-500"/></svg>
+                          </button>
+                        </div>
+                        {/* 삭제 */}
+                        <button onClick={() => setEditEvidences((prev) => prev.filter((_, j) => j !== i))} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-500/10 shrink-0">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#f04452" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-toss-gray-400 text-center py-4">증거 자료가 없습니다</p>
+                )}
+              </div>
+
+              {/* 액션 */}
               <div className="flex gap-3">
                 <button onClick={() => setIsEditing(false)} className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all active:scale-[0.98]">취소</button>
                 <button

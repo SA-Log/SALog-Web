@@ -10,7 +10,7 @@ const createSchema = z.object({
   barracksAddress: z.string().min(1).max(200),
   nickname: z.string().min(1).max(50),
   tagTypes: z.array(z.enum(VALID_TAG_TYPES)).min(1, "비매너 유형을 1개 이상 선택해주세요"),
-  description: z.string().max(500).optional().or(z.literal("")),
+  description: z.string().max(1000).optional().or(z.literal("")),
   evidences: z.array(z.object({
     type: z.enum(["youtube", "link", "screenshot"]),
     url: z.string().url().max(2000),

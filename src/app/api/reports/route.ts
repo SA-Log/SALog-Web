@@ -15,7 +15,7 @@ const createReportSchema = z.object({
     .array(z.enum(VALID_HACK_TYPES))
     .min(1, "핵 유형을 1개 이상 선택해주세요")
     .max(VALID_HACK_TYPES.length),
-  description: z.string().max(500).optional().or(z.literal("")),
+  description: z.string().max(1000).optional().or(z.literal("")),
   evidences: z
     .array(
       z.object({
