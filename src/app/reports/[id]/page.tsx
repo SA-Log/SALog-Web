@@ -23,6 +23,7 @@ interface ReportData {
   youtubeUrl: string | null;
   createdAt: string;
   reporter: { id: string; nickname: string | null; image: string | null };
+  reporterId: string;
   agreeCount: number;
   unsureCount: number;
   disagreeCount: number;
@@ -288,8 +289,10 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     fetchReport();
   }, [id]);
 
+  const isAuthor = report?.reporterId === authUser?.id;
+
   function handleVote(type: VoteType) {
-    if (hasVoted || !report) return;
+    if (hasVoted || !report || isAuthor) return;
     setUserVote(type);
     setHasVoted(true);
     if (type === "AGREE") setAgreeOffset(1);
@@ -503,7 +506,11 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <p className="text-[11px] text-toss-gray-400 text-center mb-4">총 {voteTotal}명 참여</p>
 
-          {hasVoted ? (
+          {isAuthor ? (
+            <div className="text-center py-3 rounded-xl bg-secondary">
+              <p className="text-[13px] text-toss-gray-500">본인이 작성한 신고에는 투표할 수 없습니다</p>
+            </div>
+          ) : hasVoted ? (
             <div className="text-center py-3 rounded-xl bg-secondary">
               <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-400">
                 <span className={`font-semibold ${

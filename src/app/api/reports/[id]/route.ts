@@ -90,6 +90,7 @@ export async function GET(
     youtubeUrl: report.youtubeUrl,
     createdAt: report.createdAt,
     reporter: report.reporter,
+    reporterId: report.reporterId,
     agreeCount,
     unsureCount,
     disagreeCount,
