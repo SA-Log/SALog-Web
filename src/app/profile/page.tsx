@@ -32,6 +32,8 @@ export default function ProfilePage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -537,21 +539,45 @@ export default function ProfilePage() {
                 className="w-full h-11 px-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/50 text-[14px] outline-none focus:ring-2 focus:ring-toss-red/20 placeholder:text-toss-gray-400" />
             </div>
 
+            {deleteError && (
+              <p className="text-[12px] text-toss-red mb-3">{deleteError}</p>
+            )}
+
             <div className="flex gap-3">
               <button
-                onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}
+                onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); setDeleteError(""); }}
                 className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all active:scale-[0.98]">
                 취소
               </button>
               <button
-                disabled={deleteInput !== "탈퇴합니다"}
-                onClick={() => logout()}
+                disabled={deleteInput !== "탈퇴합니다" || isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  setDeleteError("");
+                  try {
+                    const res = await fetch("/api/auth/delete-account", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ confirm: deleteInput }),
+                    });
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok || !data?.success) {
+                      setDeleteError(data?.error || "탈퇴에 실패했습니다");
+                      return;
+                    }
+                    logout();
+                  } catch {
+                    setDeleteError("서버 연결에 실패했습니다");
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
                 className={`flex-1 h-12 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.98] ${
-                  deleteInput === "탈퇴합니다"
+                  deleteInput === "탈퇴합니다" && !isDeleting
                     ? "bg-toss-red text-white"
                     : "bg-toss-gray-200 dark:bg-toss-gray-700 text-toss-gray-400 cursor-not-allowed"
                 }`}>
-                회원탈퇴
+                {isDeleting ? "처리 중..." : "회원탈퇴"}
               </button>
             </div>
           </div>

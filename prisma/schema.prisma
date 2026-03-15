@@ -25,6 +25,7 @@ model User {
   bio               String?
   isProfilePublic   Boolean   @default(true)
   notificationEmail String?
+  deletedAt         DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

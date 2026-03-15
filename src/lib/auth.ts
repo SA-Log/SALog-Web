@@ -39,9 +39,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               nickname: true,
               isProfileComplete: true,
               barracksVerified: true,
+              deletedAt: true,
             },
           });
           if (dbUser) {
+            // 탈퇴한 유저는 세션 무효화
+            if (dbUser.deletedAt) {
+              return { ...token, isProfileComplete: false, deletedAt: true };
+            }
             token.role = dbUser.role;
             token.nickname = dbUser.nickname;
             token.isProfileComplete = dbUser.isProfileComplete;
