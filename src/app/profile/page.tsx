@@ -626,11 +626,16 @@ function ProfileFollowTab({ type }: { type: "followers" | "following" }) {
       });
       const data = await res.json();
       if (res.ok) {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === userId ? { ...u, isFollowingBack: data.following } : u
-          )
-        );
+        if (type === "following" && !data.following) {
+          // 팔로잉 탭에서 언팔 → 목록에서 제거
+          setUsers((prev) => prev.filter((u) => u.id !== userId));
+        } else {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === userId ? { ...u, isFollowingBack: data.following } : u
+            )
+          );
+        }
       }
     } catch { /* ignore */ }
     finally { setTogglingId(null); }
