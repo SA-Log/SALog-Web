@@ -796,7 +796,7 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
                   href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-0 px-4 py-3.5 rounded-2xl bg-card border border-border/30 hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                  className="flex-1 min-w-0 px-4 py-3.5 rounded-2xl bg-card border border-border/30 hover:bg-primary/5 hover:border-primary/20 active:bg-primary/10 transition-colors"
                 >
                   <p className="text-[15px] font-semibold text-foreground truncate">{displayName}</p>
                   {entry.memo && <p className="text-[12px] text-toss-gray-400 truncate mt-1">{entry.memo}</p>}
