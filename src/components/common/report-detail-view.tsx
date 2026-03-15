@@ -347,7 +347,7 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
               병영수첩 바로가기
             </a>
           )}
-          {report.barracksAddress && !isAuthor && (
+          {report.barracksAddress && (
             <button
               onClick={handleBlacklist}
               disabled={blacklisted || blacklistLoading}
