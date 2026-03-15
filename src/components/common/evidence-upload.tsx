@@ -12,8 +12,7 @@ export interface EvidenceItem {
 }
 
 const EVIDENCE_TYPES = [
-  { type: "screenshot" as const, label: "스크린샷", icon: "📸", accept: "image/*", desc: "킬캠, 전적, 병영수첩 캡처" },
-  { type: "video" as const, label: "영상", icon: "🎬", accept: "video/*", desc: "직접 녹화한 영상 파일" },
+  { type: "screenshot" as const, label: "스크린샷", icon: "📸", accept: "image/*", desc: "킬캠, 전적, 병영수첩 캡처 (최대 4MB)" },
   { type: "youtube" as const, label: "YouTube 링크", icon: "▶️", accept: null, desc: "유튜브 영상 URL" },
   { type: "link" as const, label: "기타 링크", icon: "🔗", accept: null, desc: "기타 증거 URL" },
 ];
