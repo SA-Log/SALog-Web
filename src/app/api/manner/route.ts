@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { notifyNewReport } from "@/lib/discord";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -49,6 +50,9 @@ export async function POST(req: Request) {
         reporterId: session.user.id,
       },
     });
+
+    const reporter = await prisma.user.findUnique({ where: { id: session.user.id }, select: { nickname: true } });
+    notifyNewReport({ type: "manner", nickname, reportId: report.id, reporterName: reporter?.nickname ?? "유저", description }).catch(() => {});
 
     return NextResponse.json({ id: report.id, success: true }, { status: 201 });
   } catch (err) {

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { notifyNewReport } from "@/lib/discord";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -84,6 +85,10 @@ export async function POST(req: Request) {
         reporterId: session.user.id,
       },
     });
+
+    // 디스코드 알림 (비동기, 실패해도 무시)
+    const reporter = await prisma.user.findUnique({ where: { id: session.user.id }, select: { nickname: true } });
+    notifyNewReport({ type: "hack", nickname, reportId: report.id, reporterName: reporter?.nickname ?? "유저", description }).catch(() => {});
 
     return NextResponse.json({ id: report.id, success: true }, { status: 201 });
   } catch (err) {
