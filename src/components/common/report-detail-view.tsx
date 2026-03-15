@@ -360,7 +360,7 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
           {report.barracksAddress && (
             <button
               onClick={handleBlacklist}
-              disabled={blacklisted || blacklistLoading}
+              disabled={blacklistLoading}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all active:scale-[0.97] ${
                 blacklisted
                   ? "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-green"
