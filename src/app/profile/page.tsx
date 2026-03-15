@@ -777,22 +777,68 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
 
   return (
     <div>
-      {/* 추가 버튼 */}
-      <div className="flex justify-end mb-4">
-        <button onClick={() => setShowAdd(!showAdd)} className="h-8 px-3 rounded-xl bg-secondary text-[12px] font-medium text-toss-gray-600 dark:text-toss-gray-400 hover:bg-secondary/80 transition-colors">
-          {showAdd ? "취소" : "+ 직접 추가"}
-        </button>
-      </div>
+      {/* 목록 */}
+      {entries.length === 0 && !showAdd ? (
+        <div className="py-8">
+          <EmptyState
+            icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+            title="블랙리스트가 비어있습니다"
+            description="의심 유저를 블랙리스트에 추가해보세요"
+          />
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
+          {entries.map((entry) => {
+            const displayName = entry.nickname ?? entry.barracksAddress;
+            return (
+              <div key={entry.id} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-secondary/30 transition-colors">
+                {/* 아바타 */}
+                <div className="w-10 h-10 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center shrink-0">
+                  <span className="text-[14px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
+                </div>
+                {/* 정보 */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[14px] font-semibold text-foreground truncate">{displayName}</p>
+                    <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-toss-gray-300 hover:text-primary transition-colors">
+                        <path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                    </a>
+                  </div>
+                  {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
+                </div>
+                {/* 삭제 */}
+                <button
+                  onClick={() => handleDelete(entry.id)}
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* 직접 추가 폼 */}
-      {showAdd && (
-        <div className="bg-card rounded-2xl border border-border/40 p-4 mb-4 space-y-3">
+      {/* 추가 버튼 — 하단 고정 */}
+      {!showAdd ? (
+        <button onClick={() => setShowAdd(true)} className="w-full mt-4 h-11 rounded-2xl border border-dashed border-border/50 text-[13px] font-medium text-toss-gray-500 hover:text-foreground hover:border-border hover:bg-secondary/30 transition-all flex items-center justify-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3v8M3 7h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          직접 추가
+        </button>
+      ) : (
+        <div className="mt-4 bg-card rounded-2xl border border-border/40 p-4 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[13px] font-semibold text-foreground">블랙리스트 추가</p>
+            <button onClick={() => setShowAdd(false)} className="text-[12px] text-toss-gray-400 hover:text-foreground transition-colors">취소</button>
+          </div>
           <input
             type="text"
             value={addAddress}
             onChange={(e) => { setAddAddress(e.target.value); setAddError(""); }}
             placeholder="병영주소 URL 또는 숫자"
-            className="w-full h-10 px-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full h-10 px-3.5 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
           />
           <input
             type="text"
@@ -800,60 +846,12 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
             onChange={(e) => setAddMemo(e.target.value)}
             placeholder="메모 (선택)"
             maxLength={100}
-            className="w-full h-10 px-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full h-10 px-3.5 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
           />
           {addError && <p className="text-[11px] text-toss-red">{addError}</p>}
-          <button onClick={handleAdd} disabled={adding || !addAddress.trim()} className="w-full h-10 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40">
-            {adding ? "추가 중..." : "블랙리스트 추가"}
+          <button onClick={handleAdd} disabled={adding || !addAddress.trim()} className="w-full h-10 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 transition-all active:scale-[0.98]">
+            {adding ? "추가 중..." : "추가"}
           </button>
-        </div>
-      )}
-
-      {/* 목록 */}
-      {entries.length === 0 && !showAdd ? (
-        <EmptyState
-          icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
-          title="블랙리스트가 비어있습니다"
-          description="의심 유저를 블랙리스트에 추가해보세요"
-        />
-      ) : (
-        <div className="space-y-2.5">
-          {entries.map((entry) => (
-            <div key={entry.id} className="bg-card rounded-2xl border border-border/30 p-4 flex gap-3">
-              {/* 좌측: 아바타 + 정보 */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-toss-red/8 dark:bg-toss-red/15 flex items-center justify-center shrink-0">
-                    <span className="text-[16px] font-bold text-toss-red">{(entry.nickname ?? entry.barracksAddress).charAt(0)}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-semibold text-foreground truncate">
-                      {entry.nickname ?? entry.barracksAddress}
-                    </p>
-                    {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
-                  </div>
-                </div>
-                <div className="mt-3 ml-14">
-                  <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[11px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                    병영수첩
-                  </a>
-                </div>
-              </div>
-              {/* 우측: 삭제 버튼 — 수직 중앙 */}
-              <div className="flex items-center shrink-0">
-                <button
-                  onClick={() => handleDelete(entry.id)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </div>
