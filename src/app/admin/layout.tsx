@@ -50,6 +50,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["MASTER", "VICE_MASTER", "OPERATOR"],
   },
   {
+    href: "/admin/bans",
+    label: "유저 제재",
+    icon: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636",
+    roles: ["MASTER", "VICE_MASTER", "OPERATOR"],
+  },
+  {
     href: "/admin/applications",
     label: "크리에이터 심사",
     icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
