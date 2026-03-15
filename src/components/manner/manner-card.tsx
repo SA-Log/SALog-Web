@@ -135,9 +135,24 @@ export function MannerCard({ tag }: MannerCardProps) {
           </div>
         )}
 
-        {/* Footer */}
+        {/* Footer — 투표 + 댓글 (핵 유저 카드와 동일) */}
         <div className="px-4 sm:px-5 py-3 border-t border-border/20">
-          <span className="text-[11px] text-toss-gray-400">{formatRelative(tag.createdAt)}</span>
+          <div className="flex items-center gap-4 text-[12px] leading-tight">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-toss-green shrink-0 -translate-y-[0.5px]" />
+              <span className="font-semibold text-toss-green tabular-nums">0</span>
+              <span className="text-toss-gray-400">동의</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-toss-red shrink-0 -translate-y-[0.5px]" />
+              <span className="font-semibold text-toss-red tabular-nums">0</span>
+              <span className="text-toss-gray-400">반대</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-toss-gray-400">
+              <svg className="shrink-0 -translate-y-[0.5px]" width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M1.5 5.5a4 4 0 014-4h1a4 4 0 014 4v.5a4 4 0 01-4 4H5L2.5 11.5v-2.3A3.97 3.97 0 011.5 5.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="tabular-nums">0</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>

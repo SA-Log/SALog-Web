@@ -356,11 +356,34 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   return (
     <AuthGuard>
     <div className="mx-auto max-w-screen-lg px-5 py-6 pb-12">
-      {/* Navigation */}
-      <Link href="/reports" className="inline-flex items-center gap-1 text-[13px] text-toss-gray-500 hover:text-foreground transition-toss mb-5">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        목록으로
-      </Link>
+      {/* Navigation + Author actions */}
+      <div className="flex items-center justify-between mb-5">
+        <Link href="/reports" className="inline-flex items-center gap-1 text-[13px] text-toss-gray-500 hover:text-foreground transition-toss">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          목록으로
+        </Link>
+        {isAuthor && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { /* TODO: 편집 모달 */ }}
+              className="h-8 px-3 rounded-lg text-[12px] font-medium text-toss-gray-500 hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              편집
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm("이 게시글을 삭제하시겠습니까? 되돌릴 수 없습니다.")) return;
+                const res = await fetch(`/api/reports/${id}`, { method: "DELETE" });
+                if (res.ok) window.location.href = "/reports";
+                else alert("삭제에 실패했습니다");
+              }}
+              className="h-8 px-3 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+            >
+              삭제
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ─── Reported User (피신고자) ─── */}
       <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-5 mb-4">
@@ -445,23 +468,6 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           </svg>
         </Link>
       </div>
-
-      {/* ─── Author actions ─── */}
-      {isAuthor && (
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={async () => {
-              if (!confirm("이 게시글을 삭제하시겠습니까? 되돌릴 수 없습니다.")) return;
-              const res = await fetch(`/api/reports/${id}`, { method: "DELETE" });
-              if (res.ok) window.location.href = "/reports";
-              else alert("삭제에 실패했습니다");
-            }}
-            className="h-9 px-4 rounded-xl bg-red-50 dark:bg-red-500/10 text-[12px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 transition-colors"
-          >
-            삭제
-          </button>
-        </div>
-      )}
 
       {/* ─── Report Content (설명 + 증거 통합) ─── */}
       {(report.description || allEvidences.length > 0) && (
