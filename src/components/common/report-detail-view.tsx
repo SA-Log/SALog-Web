@@ -34,6 +34,7 @@ export interface ReportDetailData {
   // 비매너 전용
   tagType?: string;
   tagTypes?: string[];
+  blacklisted?: boolean;
 }
 
 type VoteType = "AGREE" | "UNSURE" | "DISAGREE";
@@ -154,17 +155,8 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   const [commentText, setCommentText] = useState("");
 
   const [isEditing, setIsEditing] = useState(false);
-  const [blacklisted, setBlacklisted] = useState(false);
+  const [blacklisted, setBlacklisted] = useState(!!initialReport.blacklisted);
   const [blacklistLoading, setBlacklistLoading] = useState(false);
-
-  // 진입 시 블랙리스트 여부 확인
-  useEffect(() => {
-    if (!report.barracksAddress) return;
-    fetch(`/api/blacklist/check?barracksAddress=${report.barracksAddress}`)
-      .then((r) => r.json())
-      .then((d) => { if (d.exists) setBlacklisted(true); })
-      .catch(() => {});
-  }, [report.barracksAddress]);
   const [editDescription, setEditDescription] = useState(report.description ?? "");
   const [editHackTypes, setEditHackTypes] = useState<string[]>(report.hackTypes ?? []);
   const [editTagTypes, setEditTagTypes] = useState<string[]>(report.tagTypes ?? (report.tagType ? [report.tagType] : []));

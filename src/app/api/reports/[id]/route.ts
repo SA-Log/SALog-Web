@@ -81,6 +81,13 @@ export async function GET(
   const unsureCount = report.votes.length - agreeCount - disagreeCount;
   const userVote = report.votes.find((v) => v.userId === session.user!.id);
 
+  // 블랙리스트 여부
+  const blacklisted = report.barracksAddress
+    ? !!(await prisma.blacklistEntry.findUnique({
+        where: { userId_barracksAddress: { userId: session.user!.id, barracksAddress: report.barracksAddress } },
+      }))
+    : false;
+
   return NextResponse.json({
     id: report.id,
     nickname: report.nickname,
@@ -99,6 +106,7 @@ export async function GET(
     userVote: userVote?.voteType ?? null,
     comments: report.comments,
     nicknameHistory: report.nicknameHistory,
+    blacklisted,
   });
 }
 

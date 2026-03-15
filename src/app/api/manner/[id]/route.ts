@@ -53,7 +53,13 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(report);
+  const blacklisted = report.barracksAddress
+    ? !!(await prisma.blacklistEntry.findUnique({
+        where: { userId_barracksAddress: { userId: session.user!.id, barracksAddress: report.barracksAddress } },
+      }))
+    : false;
+
+  return NextResponse.json({ ...report, blacklisted });
 }
 
 export async function DELETE(
