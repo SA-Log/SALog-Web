@@ -819,28 +819,38 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
       ) : (
         <div className="space-y-2.5">
           {entries.map((entry) => (
-            <div key={entry.id} className="bg-card rounded-2xl border border-border/30 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-toss-red/8 dark:bg-toss-red/15 flex items-center justify-center shrink-0">
-                  <span className="text-[16px] font-bold text-toss-red">{(entry.nickname ?? entry.barracksAddress).charAt(0)}</span>
+            <div key={entry.id} className="bg-card rounded-2xl border border-border/30 p-4 flex gap-3">
+              {/* 좌측: 아바타 + 정보 */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-toss-red/8 dark:bg-toss-red/15 flex items-center justify-center shrink-0">
+                    <span className="text-[16px] font-bold text-toss-red">{(entry.nickname ?? entry.barracksAddress).charAt(0)}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-semibold text-foreground truncate">
+                      {entry.nickname ?? entry.barracksAddress}
+                    </p>
+                    {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-foreground truncate">
-                    {entry.nickname ?? entry.barracksAddress}
-                  </p>
-                  {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
+                <div className="mt-3 ml-14">
+                  <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[11px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                    병영수첩
+                  </a>
                 </div>
-                <button onClick={() => handleDelete(entry.id)} className="shrink-0 h-7 px-2.5 rounded-lg text-[11px] font-medium text-toss-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                  삭제
-                </button>
               </div>
-              {/* 병영수첩 바로가기 */}
-              <div className="mt-3 flex gap-2">
-                <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[11px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                  병영수첩
-                </a>
+              {/* 우측: 삭제 버튼 — 수직 중앙 */}
+              <div className="flex items-center shrink-0">
+                <button
+                  onClick={() => handleDelete(entry.id)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
           ))}
