@@ -26,29 +26,31 @@ const ROLE_FILTERS: { value: UserRole | "ALL"; label: string }[] = [
   { value: "MASTER", label: "마스터" },
   { value: "VICE_MASTER", label: "부마스터" },
   { value: "OPERATOR", label: "운영진" },
-  { value: "VERIFIED_CREATOR", label: "인증 크리에이터" },
+  { value: "VERIFIED_CREATOR", label: "크리에이터" },
   { value: "USER", label: "일반" },
 ];
 
-const BAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  WARNING: { label: "경고", color: "text-amber-600", bg: "bg-amber-500/10" },
-  TEMP: { label: "임시 정지", color: "text-toss-red", bg: "bg-toss-red/10" },
-  PERMANENT: { label: "영구 정지", color: "text-toss-red", bg: "bg-toss-red/10" },
+// Apple-style 역할 칩 — 각 역할에 고유한 색상
+const ROLE_CHIP: Record<string, { label: string; text: string; bg: string; ring: string }> = {
+  USER: { label: "일반", text: "text-slate-600 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800", ring: "ring-slate-200 dark:ring-slate-700" },
+  OPERATOR: { label: "운영진", text: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/15", ring: "ring-blue-200 dark:ring-blue-500/30" },
+  VICE_MASTER: { label: "부마스터", text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/15", ring: "ring-purple-200 dark:ring-purple-500/30" },
+  VERIFIED_CREATOR: { label: "크리에이터", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/15", ring: "ring-emerald-200 dark:ring-emerald-500/30" },
+  MASTER: { label: "마스터", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/15", ring: "ring-amber-200 dark:ring-amber-500/30" },
 };
 
-const ROLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "USER", label: "일반" },
-  { value: "OPERATOR", label: "운영진" },
-  { value: "VICE_MASTER", label: "부마스터" },
-  { value: "VERIFIED_CREATOR", label: "크리에이터" },
-];
+const BAN_CHIP: Record<string, { label: string; text: string; bg: string }> = {
+  WARNING: { label: "경고", text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/15" },
+  TEMP: { label: "정지", text: "text-orange-700 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-500/15" },
+  PERMANENT: { label: "영구 정지", text: "text-red-700 dark:text-red-400", bg: "bg-red-50 dark:bg-red-500/15" },
+};
 
 const BAN_OPTIONS = [
-  { value: "WARNING", label: "경고" },
-  { value: "TEMP_7", label: "7일 정지" },
-  { value: "TEMP_30", label: "30일 정지" },
-  { value: "TEMP_90", label: "90일 정지" },
-  { value: "PERMANENT", label: "영구 정지" },
+  { value: "WARNING", label: "경고", desc: "기능 제한 없음" },
+  { value: "TEMP_7", label: "7일", desc: "임시 정지" },
+  { value: "TEMP_30", label: "30일", desc: "임시 정지" },
+  { value: "TEMP_90", label: "90일", desc: "임시 정지" },
+  { value: "PERMANENT", label: "영구", desc: "영구 정지" },
 ];
 
 function formatDate(dateStr: string) {
@@ -69,11 +71,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserRole | "ALL">("ALL");
   const [actionUserId, setActionUserId] = useState<string | null>(null);
-
-  // 역할 변경
   const [roleChanging, setRoleChanging] = useState<string | null>(null);
-
-  // 제재
   const [banTarget, setBanTarget] = useState<string | null>(null);
   const [banType, setBanType] = useState("WARNING");
   const [banReason, setBanReason] = useState("");
@@ -81,7 +79,6 @@ export default function AdminUsersPage() {
   const [banError, setBanError] = useState("");
 
   const isMaster = myRole === "MASTER";
-  const canDirectAction = myRole === "MASTER" || myRole === "VICE_MASTER";
   const isOperator = myRole === "OPERATOR";
 
   useEffect(() => { fetchUsers(); }, [roleFilter]);
@@ -100,7 +97,7 @@ export default function AdminUsersPage() {
   }
 
   async function handleRoleChange(userId: string, newRole: string) {
-    setRoleChanging(userId);
+    setRoleChanging(userId + newRole);
     try {
       const res = await fetch("/api/admin/users/role", {
         method: "POST",
@@ -108,16 +105,10 @@ export default function AdminUsersPage() {
         body: JSON.stringify({ userId, role: newRole }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        alert(data?.error || "역할 변경에 실패했습니다");
-        return;
-      }
+      if (!res.ok) { alert(data?.error || "역할 변경에 실패했습니다"); return; }
       fetchUsers();
-    } catch {
-      alert("서버 연결에 실패했습니다");
-    } finally {
-      setRoleChanging(null);
-    }
+    } catch { alert("서버 연결에 실패했습니다"); }
+    finally { setRoleChanging(null); }
   }
 
   async function handleBanSubmit(userId: string) {
@@ -131,9 +122,7 @@ export default function AdminUsersPage() {
       type = "TEMP";
       const days = Number(banType.split("_")[1]);
       expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    } else {
-      type = banType;
-    }
+    } else { type = banType; }
 
     try {
       const res = await fetch("/api/admin/ban", {
@@ -149,15 +138,10 @@ export default function AdminUsersPage() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) { setBanError(data?.error || "제재에 실패했습니다"); return; }
-      setBanTarget(null);
-      setBanReason("");
-      setBanType("WARNING");
+      setBanTarget(null); setBanReason(""); setBanType("WARNING");
       fetchUsers();
-    } catch {
-      setBanError("서버 연결에 실패했습니다");
-    } finally {
-      setBanSubmitting(false);
-    }
+    } catch { setBanError("서버 연결에 실패했습니다"); }
+    finally { setBanSubmitting(false); }
   }
 
   function getActiveBan(user: AdminUser) {
@@ -170,211 +154,250 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-[22px] font-bold text-foreground mb-1">유저 관리</h1>
-      <p className="text-[12px] text-toss-gray-500 mb-4">유저 역할 변경, 제재를 관리합니다</p>
-
-      {/* Search */}
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-toss-gray-400">
-            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchUsers()}
-            placeholder="닉네임 또는 ID로 검색"
-            className="w-full h-10 pl-10 pr-4 rounded-xl bg-card border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <button onClick={() => fetchUsers()} className="h-10 px-4 rounded-xl bg-secondary text-[12px] font-semibold">검색</button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-[22px] font-bold text-foreground tracking-tight">유저 관리</h1>
+        <p className="text-[13px] text-toss-gray-500 mt-0.5">역할 변경 및 제재를 관리합니다</p>
       </div>
 
-      {/* Role filter */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 scrollbar-hide">
+      {/* Search — Apple SF-style */}
+      <div className="relative">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-toss-gray-400">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && fetchUsers()}
+          placeholder="닉네임 또는 ID로 검색"
+          className="w-full h-11 pl-10 pr-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border-none text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20" />
+      </div>
+
+      {/* Segmented Control — role filter */}
+      <div className="bg-toss-gray-50 dark:bg-secondary rounded-2xl p-1 flex gap-0.5 overflow-x-auto scrollbar-hide">
         {ROLE_FILTERS.map((f) => (
           <button key={f.value} onClick={() => setRoleFilter(f.value)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-medium ${
-              roleFilter === f.value ? "bg-primary text-white" : "bg-secondary text-toss-gray-600"
+            className={`flex-1 min-w-fit px-3 py-2 rounded-xl text-[12px] font-semibold transition-all ${
+              roleFilter === f.value
+                ? "bg-card text-foreground shadow-sm"
+                : "text-toss-gray-500 hover:text-foreground"
             }`}>
             {f.label}
           </button>
         ))}
       </div>
 
-      <p className="text-[13px] text-toss-gray-500 mb-3">총 {users.length}명</p>
+      {/* Count */}
+      <p className="text-[12px] text-toss-gray-400 tabular-nums">{users.length}명의 유저</p>
 
       {/* User list */}
       {loading ? (
-        <div className="p-8 text-center"><p className="text-[13px] text-toss-gray-500 animate-pulse">로딩 중...</p></div>
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-card rounded-2xl border border-border/40 p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-24 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" />
+                  <div className="h-3 w-32 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : users.length === 0 ? (
-        <div className="p-8 text-center"><p className="text-[13px] text-toss-gray-500">유저가 없습니다</p></div>
+        <div className="py-16 text-center">
+          <p className="text-[14px] text-toss-gray-500">검색 결과가 없습니다</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {users.map((user) => {
-            const roleInfo = ROLE_MAP[user.role] ?? ROLE_MAP.USER;
+            const chip = ROLE_CHIP[user.role] ?? ROLE_CHIP.USER;
             const displayName = user.nickname ?? "알 수 없음";
             const activeBan = getActiveBan(user);
             const isExpanded = actionUserId === user.id;
             const isBanning = banTarget === user.id;
 
             return (
-              <div key={user.id} className="bg-card rounded-2xl border border-border/50 shadow-toss p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
+              <div key={user.id} className={`bg-card rounded-2xl border shadow-toss overflow-hidden transition-all ${
+                isExpanded ? "border-primary/20 shadow-toss-md" : "border-border/40"
+              }`}>
+                {/* User row */}
+                <div className="p-4 flex items-center gap-3.5">
+                  {/* Avatar — 원형 */}
+                  <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
                     {user.image ? (
                       <img src={user.image} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-[14px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
+                      <span className="text-[15px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Link href={`/profile/${user.id}`} className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">
                         {displayName}
                       </Link>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${roleInfo.bg} ${roleInfo.color}`}>{roleInfo.label}</span>
+                      {/* 역할 칩 */}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${chip.bg} ${chip.text}`}>
+                        {chip.label}
+                      </span>
+                      {/* 인증 뱃지 */}
                       {user.barracksVerified && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-toss-green/10 text-toss-green">인증</span>
+                        <span className="w-4 h-4 rounded-full bg-toss-green flex items-center justify-center" title="인증됨">
+                          <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2.5 5.5l2 2 3.5-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </span>
                       )}
+                      {/* 제재 상태 */}
                       {activeBan?.active && (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${BAN_LABELS[activeBan.type]?.bg} ${BAN_LABELS[activeBan.type]?.color}`}>
-                          {BAN_LABELS[activeBan.type]?.label}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${BAN_CHIP[activeBan.type]?.bg} ${BAN_CHIP[activeBan.type]?.text}`}>
+                          {BAN_CHIP[activeBan.type]?.label}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-toss-gray-500">
-                      <span>{formatDate(user.createdAt)} 가입</span>
-                      {user.barracksAddress && <span>병영주소: {user.barracksAddress}</span>}
-                    </div>
+                    <p className="text-[11px] text-toss-gray-400 mt-0.5">
+                      {formatDate(user.createdAt)} 가입{user.barracksAddress ? ` · ${user.barracksAddress}` : ""}
+                    </p>
                   </div>
 
-                  {/* 액션 토글 */}
+                  {/* 액션 토글 — chevron */}
                   {user.role !== "MASTER" && (
                     <button
                       onClick={() => { setActionUserId(isExpanded ? null : user.id); setBanTarget(null); setBanError(""); }}
-                      className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+                      className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        isExpanded ? "bg-primary/10 text-primary" : "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-400 hover:text-foreground"
+                      }`}
                     >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <circle cx="7" cy="3" r="1" fill="currentColor" className="text-toss-gray-500"/>
-                        <circle cx="7" cy="7" r="1" fill="currentColor" className="text-toss-gray-500"/>
-                        <circle cx="7" cy="11" r="1" fill="currentColor" className="text-toss-gray-500"/>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}>
+                        <path d="M4 5.5L7 8.5L10 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </button>
                   )}
                 </div>
 
-                {/* 최근 제재 정보 */}
-                {activeBan && (
-                  <div className={`mt-3 rounded-xl p-3 ${activeBan.active ? "bg-toss-red/5 border border-toss-red/10" : "bg-amber-500/5 border border-amber-500/10"}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${BAN_LABELS[activeBan.type]?.bg} ${BAN_LABELS[activeBan.type]?.color}`}>
-                        {BAN_LABELS[activeBan.type]?.label}
-                      </span>
-                      <span className="text-[11px] text-toss-gray-400">{formatDate(activeBan.createdAt)}</span>
+                {/* 제재 배너 */}
+                {activeBan && !isExpanded && (
+                  <div className={`px-4 pb-3 -mt-1`}>
+                    <div className={`rounded-xl px-3 py-2 ${activeBan.active ? "bg-red-50 dark:bg-red-500/10" : "bg-amber-50 dark:bg-amber-500/10"}`}>
+                      <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400">
+                        <span className="font-semibold">{BAN_CHIP[activeBan.type]?.label}</span> · {activeBan.reason}
+                      </p>
                     </div>
-                    <p className="text-[12px] text-toss-gray-500">{activeBan.reason}</p>
-                    {activeBan.type === "TEMP" && activeBan.expiresAt && (
-                      <p className="text-[11px] text-toss-gray-400 mt-1">만료: {new Date(activeBan.expiresAt).toLocaleDateString("ko-KR")}</p>
-                    )}
                   </div>
                 )}
 
-                {/* ─── 액션 패널 ─── */}
+                {/* ─── 확장 패널 ─── */}
                 {isExpanded && user.role !== "MASTER" && (
-                  <div className="mt-3 pt-3 border-t border-border/50 space-y-4">
-
-                    {/* 역할 변경 — 마스터만 */}
+                  <div className="border-t border-border/30">
+                    {/* 역할 변경 */}
                     {isMaster && (
-                      <div>
-                        <p className="text-[11px] font-semibold text-toss-gray-500 uppercase tracking-wide mb-2">역할 변경</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ROLE_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              disabled={user.role === opt.value || roleChanging === user.id}
-                              onClick={() => handleRoleChange(user.id, opt.value)}
-                              className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-                                user.role === opt.value
-                                  ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                  : "bg-secondary text-toss-gray-600 hover:bg-secondary/80"
-                              } disabled:opacity-50`}
-                            >
-                              {roleChanging === user.id ? "..." : user.role === opt.value ? `${opt.label} (현재)` : opt.label}
-                            </button>
-                          ))}
+                      <div className="px-4 py-4 border-b border-border/20">
+                        <p className="text-[11px] font-semibold text-toss-gray-400 uppercase tracking-wider mb-3">역할 변경</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {(Object.entries(ROLE_CHIP) as [string, typeof ROLE_CHIP[string]][])
+                            .filter(([key]) => key !== "MASTER")
+                            .map(([value, style]) => {
+                              const isCurrent = user.role === value;
+                              const isChanging = roleChanging === user.id + value;
+                              return (
+                                <button
+                                  key={value}
+                                  disabled={isCurrent || !!roleChanging}
+                                  onClick={() => handleRoleChange(user.id, value)}
+                                  className={`py-2.5 rounded-xl text-[11px] font-semibold transition-all ${
+                                    isCurrent
+                                      ? `${style.bg} ${style.text} ring-1 ${style.ring}`
+                                      : "bg-toss-gray-50 dark:bg-toss-gray-800 text-toss-gray-500 hover:text-foreground hover:bg-toss-gray-100 dark:hover:bg-toss-gray-700"
+                                  } disabled:opacity-60`}
+                                >
+                                  {isChanging ? "..." : style.label}
+                                  {isCurrent && <span className="block text-[9px] font-normal mt-0.5 opacity-60">현재</span>}
+                                </button>
+                              );
+                            })}
                         </div>
                       </div>
                     )}
                     {!isMaster && (
-                      <p className="text-[11px] text-toss-gray-400">역할 변경은 마스터만 가능합니다</p>
+                      <div className="px-4 py-3 border-b border-border/20">
+                        <p className="text-[11px] text-toss-gray-400 flex items-center gap-1.5">
+                          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="2" y="5" width="7" height="4.5" rx="1" stroke="currentColor" strokeWidth="1"/><path d="M3.5 5V3.75a2 2 0 014 0V5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/></svg>
+                          역할 변경은 마스터만 가능합니다
+                        </p>
+                      </div>
                     )}
 
                     {/* 제재 */}
-                    {!isBanning ? (
-                      <button
-                        onClick={() => { setBanTarget(user.id); setBanError(""); setBanReason(""); setBanType("WARNING"); }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-toss-red/5 text-[12px] font-medium text-toss-red hover:bg-toss-red/10 transition-colors"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/>
-                          <path d="M4.5 4.5l5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                        </svg>
-                        제재하기
-                      </button>
-                    ) : (
-                      <div className="space-y-3 bg-toss-red/5 rounded-xl p-3 border border-toss-red/10">
-                        <p className="text-[12px] font-semibold text-toss-red">제재 부여</p>
+                    <div className="px-4 py-4">
+                      {!isBanning ? (
+                        <button
+                          onClick={() => { setBanTarget(user.id); setBanError(""); setBanReason(""); setBanType("WARNING"); }}
+                          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-[13px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/>
+                            <path d="M4.5 4.5l5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          </svg>
+                          제재하기
+                        </button>
+                      ) : (
+                        <div className="space-y-4">
+                          <p className="text-[13px] font-bold text-foreground">제재 부여</p>
 
-                        {isOperator && (
-                          <p className="text-[10px] text-amber-600">운영진의 제재는 승인이 필요합니다</p>
-                        )}
+                          {isOperator && (
+                            <div className="rounded-xl px-3 py-2 bg-amber-50 dark:bg-amber-500/10">
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">운영진의 제재는 마스터 또는 부마스터의 승인이 필요합니다</p>
+                            </div>
+                          )}
 
-                        {/* 제재 종류 */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {BAN_OPTIONS.map((opt) => (
+                          {/* 제재 종류 — 세그먼트 */}
+                          <div className="bg-toss-gray-50 dark:bg-toss-gray-800/50 rounded-xl p-1 flex gap-0.5">
+                            {BAN_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                onClick={() => setBanType(opt.value)}
+                                className={`flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+                                  banType === opt.value
+                                    ? opt.value === "PERMANENT" || opt.value.startsWith("TEMP")
+                                      ? "bg-red-500 text-white shadow-sm"
+                                      : "bg-card text-foreground shadow-sm"
+                                    : "text-toss-gray-500"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* 사유 */}
+                          <textarea
+                            value={banReason}
+                            onChange={(e) => setBanReason(e.target.value)}
+                            placeholder="제재 사유를 입력하세요"
+                            rows={2}
+                            className="w-full px-4 py-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-red-200 dark:focus:ring-red-500/30 resize-none"
+                          />
+
+                          {banError && <p className="text-[12px] text-red-500 text-center">{banError}</p>}
+
+                          <div className="flex gap-2.5">
                             <button
-                              key={opt.value}
-                              onClick={() => setBanType(opt.value)}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                                banType === opt.value
-                                  ? "bg-toss-red/20 text-toss-red ring-1 ring-toss-red/30"
-                                  : "bg-card text-toss-gray-600"
-                              }`}
+                              onClick={() => { setBanTarget(null); setBanError(""); }}
+                              className="flex-1 h-10 rounded-xl bg-toss-gray-50 dark:bg-secondary text-[13px] font-semibold text-toss-gray-600 transition-all hover:bg-toss-gray-100 dark:hover:bg-toss-gray-700"
                             >
-                              {opt.label}
+                              취소
                             </button>
-                          ))}
+                            <button
+                              onClick={() => handleBanSubmit(user.id)}
+                              disabled={banSubmitting || !banReason.trim()}
+                              className="flex-1 h-10 rounded-xl bg-red-500 text-white text-[13px] font-semibold disabled:opacity-40 transition-all hover:bg-red-600 active:scale-[0.98]"
+                            >
+                              {banSubmitting ? "처리 중..." : isOperator ? "승인 요청" : "제재 적용"}
+                            </button>
+                          </div>
                         </div>
-
-                        {/* 사유 */}
-                        <textarea
-                          value={banReason}
-                          onChange={(e) => setBanReason(e.target.value)}
-                          placeholder="제재 사유를 입력하세요"
-                          rows={2}
-                          className="w-full px-3 py-2 rounded-lg bg-card border border-border text-[12px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-toss-red/20 resize-none"
-                        />
-
-                        {banError && <p className="text-[11px] text-toss-red">{banError}</p>}
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { setBanTarget(null); setBanError(""); }}
-                            className="flex-1 h-9 rounded-lg bg-card text-[12px] font-semibold text-toss-gray-600"
-                          >
-                            취소
-                          </button>
-                          <button
-                            onClick={() => handleBanSubmit(user.id)}
-                            disabled={banSubmitting || !banReason.trim()}
-                            className="flex-1 h-9 rounded-lg bg-toss-red text-white text-[12px] font-semibold disabled:opacity-40"
-                          >
-                            {banSubmitting ? "처리 중..." : isOperator ? "승인 요청" : "제재 적용"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

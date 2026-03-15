@@ -23,10 +23,10 @@ const TYPE_FILTERS = [
   { value: "PERMANENT", label: "영구 정지" },
 ];
 
-const BAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  WARNING: { label: "경고", color: "text-amber-600", bg: "bg-amber-500/10" },
-  TEMP: { label: "임시 정지", color: "text-toss-red", bg: "bg-toss-red/10" },
-  PERMANENT: { label: "영구 정지", color: "text-toss-red", bg: "bg-toss-red/10" },
+const BAN_CHIP: Record<string, { label: string; text: string; bg: string; dot: string }> = {
+  WARNING: { label: "경고", text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/15", dot: "bg-amber-500" },
+  TEMP: { label: "임시 정지", text: "text-orange-700 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-500/15", dot: "bg-orange-500" },
+  PERMANENT: { label: "영구 정지", text: "text-red-700 dark:text-red-400", bg: "bg-red-50 dark:bg-red-500/15", dot: "bg-red-500" },
 };
 
 function formatDate(dateStr: string) {
@@ -80,102 +80,138 @@ export default function BansPage() {
     finally { setDeleting(null); }
   }
 
-  return (
-    <div>
-      <h1 className="text-[22px] font-bold text-foreground mb-1">유저 제재</h1>
-      <p className="text-[12px] text-toss-gray-500 mb-4">제재 이력을 확인하고 관리합니다</p>
+  // 카테고리별 카운트
+  const counts = {
+    ALL: bans.length,
+    WARNING: bans.filter(b => b.type === "WARNING").length,
+    TEMP: bans.filter(b => b.type === "TEMP").length,
+    PERMANENT: bans.filter(b => b.type === "PERMANENT").length,
+  };
 
-      {/* Search */}
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-toss-gray-400">
-            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchBans()}
-            placeholder="닉네임, 병영주소, 사유 검색"
-            className="w-full h-10 pl-10 pr-4 rounded-xl bg-card border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <button onClick={() => fetchBans()} className="h-10 px-4 rounded-xl bg-secondary text-[12px] font-semibold">검색</button>
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-[22px] font-bold text-foreground tracking-tight">유저 제재</h1>
+        <p className="text-[13px] text-toss-gray-500 mt-0.5">제재 이력을 확인하고 관리합니다</p>
       </div>
 
-      {/* Type filter */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 scrollbar-hide">
+      {/* Search */}
+      <div className="relative">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-toss-gray-400">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && fetchBans()}
+          placeholder="닉네임, 병영주소, 사유 검색"
+          className="w-full h-11 pl-10 pr-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border-none text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20" />
+      </div>
+
+      {/* Segmented Control */}
+      <div className="bg-toss-gray-50 dark:bg-secondary rounded-2xl p-1 flex gap-0.5">
         {TYPE_FILTERS.map((f) => (
           <button key={f.value} onClick={() => setTypeFilter(f.value)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-medium ${
-              typeFilter === f.value ? "bg-toss-red text-white" : "bg-secondary text-toss-gray-600"
+            className={`flex-1 py-2 rounded-xl text-[12px] font-semibold transition-all ${
+              typeFilter === f.value
+                ? "bg-card text-foreground shadow-sm"
+                : "text-toss-gray-500 hover:text-foreground"
             }`}>
             {f.label}
+            <span className="ml-1 text-[10px] opacity-60">{counts[f.value as keyof typeof counts]}</span>
           </button>
         ))}
       </div>
 
-      <p className="text-[13px] text-toss-gray-500 mb-3">총 {bans.length}건</p>
+      {/* Count */}
+      <p className="text-[12px] text-toss-gray-400 tabular-nums">{bans.length}건의 제재</p>
 
       {/* Ban list */}
       {loading ? (
-        <div className="p-8 text-center"><p className="text-[13px] text-toss-gray-500 animate-pulse">로딩 중...</p></div>
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-card rounded-2xl border border-border/40 p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-28 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" />
+                  <div className="h-3 w-40 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : bans.length === 0 ? (
-        <div className="p-8 text-center"><p className="text-[13px] text-toss-gray-500">제재 이력이 없습니다</p></div>
+        <div className="py-16 text-center">
+          <div className="w-14 h-14 rounded-full bg-toss-gray-50 dark:bg-secondary flex items-center justify-center mx-auto mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-toss-gray-300">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <p className="text-[14px] text-toss-gray-500 font-medium">제재 이력이 없습니다</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {bans.map((ban) => {
-            const typeInfo = BAN_LABELS[ban.type];
+            const chip = BAN_CHIP[ban.type];
             const active = isActive(ban);
             const displayName = ban.user?.nickname ?? ban.barracksAddress ?? "알 수 없음";
 
             return (
-              <div key={ban.id} className="bg-card rounded-2xl border border-border/50 shadow-toss p-4">
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
-                    {ban.user?.image ? (
-                      <img src={ban.user.image} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[14px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
+              <div key={ban.id} className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-center gap-3.5">
+                    {/* Avatar */}
+                    <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
+                      {ban.user?.image ? (
+                        <img src={ban.user.image} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[15px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {ban.user ? (
+                          <Link href={`/profile/${ban.user.id}`} className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">
+                            {displayName}
+                          </Link>
+                        ) : (
+                          <span className="text-[14px] font-semibold text-foreground truncate">{displayName}</span>
+                        )}
+                        {/* 제재 유형 칩 */}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${chip.bg} ${chip.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />
+                          {chip.label}
+                        </span>
+                        {active && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white">활성</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-toss-gray-400 mt-0.5">
+                        {formatDate(ban.createdAt)}
+                        {ban.barracksAddress && ` · 병영주소 ${ban.barracksAddress}`}
+                        {ban.type === "TEMP" && ban.expiresAt && ` · 만료 ${formatDate(ban.expiresAt)}`}
+                      </p>
+                    </div>
+
+                    {/* 해제 */}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(ban.id)}
+                        disabled={deleting === ban.id}
+                        className="shrink-0 h-8 px-3.5 rounded-xl bg-toss-gray-50 dark:bg-toss-gray-800 text-[11px] font-semibold text-toss-gray-600 dark:text-toss-gray-400 hover:bg-toss-gray-100 dark:hover:bg-toss-gray-700 disabled:opacity-50 transition-colors"
+                      >
+                        {deleting === ban.id ? "..." : "해제"}
+                      </button>
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {ban.user ? (
-                        <Link href={`/profile/${ban.user.id}`} className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">
-                          {displayName}
-                        </Link>
-                      ) : (
-                        <span className="text-[14px] font-semibold text-foreground truncate">{displayName}</span>
-                      )}
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${typeInfo.bg} ${typeInfo.color}`}>{typeInfo.label}</span>
-                      {active && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-toss-red/10 text-toss-red">활성</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-toss-gray-500">
-                      <span>{formatDate(ban.createdAt)}</span>
-                      {ban.barracksAddress && <span>병영주소: {ban.barracksAddress}</span>}
-                      {ban.type === "TEMP" && ban.expiresAt && (
-                        <span>만료: {formatDate(ban.expiresAt)}</span>
-                      )}
-                    </div>
+                  {/* 사유 */}
+                  <div className="mt-3 ml-[56px]">
+                    <p className="text-[12px] text-toss-gray-600 dark:text-toss-gray-400 leading-relaxed">{ban.reason}</p>
                   </div>
-
-                  {/* 해제 버튼 */}
-                  {canDelete && (
-                    <button
-                      onClick={() => handleDelete(ban.id)}
-                      disabled={deleting === ban.id}
-                      className="shrink-0 h-8 px-3 rounded-lg bg-secondary text-[11px] font-medium text-toss-gray-600 hover:bg-secondary/80 disabled:opacity-50"
-                    >
-                      {deleting === ban.id ? "..." : "해제"}
-                    </button>
-                  )}
-                </div>
-
-                {/* 사유 */}
-                <div className="mt-2.5 ml-[52px]">
-                  <p className="text-[12px] text-toss-gray-500 leading-relaxed">{ban.reason}</p>
                 </div>
               </div>
             );
