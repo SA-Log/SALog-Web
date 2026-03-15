@@ -87,13 +87,55 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: report.id, success: true }, { status: 201 });
 }
 
-// 오늘 신고 수 조회
-export async function GET() {
+// 신고 목록 조회 + 오늘 신고 수
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const mode = url.searchParams.get("mode"); // "list" | null (default: todayCount)
+
+  if (mode === "list") {
+    const status = url.searchParams.get("status"); // SUSPECT, PROBABLE, CONFIRMED, DISMISSED
+    const sort = url.searchParams.get("sort") ?? "latest"; // latest, oldest
+    const page = Number(url.searchParams.get("page") ?? "1");
+    const limit = 20;
+
+    const where: Record<string, unknown> = {};
+    if (status && status !== "ALL") {
+      where.status = status;
+    }
+
+    const orderBy = sort === "oldest"
+      ? { createdAt: "asc" as const }
+      : { createdAt: "desc" as const };
+
+    const [reports, total] = await Promise.all([
+      prisma.hackReport.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          nickname: true,
+          barracksAddress: true,
+          status: true,
+          hackTypes: true,
+          createdAt: true,
+          reporter: { select: { id: true, nickname: true, image: true } },
+          _count: { select: { votes: true, comments: true } },
+        },
+      }),
+      prisma.hackReport.count({ where }),
+    ]);
+
+    return NextResponse.json({ reports, total, page, totalPages: Math.ceil(total / limit) });
+  }
+
+  // 기본: 오늘 신고 수 조회
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 

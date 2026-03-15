@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FloatingActionButton } from "@/components/common/floating-action-button";
 import { ReportCard } from "@/components/hack/report-card";
-import { mockHackReports, type HackStatus } from "@/lib/mock-data";
 
 type MainTab = "reports" | "confirmed";
+type StatusFilter = "ALL" | "PROBABLE" | "SUSPECT" | "DISMISSED";
 
-const REPORT_FILTERS: { value: HackStatus | "ALL"; label: string }[] = [
+const REPORT_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "ALL", label: "전체" },
   { value: "PROBABLE", label: "핵 유력" },
   { value: "SUSPECT", label: "핵 의심" },
@@ -16,36 +16,89 @@ const REPORT_FILTERS: { value: HackStatus | "ALL"; label: string }[] = [
 
 const SORT_OPTIONS = [
   { value: "latest", label: "최신순" },
-  { value: "votes", label: "찬성 많은순" },
   { value: "oldest", label: "오래된순" },
 ];
 
+type ReportItem = {
+  id: string;
+  nickname: string;
+  barracksAddress: string;
+  status: string;
+  hackTypes: string[];
+  createdAt: string;
+  description?: string | null;
+  reporter: { id: string; nickname: string | null; image: string | null };
+  _count: { votes: number; comments: number };
+};
+
 export default function ReportsPage() {
   const [mainTab, setMainTab] = useState<MainTab>("reports");
-  const [statusFilter, setStatusFilter] = useState<HackStatus | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [sortBy, setSortBy] = useState("latest");
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [confirmedReports, setConfirmedReports] = useState<ReportItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [confirmedCount, setConfirmedCount] = useState(0);
 
-  // 핵 의심 등록 탭: 의심, 유력, 기각 (검증 중인 신고)
-  const pendingReports = mockHackReports
-    .filter((r) => r.status !== "CONFIRMED")
-    .filter((r) => statusFilter === "ALL" || r.status === statusFilter)
-    .sort((a, b) => {
-      if (sortBy === "votes") return b.agreeCount - a.agreeCount;
-      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  useEffect(() => {
+    fetchReports();
+  }, [mainTab, statusFilter, sortBy]);
 
-  // 핵 유저 DB 탭: 확정된 유저만
-  const confirmedReports = mockHackReports
-    .filter((r) => r.status === "CONFIRMED")
-    .sort((a, b) => {
-      if (sortBy === "votes") return b.agreeCount - a.agreeCount;
-      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  async function fetchReports() {
+    setLoading(true);
+    try {
+      if (mainTab === "reports") {
+        const status = statusFilter === "ALL" ? "" : statusFilter;
+        const params = new URLSearchParams({ mode: "list", sort: sortBy });
+        if (status) params.set("status", status);
+        // pending 탭: CONFIRMED 제외
+        if (!status) {
+          // 전체에서 CONFIRMED 빼기 위해 개별 로드
+          const [suspect, probable, dismissed] = await Promise.all(
+            ["SUSPECT", "PROBABLE", "DISMISSED"].map(s =>
+              fetch(`/api/reports?mode=list&status=${s}&sort=${sortBy}`).then(r => r.json())
+            )
+          );
+          const all = [...(suspect.reports ?? []), ...(probable.reports ?? []), ...(dismissed.reports ?? [])];
+          all.sort((a: ReportItem, b: ReportItem) =>
+            sortBy === "oldest"
+              ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          setReports(all);
+          setPendingCount(all.length);
+        } else {
+          const res = await fetch(`/api/reports?${params}`);
+          const data = await res.json();
+          setReports(data.reports ?? []);
+          setPendingCount(data.total ?? 0);
+        }
+      } else {
+        const res = await fetch(`/api/reports?mode=list&status=CONFIRMED&sort=${sortBy}`);
+        const data = await res.json();
+        setConfirmedReports(data.reports ?? []);
+        setConfirmedCount(data.total ?? 0);
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }
 
-  const pendingCount = mockHackReports.filter((r) => r.status !== "CONFIRMED").length;
-  const confirmedCount = mockHackReports.filter((r) => r.status === "CONFIRMED").length;
+  // 초기 로드 시 양쪽 카운트
+  useEffect(() => {
+    fetch("/api/reports?mode=list&status=CONFIRMED&sort=latest")
+      .then(r => r.json())
+      .then(d => setConfirmedCount(d.total ?? 0))
+      .catch(() => {});
+    Promise.all(
+      ["SUSPECT", "PROBABLE", "DISMISSED"].map(s =>
+        fetch(`/api/reports?mode=list&status=${s}&sort=latest`).then(r => r.json()).then(d => d.total ?? 0)
+      )
+    ).then(counts => setPendingCount(counts.reduce((a: number, b: number) => a + b, 0)))
+     .catch(() => {});
+  }, []);
+
+  const displayReports = mainTab === "reports" ? reports : confirmedReports;
 
   return (
     <div className="mx-auto max-w-screen-lg px-5 py-6">
@@ -57,7 +110,7 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      {/* Info banner — 탭에 따라 변경 */}
+      {/* Info banner */}
       {mainTab === "reports" ? (
         <div className="bg-toss-orange-light dark:bg-toss-orange/10 rounded-2xl p-4 mb-5 flex gap-3 items-center">
           <div className="w-5 h-5 rounded-full bg-toss-orange/20 flex items-center justify-center shrink-0">
@@ -82,7 +135,7 @@ export default function ReportsPage() {
       <div className="flex gap-1 mb-5 bg-secondary rounded-xl p-1">
         <button
           onClick={() => { setMainTab("reports"); setStatusFilter("ALL"); }}
-          className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium btn-chip ${
+          className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium ${
             mainTab === "reports" ? "bg-card text-foreground shadow-toss" : "text-toss-gray-500"
           }`}
         >
@@ -93,7 +146,7 @@ export default function ReportsPage() {
         </button>
         <button
           onClick={() => setMainTab("confirmed")}
-          className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium btn-chip ${
+          className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium ${
             mainTab === "confirmed" ? "bg-card text-foreground shadow-toss" : "text-toss-gray-500"
           }`}
         >
@@ -104,106 +157,104 @@ export default function ReportsPage() {
         </button>
       </div>
 
-      {/* ========== 핵 의심 등록 탭 ========== */}
+      {/* Filters */}
       {mainTab === "reports" && (
-        <>
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-              {REPORT_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setStatusFilter(f.value)}
-                  className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-medium btn-chip ${
-                    statusFilter === f.value
-                      ? "bg-primary text-white"
-                      : "bg-secondary text-toss-gray-600"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <div className="sm:ml-auto">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="h-10 sm:h-8 px-3 rounded-lg border border-border bg-card text-[13px] sm:text-[12px] text-toss-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            {REPORT_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setStatusFilter(f.value)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-medium ${
+                  statusFilter === f.value
+                    ? "bg-primary text-white"
+                    : "bg-secondary text-toss-gray-600"
+                }`}
               >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-500 mb-3">
-            총 <span className="font-semibold text-foreground">{pendingReports.length}</span>건
-          </p>
-
-          <div className="flex flex-col gap-3">
-            {pendingReports.map((report) => (
-              <ReportCard key={report.id} report={report} />
+                {f.label}
+              </button>
             ))}
           </div>
-
-          {pendingReports.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
-                  <path d="M7 10L9 12L13 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-toss-gray-400"/>
-                </svg>
-              </div>
-              <p className="text-[15px] text-foreground font-semibold">해당 조건의 신고가 없습니다</p>
-              <p className="text-[13px] text-toss-gray-500 mt-1">필터를 변경하거나 새 신고를 등록해주세요</p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ========== 핵 유저 DB 탭 ========== */}
-      {mainTab === "confirmed" && (
-        <>
-          {/* Sort only (no status filter needed for confirmed) */}
-          <div className="flex items-center justify-between mb-5">
-            <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-500">
-              확정 <span className="font-semibold text-foreground">{confirmedReports.length}</span>명
-            </p>
+          <div className="sm:ml-auto">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="h-8 px-3 rounded-lg border border-border bg-card text-[12px] text-toss-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
+              className="h-10 sm:h-8 px-3 rounded-lg border border-border bg-card text-[13px] sm:text-[12px] text-toss-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>
+        </div>
+      )}
 
-          <div className="flex flex-col gap-3">
-            {confirmedReports.map((report) => (
-              <ReportCard key={report.id} report={report} />
+      {mainTab === "confirmed" && (
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-500">
+            확정 <span className="font-semibold text-foreground">{confirmedCount}</span>명
+          </p>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="h-8 px-3 rounded-lg border border-border bg-card text-[12px] text-toss-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
-          </div>
+          </select>
+        </div>
+      )}
 
-          {confirmedReports.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
-                  <path d="M7 10L9 12L13 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-toss-gray-400"/>
-                </svg>
+      {/* Count */}
+      {mainTab === "reports" && (
+        <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-500 mb-3">
+          총 <span className="font-semibold text-foreground">{reports.length}</span>건
+        </p>
+      )}
+
+      {/* List */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-card rounded-3xl border border-border/40 p-5 animate-pulse">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-20 rounded bg-toss-gray-100 dark:bg-toss-gray-800" />
+                  <div className="h-2.5 w-14 rounded bg-toss-gray-100 dark:bg-toss-gray-800" />
+                </div>
               </div>
-              <p className="text-[15px] text-foreground font-semibold">아직 확정된 핵 유저가 없습니다</p>
+              <div className="h-5 w-32 rounded bg-toss-gray-100 dark:bg-toss-gray-800 mb-2" />
+              <div className="h-3 w-48 rounded bg-toss-gray-100 dark:bg-toss-gray-800" />
             </div>
+          ))}
+        </div>
+      ) : displayReports.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" className="text-toss-gray-400"/>
+              <path d="M7 10L9 12L13 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-toss-gray-400"/>
+            </svg>
+          </div>
+          <p className="text-[15px] text-foreground font-semibold">
+            {mainTab === "confirmed" ? "아직 확정된 핵 유저가 없습니다" : "해당 조건의 신고가 없습니다"}
+          </p>
+          {mainTab === "reports" && (
+            <p className="text-[13px] text-toss-gray-500 mt-1">필터를 변경하거나 새 신고를 등록해주세요</p>
           )}
-        </>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {displayReports.map((report) => (
+            <ReportCard key={report.id} report={report} />
+          ))}
+        </div>
       )}
 
       <FloatingActionButton href="/reports/new" label="핵 신고" color="red" />
 
-      {/* Disclaimer */}
       <div className="mt-8 p-4 rounded-xl bg-secondary border border-border">
         <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-500 leading-relaxed text-center">
           본 목록은 커뮤니티 기반 정보로, SALog는 정보의 정확성을 보장하지 않습니다.

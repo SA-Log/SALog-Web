@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { EvidenceUpload, type EvidenceItem } from "@/components/common/evidence-upload";
-import { mockMannerTags, MANNER_TAG_MAP, type MannerTagType } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, type MannerTagType } from "@/lib/mock-data";
 
 const TAG_OPTIONS: { value: MannerTagType; label: string; emoji: string }[] = [
   { value: "VERBAL_ABUSE", label: "욕설 / 인신공격", emoji: "🤬" },
@@ -17,8 +17,16 @@ const TAG_OPTIONS: { value: MannerTagType; label: string; emoji: string }[] = [
 type DuplicateTag = { id: string; nickname: string; tagType: MannerTagType };
 type SubmitMode = "new" | "evidence" | null;
 
+function extractNexonSn(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^\d+$/.test(trimmed)) return trimmed;
+  const match = trimmed.match(/barracks\.sa\.nexon\.com\/(\d+)/);
+  return match ? match[1] : null;
+}
+
 export default function NewMannerTagPage() {
   const [step, setStep] = useState(1);
+  const [addressInput, setAddressInput] = useState("");
   const [barracksAddress, setBarracksAddress] = useState("");
   const [tagTypes, setTagTypes] = useState<MannerTagType[]>([]);
   const [description, setDescription] = useState("");
@@ -39,33 +47,25 @@ export default function NewMannerTagPage() {
   const canSubmit = evidence.length > 0;
 
   async function handleLookup() {
-    const trimmed = barracksAddress.trim();
-    if (!trimmed) return;
+    const sn = extractNexonSn(addressInput);
+    if (!sn) {
+      setLookupResult({ nickname: "", found: false, error: "올바른 병영주소를 입력해주세요" });
+      return;
+    }
     setIsLooking(true);
     setLookupResult(null);
     setDuplicateTag(null);
     setSubmitMode(null);
 
     try {
-      const res = await fetch("/api/barracks/lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
-      });
+      const res = await fetch(`/api/barracks/profile?nexonSn=${sn}`);
       const data = await res.json();
 
       if (data.found) {
         setLookupResult({ nickname: data.nickname, found: true });
-
-        const normalizedId = trimmed.match(/\/(\d+)/)?.[1];
-        if (normalizedId) {
-          const existing = mockMannerTags.find((t) => t.barracksAddress.includes(normalizedId));
-          if (existing) {
-            setDuplicateTag({ id: existing.id, nickname: existing.nickname, tagType: existing.tagType });
-          }
-        }
+        setBarracksAddress(sn);
       } else {
-        setLookupResult({ nickname: "", found: false, error: data.error || "해당 병영주소를 찾을 수 없습니다" });
+        setLookupResult({ nickname: "", found: false, error: data.error || "해당 병영주소의 유저를 찾을 수 없습니다" });
       }
     } catch {
       setLookupResult({ nickname: "", found: false, error: "조회 중 오류가 발생했습니다" });
@@ -104,22 +104,24 @@ export default function NewMannerTagPage() {
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <label className="block text-[13px] font-semibold text-foreground mb-2">병영주소</label>
+            <label className="block text-[13px] font-semibold text-foreground mb-2">
+              병영주소 <span className="text-toss-red">*</span>
+            </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                value={barracksAddress}
-                onChange={(e) => { setBarracksAddress(e.target.value); setLookupResult(null); setDuplicateTag(null); setSubmitMode(null); }}
+                value={addressInput}
+                onChange={(e) => { setAddressInput(e.target.value); setLookupResult(null); setDuplicateTag(null); setSubmitMode(null); setBarracksAddress(""); }}
                 placeholder="https://barracks.sa.nexon.com/1234567890/match"
                 className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
               />
-              <button onClick={handleLookup} disabled={!barracksAddress.trim() || isLooking}
+              <button onClick={handleLookup} disabled={!addressInput.trim() || isLooking}
                 className="h-11 px-5 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 btn-primary shrink-0">
                 {isLooking ? "조회 중..." : "조회"}
               </button>
             </div>
             <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
-              병영수첩 URL을 입력하세요 (예: https://barracks.sa.nexon.com/1234567890/match)
+              신고 대상의 병영수첩 URL을 입력해주세요
             </p>
           </div>
 
