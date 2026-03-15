@@ -791,16 +791,21 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
           {entries.map((entry) => {
             const displayName = entry.nickname ?? entry.barracksAddress;
             return (
-              <div key={entry.id} className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors">
-                <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">{displayName}</p>
-                  {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
+              <div key={entry.id} className="flex items-center">
+                <a
+                  href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 min-w-0 px-5 py-4 hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                >
+                  <p className="text-[15px] font-semibold text-foreground truncate">{displayName}</p>
+                  {entry.memo && <p className="text-[12px] text-toss-gray-400 truncate mt-1">{entry.memo}</p>}
                 </a>
                 <button
                   onClick={() => handleDelete(entry.id)}
-                  className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                  className="shrink-0 w-10 h-10 mr-3 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                 >
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 </button>
               </div>
             );
