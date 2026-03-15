@@ -351,14 +351,23 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
             <button
               onClick={handleBlacklist}
               disabled={blacklisted || blacklistLoading}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all active:scale-[0.97] ${
                 blacklisted
-                  ? "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-400"
-                  : "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 dark:text-toss-gray-400 hover:bg-toss-gray-200 dark:hover:bg-toss-gray-700"
+                  ? "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-green"
+                  : "bg-toss-red/10 text-toss-red hover:bg-toss-red/20"
               }`}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-              {blacklisted ? "블랙리스트 추가됨" : "블랙리스트 추가"}
+              {blacklisted ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  블랙리스트에 추가됨
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  블랙리스트에 추가
+                </>
+              )}
             </button>
           )}
         </div>

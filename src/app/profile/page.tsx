@@ -313,7 +313,7 @@ export default function ProfilePage() {
       {/* ─── Tab Content ─── */}
       <div className="py-6">
         {activeTab === "activity" && <ProfileActivityTab />}
-        {activeTab === "blacklist" && <ProfileBlacklistTab />}
+        {activeTab === "blacklist" && <ProfileBlacklistTab onCountChange={(d) => setBlacklistCount((c) => c + d)} />}
         {activeTab === "followers" && <ProfileFollowTab type="followers" onCountChange={(d) => setFollowerCount((c) => c + d)} />}
         {activeTab === "following" && <ProfileFollowTab type="following" onCountChange={(d) => setFollowingCount((c) => c + d)} />}
       </div>
@@ -706,7 +706,7 @@ function ProfileActivityTab() {
 
 type BlacklistItem = { id: string; barracksAddress: string; nickname: string | null; memo: string | null; createdAt: string };
 
-function ProfileBlacklistTab() {
+function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number) => void }) {
   const [entries, setEntries] = useState<BlacklistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -745,6 +745,7 @@ function ProfileBlacklistTab() {
       const data = await res.json().catch(() => null);
       if (res.ok) {
         setEntries((prev) => [{ id: data.id, barracksAddress: sn, nickname, memo: addMemo.trim() || null, createdAt: new Date().toISOString() }, ...prev]);
+        onCountChange?.(1);
         setShowAdd(false);
         setAddAddress("");
         setAddMemo("");
@@ -761,7 +762,7 @@ function ProfileBlacklistTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    if (res.ok) setEntries((prev) => prev.filter((e) => e.id !== id));
+    if (res.ok) { setEntries((prev) => prev.filter((e) => e.id !== id)); onCountChange?.(-1); }
   }
 
   if (loading) {
