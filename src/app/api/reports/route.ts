@@ -73,18 +73,23 @@ export async function POST(req: Request) {
   const { barracksAddress, nickname, hackTypes, description, evidences } =
     parsed.data;
 
-  const report = await prisma.hackReport.create({
-    data: {
-      barracksAddress: barracksAddress || "",
-      nickname,
-      hackTypes,
-      description: description || null,
-      evidences: evidences ?? [],
-      reporterId: session.user.id,
-    },
-  });
+  try {
+    const report = await prisma.hackReport.create({
+      data: {
+        barracksAddress: barracksAddress || "",
+        nickname,
+        hackTypes,
+        description: description || null,
+        evidences: evidences ?? [],
+        reporterId: session.user.id,
+      },
+    });
 
-  return NextResponse.json({ id: report.id, success: true }, { status: 201 });
+    return NextResponse.json({ id: report.id, success: true }, { status: 201 });
+  } catch (err) {
+    console.error("[reports/POST] 에러:", err);
+    return NextResponse.json({ error: "신고 등록에 실패했습니다" }, { status: 500 });
+  }
 }
 
 // 신고 목록 조회 + 오늘 신고 수
