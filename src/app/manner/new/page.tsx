@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { EvidenceUpload, type EvidenceItem } from "@/components/common/evidence-upload";
 import { MANNER_TAG_MAP, type MannerTagType } from "@/lib/mock-data";
@@ -25,9 +26,12 @@ function extractNexonSn(input: string): string | null {
 }
 
 export default function NewMannerTagPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [addressInput, setAddressInput] = useState("");
   const [barracksAddress, setBarracksAddress] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [tagTypes, setTagTypes] = useState<MannerTagType[]>([]);
   const [description, setDescription] = useState("");
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
@@ -44,7 +48,38 @@ export default function NewMannerTagPage() {
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
   }
-  const canSubmit = evidence.length > 0;
+  const canSubmit = !isSubmitting;
+
+  async function handleSubmit() {
+    if (!lookupResult?.found || !lookupResult.nickname || tagTypes.length === 0) return;
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      // 첫 번째 태그 타입으로 등록 (복수 선택 시 각각 등록)
+      for (const tagType of tagTypes) {
+        const res = await fetch("/api/manner", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            barracksAddress,
+            nickname: lookupResult.nickname,
+            tagType,
+            description: description.trim(),
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          setSubmitError(data?.error || "등록에 실패했습니다");
+          return;
+        }
+      }
+      router.push("/manner");
+    } catch {
+      setSubmitError("서버 연결에 실패했습니다");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   async function handleLookup() {
     const sn = extractNexonSn(addressInput);
@@ -322,19 +357,25 @@ export default function NewMannerTagPage() {
 
           <div>
             <label className="block text-[13px] font-semibold text-foreground mb-2">
-              증거 자료 <span className="text-toss-red">*</span>
+              증거 자료 <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
             </label>
             <EvidenceUpload items={evidence} onChange={setEvidence} />
           </div>
+
+          {submitError && (
+            <p className="text-[12px] text-toss-red text-center">{submitError}</p>
+          )}
 
           <div className="flex gap-2">
             <button onClick={() => setStep(2)}
               className="flex-1 h-12 rounded-xl bg-secondary text-toss-gray-700 dark:text-toss-gray-300 text-[14px] font-semibold btn-secondary">
               이전
             </button>
-            <button disabled={!canSubmit}
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
               className="flex-1 h-12 rounded-xl bg-toss-orange text-white text-[14px] font-semibold disabled:opacity-40 btn-orange">
-              {submitMode === "evidence" ? "증거 제출" : "등록하기"}
+              {isSubmitting ? "등록 중..." : submitMode === "evidence" ? "증거 제출" : "등록하기"}
             </button>
           </div>
 

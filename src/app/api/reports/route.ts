@@ -129,15 +129,25 @@ export async function GET(req: Request) {
           barracksAddress: true,
           status: true,
           hackTypes: true,
+          description: true,
           createdAt: true,
           reporter: { select: { id: true, nickname: true, image: true } },
-          _count: { select: { votes: true, comments: true } },
+          votes: { select: { voteType: true } },
+          _count: { select: { comments: true } },
         },
       }),
       prisma.hackReport.count({ where }),
     ]);
 
-    return NextResponse.json({ reports, total, page, totalPages: Math.ceil(total / limit) });
+    const mapped = reports.map((r) => {
+      const agreeCount = r.votes.filter((v) => v.voteType === "AGREE").length;
+      const disagreeCount = r.votes.filter((v) => v.voteType === "DISAGREE").length;
+      const unsureCount = r.votes.length - agreeCount - disagreeCount;
+      const { votes: _, ...rest } = r;
+      return { ...rest, agreeCount, unsureCount, disagreeCount };
+    });
+
+    return NextResponse.json({ reports: mapped, total, page, totalPages: Math.ceil(total / limit) });
   }
 
   // 기본: 오늘 신고 수 조회

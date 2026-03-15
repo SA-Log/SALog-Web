@@ -28,17 +28,13 @@ interface ReportCardProps {
     id: string;
     nickname: string;
     status: string;
-    hackTypes?: string[];
     description?: string | null;
     createdAt: string;
     reporter?: { id: string; nickname: string | null; image: string | null };
-    _count?: { votes: number; comments: number };
-    // mock 호환
-    reporterId?: string;
-    reporterName?: string;
     agreeCount?: number;
     unsureCount?: number;
     disagreeCount?: number;
+    _count?: { comments: number };
     commentCount?: number;
   };
 }
@@ -46,9 +42,11 @@ interface ReportCardProps {
 export function ReportCard({ report }: ReportCardProps) {
   const router = useRouter();
 
-  const reporterName = report.reporter?.nickname ?? report.reporterName ?? "유저";
-  const reporterId = report.reporter?.id ?? report.reporterId ?? "";
-  const voteCount = report._count?.votes ?? ((report.agreeCount ?? 0) + (report.unsureCount ?? 0) + (report.disagreeCount ?? 0));
+  const reporterName = report.reporter?.nickname ?? "유저";
+  const reporterId = report.reporter?.id ?? "";
+  const agreeCount = report.agreeCount ?? 0;
+  const unsureCount = report.unsureCount ?? 0;
+  const disagreeCount = report.disagreeCount ?? 0;
   const commentCount = report._count?.comments ?? report.commentCount ?? 0;
 
   return (
@@ -83,16 +81,26 @@ export function ReportCard({ report }: ReportCardProps) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer — 찬성/모름/반대 + 댓글 */}
         <div className="px-4 sm:px-5 py-3 border-t border-border/20 flex items-center justify-between">
           <div className="flex items-center gap-4 text-[12px] leading-none">
-            <span className="inline-flex items-center gap-1 text-toss-gray-500">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4 6 1z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/></svg>
-              <span className="tabular-nums">{voteCount}</span>
-              <span>투표</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-toss-red shrink-0" />
+              <span className="font-semibold text-toss-red tabular-nums">{agreeCount}</span>
+              <span className="text-toss-gray-400">맞음</span>
             </span>
-            <span className="inline-flex items-center gap-1 text-toss-gray-500">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 5.5a4 4 0 014-4h1a4 4 0 014 4v.5a4 4 0 01-4 4H5L2.5 11.5v-2.3A3.97 3.97 0 011.5 5.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span className="font-semibold text-amber-500 tabular-nums">{unsureCount}</span>
+              <span className="text-toss-gray-400">모름</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-toss-blue shrink-0" />
+              <span className="font-semibold text-toss-blue tabular-nums">{disagreeCount}</span>
+              <span className="text-toss-gray-400">아님</span>
+            </span>
+            <span className="inline-flex items-center gap-1 text-toss-gray-400">
+              <svg className="shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 5.5a4 4 0 014-4h1a4 4 0 014 4v.5a4 4 0 01-4 4H5L2.5 11.5v-2.3A3.97 3.97 0 011.5 5.5z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <span className="tabular-nums">{commentCount}</span>
             </span>
           </div>
