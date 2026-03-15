@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
-const BARRACKS_API = "https://barracks.sa.nexon.com/api";
+const CRAWLER_URL = process.env.CRAWLER_URL ?? "http://localhost:3001";
+const CRAWLER_API_KEY = process.env.CRAWLER_API_KEY ?? "";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -21,11 +22,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${BARRACKS_API}/Profile/GetProfileMain/${nexonSn}`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://barracks.sa.nexon.com/",
-      },
+    const res = await fetch(`${CRAWLER_URL}/api/barracks/profile?nexonSn=${nexonSn}`, {
+      headers: { "x-api-key": CRAWLER_API_KEY },
     });
 
     if (!res.ok) {
@@ -33,22 +31,7 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json();
-
-    if (data.rtnCode !== 0 || !data.result?.isFounded) {
-      return NextResponse.json({ error: "해당 병영주소의 유저를 찾을 수 없습니다", found: false });
-    }
-
-    const { characterInfo, profileInfo } = data.result;
-
-    return NextResponse.json({
-      found: true,
-      nickname: characterInfo.user_nick,
-      nexonSn: characterInfo.user_nexon_sn,
-      userIntro: profileInfo?.user_intro ?? "",
-      userImg: profileInfo?.user_img ?? null,
-      level: characterInfo.level_no,
-      clanName: characterInfo.clan_name ?? null,
-    });
+    return NextResponse.json(data);
   } catch {
     return NextResponse.json({ error: "조회 중 오류가 발생했습니다", found: false }, { status: 500 });
   }
