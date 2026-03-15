@@ -20,7 +20,7 @@ export interface ReportDetailData {
   evidences: Evidence[] | null;
   youtubeUrl?: string | null;
   createdAt: string;
-  reporter: { id: string; nickname: string | null; image: string | null };
+  reporter: { id: string; nickname: string | null; image: string | null; barracksVerified?: boolean };
   reporterId: string;
   // 핵 유저 전용
   status?: string;
@@ -30,7 +30,7 @@ export interface ReportDetailData {
   disagreeCount?: number;
   userVote?: "AGREE" | "UNSURE" | "DISAGREE" | null;
   nicknameHistory?: { id: string; oldNickname: string; newNickname: string; detectedAt: string }[];
-  comments?: { id: string; content: string; createdAt: string; user: { id: string; nickname: string | null; image: string | null } }[];
+  comments?: { id: string; content: string; createdAt: string; user: { id: string; nickname: string | null; image: string | null; barracksVerified?: boolean } }[];
   // 비매너 전용
   tagType?: string;
   tagTypes?: string[];
@@ -300,12 +300,10 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
           <span className={`text-[12px] font-semibold text-${accentColor}`}>신고 대상</span>
           {report.status && <div className="ml-auto"><StatusBadge status={report.status} /></div>}
         </div>
-        <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-2xl bg-${accentColor}/8 dark:bg-${accentColor}/15 flex items-center justify-center shrink-0`}>
-            <span className={`text-[22px] font-bold text-${accentColor}`}>{report.nickname.charAt(0)}</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-[20px] sm:text-[24px] font-bold text-foreground tracking-tight truncate">{report.nickname}</h1>
+        <div>
+          <h1 className="text-[20px] sm:text-[24px] font-bold text-foreground tracking-tight truncate">{report.nickname}</h1>
+          <div className="min-w-0">
+
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {type === "hack" && report.hackTypes?.map((ht) => {
                 const info = HACK_TYPE_LABELS[ht];
@@ -348,7 +346,14 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
             {report.reporter.image ? <img src={report.reporter.image} alt="" className="w-full h-full object-cover" /> : <span className="text-[14px] font-bold text-toss-gray-500">{(report.reporter.nickname || "?").charAt(0)}</span>}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors truncate">{report.reporter.nickname || "익명"}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors truncate">{report.reporter.nickname || "익명"}</p>
+              {report.reporter.barracksVerified && (
+                <span className="w-[16px] h-[16px] rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <svg width="9" height="9" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-toss-gray-400">프로필 보기</p>
           </div>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 dark:text-toss-gray-600 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -470,6 +475,11 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <Link href={`/profile/${comment.user.id}`} className="text-[12px] font-semibold text-foreground hover:opacity-80">{comment.user.nickname || "익명"}</Link>
+                    {comment.user.barracksVerified && (
+                      <span className="w-[14px] h-[14px] rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <svg width="7" height="7" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </span>
+                    )}
                     <span className="text-[11px] text-toss-gray-400">{formatRelativeTime(comment.createdAt)}</span>
                   </div>
                   <p className="text-[13px] text-toss-gray-700 dark:text-toss-gray-300 mt-0.5 leading-relaxed">{comment.content}</p>

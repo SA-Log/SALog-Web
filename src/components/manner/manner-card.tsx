@@ -45,7 +45,7 @@ interface MannerCardProps {
     description?: string | null;
     evidences?: EvidenceItem[] | null;
     createdAt: string;
-    reporter?: { id: string; nickname: string | null; image: string | null };
+    reporter?: { id: string; nickname: string | null; image: string | null; barracksVerified?: boolean };
     reporterId?: string;
     reporterName?: string;
   };
@@ -75,9 +75,16 @@ export function MannerCard({ tag }: MannerCardProps) {
             )}
           </Link>
           <div className="flex-1 min-w-0">
-            <Link href={`/profile/${reporterId}`} className="text-[13px] font-semibold text-foreground truncate hover:underline block">
-              {reporterName}
-            </Link>
+            <div className="flex items-center gap-1">
+              <Link href={`/profile/${reporterId}`} className="text-[13px] font-semibold text-foreground truncate hover:underline">
+                {reporterName}
+              </Link>
+              {tag.reporter?.barracksVerified && (
+                <span className="w-[14px] h-[14px] rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <svg width="7" height="7" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatRelative(tag.createdAt)}</p>
           </div>
           {/* 태그 뱃지들 */}

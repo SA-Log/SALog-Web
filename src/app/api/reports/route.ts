@@ -133,7 +133,7 @@ export async function GET(req: Request) {
           evidences: true,
           youtubeUrl: true,
           createdAt: true,
-          reporter: { select: { id: true, nickname: true, image: true } },
+          reporter: { select: { id: true, nickname: true, image: true, barracksVerified: true } },
           votes: { select: { voteType: true } },
           _count: { select: { comments: true } },
         },

@@ -91,7 +91,7 @@ export async function GET(req: Request) {
         evidences: true,
         createdAt: true,
         reporterId: true,
-        reporter: { select: { id: true, nickname: true, image: true } },
+        reporter: { select: { id: true, nickname: true, image: true, barracksVerified: true } },
       },
     }),
     prisma.mannerTag.count({ where }),

@@ -35,14 +35,14 @@ export async function GET(
       reporterId: true,
       createdAt: true,
       reporter: {
-        select: { id: true, nickname: true, image: true },
+        select: { id: true, nickname: true, image: true, barracksVerified: true },
       },
       comments: {
         select: {
           id: true,
           content: true,
           createdAt: true,
-          user: { select: { id: true, nickname: true, image: true } },
+          user: { select: { id: true, nickname: true, image: true, barracksVerified: true } },
         },
         orderBy: { createdAt: "asc" as const },
       },

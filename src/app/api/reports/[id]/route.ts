@@ -34,6 +34,7 @@ export async function GET(
           id: true,
           nickname: true,
           image: true,
+          barracksVerified: true,
         },
       },
       votes: {
@@ -53,6 +54,7 @@ export async function GET(
               id: true,
               nickname: true,
               image: true,
+              barracksVerified: true,
             },
           },
         },
