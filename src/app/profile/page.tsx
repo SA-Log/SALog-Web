@@ -791,29 +791,16 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
           {entries.map((entry) => {
             const displayName = entry.nickname ?? entry.barracksAddress;
             return (
-              <div key={entry.id} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-secondary/30 transition-colors">
-                {/* 아바타 */}
-                <div className="w-10 h-10 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center shrink-0">
-                  <span className="text-[14px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>
-                </div>
-                {/* 정보 */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-semibold text-foreground truncate">{displayName}</p>
-                    <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-toss-gray-300 hover:text-primary transition-colors">
-                        <path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      </svg>
-                    </a>
-                  </div>
+              <div key={entry.id} className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors">
+                <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">{displayName}</p>
                   {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
-                </div>
-                {/* 삭제 */}
+                </a>
                 <button
                   onClick={() => handleDelete(entry.id)}
-                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                  className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 </button>
               </div>
             );
