@@ -35,6 +35,7 @@ export async function GET() {
           followers: true,
           following: true,
           hackReports: true,
+          blacklist: true,
         },
       },
     },
@@ -49,6 +50,7 @@ export async function GET() {
     followerCount: user._count.followers,
     followingCount: user._count.following,
     reportCount: user._count.hackReports,
+    blacklistCount: user._count.blacklist,
   });
 }
 

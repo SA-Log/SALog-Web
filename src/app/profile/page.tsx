@@ -53,6 +53,7 @@ export default function ProfilePage() {
           setFollowerCount(data.followerCount ?? 0);
           setFollowingCount(data.followingCount ?? 0);
           setTotalReports(data.reportCount ?? 0);
+          setBlacklistCount(data.blacklistCount ?? 0);
         }
         setProfileLoaded(true);
       })
@@ -76,6 +77,7 @@ export default function ProfilePage() {
   const [totalReports, setTotalReports] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [blacklistCount, setBlacklistCount] = useState(0);
 
   const rank = getRankForExp(exp);
   const title = getTitleForAccuracy(accuracy);
@@ -84,7 +86,7 @@ export default function ProfilePage() {
 
   const tabs: { value: ProfileTab; label: string; count: number }[] = [
     { value: "activity", label: "활동", count: totalReports },
-    { value: "blacklist", label: "블랙리스트", count: 0 },
+    { value: "blacklist", label: "블랙리스트", count: blacklistCount },
     { value: "followers", label: "팔로워", count: followerCount },
     { value: "following", label: "팔로잉", count: followingCount },
   ];
@@ -583,23 +585,249 @@ type FollowUser = {
   isFollowingBack: boolean;
 };
 
+type ActivityItem = {
+  id: string;
+  nickname: string;
+  reportType: "hack" | "manner";
+  status?: string;
+  hackTypes?: string[];
+  tagType?: string;
+  tagTypes?: string[];
+  evidences?: unknown;
+  description?: string | null;
+  createdAt: string;
+};
+
+function getYtThumb(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg` : null;
+}
+
+function getThumb(item: ActivityItem): string | null {
+  const evs = (item.evidences ?? []) as { type: string; url: string }[];
+  for (const e of evs) {
+    if (e.type === "screenshot") return e.url;
+    if (e.type === "youtube") { const t = getYtThumb(e.url); if (t) return t; }
+  }
+  return null;
+}
+
+const HACK_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  SUSPECT: { label: "의심", color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-500/20" },
+  PROBABLE: { label: "유력", color: "text-orange-700 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-500/20" },
+  CONFIRMED: { label: "확정", color: "text-white", bg: "bg-toss-red" },
+  DISMISSED: { label: "기각", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-500/20" },
+};
+
 function ProfileActivityTab() {
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/profile/activity")
+      .then((r) => r.json())
+      .then((d) => setActivities(d.activities ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-3 gap-1.5">
+        {[1,2,3,4,5,6].map((i) => (
+          <div key={i} className="aspect-square rounded-2xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <EmptyState
+        icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>}
+        title="아직 신고 활동이 없습니다"
+        description="핵 유저를 발견하면 신고해주세요"
+      />
+    );
+  }
+
   return (
-    <EmptyState
-      icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>}
-      title="아직 신고 활동이 없습니다"
-      description="핵 유저를 발견하면 신고해주세요"
-    />
+    <div className="grid grid-cols-3 gap-1.5">
+      {activities.map((item) => {
+        const thumb = getThumb(item);
+        const isHack = item.reportType === "hack";
+        const href = isHack ? `/reports/${item.id}` : `/manner/${item.id}`;
+        const statusInfo = isHack && item.status ? HACK_STATUS[item.status] : null;
+
+        return (
+          <Link key={item.id} href={href} className="group relative aspect-square rounded-2xl overflow-hidden bg-toss-gray-100 dark:bg-toss-gray-800 border border-border/30 hover:shadow-toss-md transition-all hover:-translate-y-0.5">
+            {/* 썸네일 또는 그라데이션 배경 */}
+            {thumb ? (
+              <img src={thumb} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className={`w-full h-full ${isHack ? "bg-gradient-to-br from-toss-red/10 to-toss-red/5" : "bg-gradient-to-br from-toss-orange/10 to-toss-orange/5"}`} />
+            )}
+
+            {/* 오버레이 */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+            {/* 유형 뱃지 — 좌상단 */}
+            <div className="absolute top-2 left-2">
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isHack ? "bg-toss-red/90 text-white" : "bg-toss-orange/90 text-white"}`}>
+                {isHack ? "핵" : "비매너"}
+              </span>
+            </div>
+
+            {/* 상태 뱃지 — 우상단 (핵만) */}
+            {statusInfo && (
+              <div className="absolute top-2 right-2">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${statusInfo.bg} ${statusInfo.color}`}>
+                  {statusInfo.label}
+                </span>
+              </div>
+            )}
+
+            {/* 닉네임 — 하단 */}
+            <div className="absolute inset-x-0 bottom-0 p-2.5">
+              <p className="text-[12px] font-semibold text-white truncate">{item.nickname}</p>
+              {item.description && (
+                <p className="text-[10px] text-white/70 truncate mt-0.5">{item.description}</p>
+              )}
+            </div>
+
+            {/* 호버 오버레이 */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
+type BlacklistItem = { id: string; barracksAddress: string; memo: string | null; createdAt: string };
+
 function ProfileBlacklistTab() {
+  const [entries, setEntries] = useState<BlacklistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addAddress, setAddAddress] = useState("");
+  const [addMemo, setAddMemo] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/blacklist")
+      .then((r) => r.json())
+      .then((d) => setEntries(d.entries ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleAdd() {
+    const sn = addAddress.trim().match(/(\d+)/)?.[1];
+    if (!sn) { setAddError("병영주소를 입력해주세요"); return; }
+    setAdding(true);
+    setAddError("");
+    try {
+      const res = await fetch("/api/blacklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barracksAddress: sn, memo: addMemo.trim() }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        setEntries((prev) => [{ id: data.id, barracksAddress: sn, memo: addMemo.trim() || null, createdAt: new Date().toISOString() }, ...prev]);
+        setShowAdd(false);
+        setAddAddress("");
+        setAddMemo("");
+      } else {
+        setAddError(data?.error || "추가에 실패했습니다");
+      }
+    } catch { setAddError("서버 연결에 실패했습니다"); }
+    finally { setAdding(false); }
+  }
+
+  async function handleDelete(id: string) {
+    const res = await fetch("/api/blacklist", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1,2,3].map((i) => (
+          <div key={i} className="h-16 rounded-2xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <EmptyState
-      icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
-      title="블랙리스트가 비어있습니다"
-      description="의심 유저를 블랙리스트에 추가해보세요"
-    />
+    <div>
+      {/* 추가 버튼 */}
+      <div className="flex justify-end mb-4">
+        <button onClick={() => setShowAdd(!showAdd)} className="h-8 px-3 rounded-xl bg-secondary text-[12px] font-medium text-toss-gray-600 dark:text-toss-gray-400 hover:bg-secondary/80 transition-colors">
+          {showAdd ? "취소" : "+ 직접 추가"}
+        </button>
+      </div>
+
+      {/* 직접 추가 폼 */}
+      {showAdd && (
+        <div className="bg-card rounded-2xl border border-border/40 p-4 mb-4 space-y-3">
+          <input
+            type="text"
+            value={addAddress}
+            onChange={(e) => { setAddAddress(e.target.value); setAddError(""); }}
+            placeholder="병영주소 URL 또는 숫자"
+            className="w-full h-10 px-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          <input
+            type="text"
+            value={addMemo}
+            onChange={(e) => setAddMemo(e.target.value)}
+            placeholder="메모 (선택)"
+            maxLength={100}
+            className="w-full h-10 px-3 rounded-xl bg-toss-gray-50 dark:bg-secondary border-none text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {addError && <p className="text-[11px] text-toss-red">{addError}</p>}
+          <button onClick={handleAdd} disabled={adding || !addAddress.trim()} className="w-full h-10 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40">
+            {adding ? "추가 중..." : "블랙리스트 추가"}
+          </button>
+        </div>
+      )}
+
+      {/* 목록 */}
+      {entries.length === 0 && !showAdd ? (
+        <EmptyState
+          icon={<><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>}
+          title="블랙리스트가 비어있습니다"
+          description="의심 유저를 블랙리스트에 추가해보세요"
+        />
+      ) : (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <div key={entry.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/30 hover:bg-secondary/30 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/></svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-foreground hover:text-primary transition-colors">
+                  {entry.barracksAddress}
+                </a>
+                {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
+              </div>
+              <button onClick={() => handleDelete(entry.id)} className="shrink-0 h-7 px-2.5 rounded-lg text-[11px] font-medium text-toss-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                삭제
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

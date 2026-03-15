@@ -154,6 +154,8 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   const [commentText, setCommentText] = useState("");
 
   const [isEditing, setIsEditing] = useState(false);
+  const [blacklisted, setBlacklisted] = useState(false);
+  const [blacklistLoading, setBlacklistLoading] = useState(false);
   const [editDescription, setEditDescription] = useState(report.description ?? "");
   const [editHackTypes, setEditHackTypes] = useState<string[]>(report.hackTypes ?? []);
   const [editTagTypes, setEditTagTypes] = useState<string[]>(report.tagTypes ?? (report.tagType ? [report.tagType] : []));
@@ -179,6 +181,20 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
         setCommentText("");
       }
     } catch { /* ignore */ }
+  }
+
+  async function handleBlacklist() {
+    if (!report.barracksAddress || blacklisted) return;
+    setBlacklistLoading(true);
+    try {
+      const res = await fetch("/api/blacklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barracksAddress: report.barracksAddress, nickname: report.nickname }),
+      });
+      if (res.ok || res.status === 409) setBlacklisted(true);
+    } catch { /* ignore */ }
+    finally { setBlacklistLoading(false); }
   }
 
   function openEdit() {
@@ -324,12 +340,28 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
             </div>
           </div>
         </div>
-        {barracksUrl && (
-          <a href={barracksUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[12px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            병영수첩 바로가기
-          </a>
-        )}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {barracksUrl && (
+            <a href={barracksUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[12px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              병영수첩 바로가기
+            </a>
+          )}
+          {report.barracksAddress && !isAuthor && (
+            <button
+              onClick={handleBlacklist}
+              disabled={blacklisted || blacklistLoading}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium transition-colors ${
+                blacklisted
+                  ? "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-400"
+                  : "bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 dark:text-toss-gray-400 hover:bg-toss-gray-200 dark:hover:bg-toss-gray-700"
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              {blacklisted ? "블랙리스트 추가됨" : "블랙리스트 추가"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ─── Reporter ─── */}
