@@ -18,10 +18,17 @@ const HACK_TYPES = [
 type DuplicateReport = { id: string; nickname: string; status: string };
 type SubmitMode = "new" | "evidence" | null;
 
+function extractNexonSn(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^\d+$/.test(trimmed)) return trimmed;
+  const match = trimmed.match(/barracks\.sa\.nexon\.com\/(\d+)/);
+  return match ? match[1] : null;
+}
+
 export default function NewReportPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [nicknameInput, setNicknameInput] = useState("");
+  const [addressInput, setAddressInput] = useState("");
   const [barracksAddress, setBarracksAddress] = useState("");
   const [hackTypes, setHackTypes] = useState<string[]>([]);
   const [description, setDescription] = useState("");
@@ -60,30 +67,30 @@ export default function NewReportPage() {
   }
 
   async function handleLookup() {
-    const trimmed = nicknameInput.trim();
-    if (!trimmed) return;
+    const sn = extractNexonSn(addressInput);
+    if (!sn) {
+      setLookupResult({ nickname: "", found: false, error: "올바른 병영주소를 입력해주세요" });
+      return;
+    }
     setIsLooking(true);
     setLookupResult(null);
     setDuplicateReport(null);
     setSubmitMode(null);
 
     try {
-      const res = await fetch("/api/barracks/lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: trimmed }),
-      });
+      const res = await fetch(`/api/barracks/profile?nexonSn=${sn}`);
       const data = await res.json();
 
       if (data.found) {
         setLookupResult({ nickname: data.nickname, found: true });
+        setBarracksAddress(sn);
 
-        // 닉네임으로 중복 신고 확인 (DB 조회)
+        // 병영주소로 중복 신고 확인 (DB 조회)
         try {
           const dupRes = await fetch("/api/reports/check-duplicate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nickname: data.nickname }),
+            body: JSON.stringify({ nickname: data.nickname, barracksAddress: sn }),
           });
           const dupData = await dupRes.json();
           if (dupData.duplicate && dupData.report) {
@@ -97,7 +104,7 @@ export default function NewReportPage() {
           // 중복 확인 실패해도 신고 진행 가능
         }
       } else {
-        setLookupResult({ nickname: "", found: false, error: data.error || "해당 닉네임의 유저를 찾을 수 없습니다" });
+        setLookupResult({ nickname: "", found: false, error: data.error || "해당 병영주소의 유저를 찾을 수 없습니다" });
       }
     } catch {
       setLookupResult({ nickname: "", found: false, error: "조회 중 오류가 발생했습니다" });
@@ -211,27 +218,26 @@ export default function NewReportPage() {
         <div className="space-y-5">
           <div>
             <label className="block text-[13px] font-semibold text-foreground mb-2">
-              닉네임 <span className="text-toss-red">*</span>
+              병영주소 <span className="text-toss-red">*</span>
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                value={nicknameInput}
-                onChange={(e) => { setNicknameInput(e.target.value); setLookupResult(null); setDuplicateReport(null); setSubmitMode(null); }}
-                placeholder="서든어택 닉네임 입력"
-                maxLength={50}
+                value={addressInput}
+                onChange={(e) => { setAddressInput(e.target.value); setLookupResult(null); setDuplicateReport(null); setSubmitMode(null); setBarracksAddress(""); }}
+                placeholder="https://barracks.sa.nexon.com/1234567890/match"
                 className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
               />
               <button
                 onClick={handleLookup}
-                disabled={!nicknameInput.trim() || isLooking}
+                disabled={!addressInput.trim() || isLooking}
                 className="h-11 px-5 rounded-xl bg-primary text-white text-[13px] font-semibold disabled:opacity-40 btn-primary shrink-0"
               >
                 {isLooking ? "조회 중..." : "조회"}
               </button>
             </div>
             <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
-              신고 대상의 서든어택 닉네임을 정확히 입력해주세요
+              신고 대상의 병영수첩 URL을 입력해주세요
             </p>
           </div>
 
@@ -261,25 +267,6 @@ export default function NewReportPage() {
               ) : (
                 <p className="text-[13px] text-toss-red">{lookupResult.error}</p>
               )}
-            </div>
-          )}
-
-          {/* 병영주소 선택 입력 */}
-          {lookupResult?.found && (
-            <div>
-              <label className="block text-[13px] font-semibold text-foreground mb-2">
-                병영주소 URL <span className="text-[11px] font-normal text-toss-gray-500">(선택)</span>
-              </label>
-              <input
-                type="text"
-                value={barracksAddress}
-                onChange={(e) => setBarracksAddress(e.target.value)}
-                placeholder="https://barracks.sa.nexon.com/1234567890/match"
-                className="w-full h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-              />
-              <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400 mt-1.5">
-                병영수첩 URL을 입력하면 신고 상세 페이지에서 바로 확인할 수 있습니다
-              </p>
             </div>
           )}
 
@@ -342,8 +329,8 @@ export default function NewReportPage() {
             </div>
             <div>
               <p className="text-[14px] font-semibold text-foreground">{lookupResult?.nickname}</p>
-              {barracksAddress.trim() && (
-                <a href={barracksAddress.trim()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-primary hover:opacity-80 transition-opacity">
+              {barracksAddress && (
+                <a href={`https://barracks.sa.nexon.com/${barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-primary hover:opacity-80 transition-opacity">
                   병영수첩 바로가기
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 7L7 3M7 3H4M7 3V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </a>

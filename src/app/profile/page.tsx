@@ -312,8 +312,8 @@ export default function ProfilePage() {
       <div className="py-6">
         {activeTab === "activity" && <ProfileActivityTab />}
         {activeTab === "blacklist" && <ProfileBlacklistTab />}
-        {activeTab === "followers" && <ProfileFollowTab type="followers" />}
-        {activeTab === "following" && <ProfileFollowTab type="following" />}
+        {activeTab === "followers" && <ProfileFollowTab type="followers" onCountChange={(d) => setFollowerCount((c) => c + d)} />}
+        {activeTab === "following" && <ProfileFollowTab type="following" onCountChange={(d) => setFollowingCount((c) => c + d)} />}
       </div>
 
       {/* ─── Edit Profile Modal ─── */}
@@ -603,7 +603,7 @@ function ProfileBlacklistTab() {
   );
 }
 
-function ProfileFollowTab({ type }: { type: "followers" | "following" }) {
+function ProfileFollowTab({ type, onCountChange }: { type: "followers" | "following"; onCountChange?: (delta: number) => void }) {
   const [users, setUsers] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -627,9 +627,9 @@ function ProfileFollowTab({ type }: { type: "followers" | "following" }) {
       const data = await res.json();
       if (res.ok) {
         if (type === "following" && !data.following) {
-          // 팔로잉 탭에서 언팔 → 목록에서 제거
           setUsers((prev) => prev.filter((u) => u.id !== userId));
-        } else {
+          onCountChange?.(-1);
+        } else if (type === "followers") {
           setUsers((prev) =>
             prev.map((u) =>
               u.id === userId ? { ...u, isFollowingBack: data.following } : u
