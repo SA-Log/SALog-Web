@@ -55,6 +55,30 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<UserRole | "ALL">("ALL");
 
   const isMaster = myRole === "MASTER";
+  const [actionUserId, setActionUserId] = useState<string | null>(null);
+  const [roleChanging, setRoleChanging] = useState<string | null>(null);
+
+  async function handleRoleChange(userId: string, newRole: string) {
+    setRoleChanging(userId);
+    try {
+      const res = await fetch("/api/admin/users/role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        alert(data?.error || "역할 변경에 실패했습니다");
+        return;
+      }
+      fetchUsers();
+      setActionUserId(null);
+    } catch {
+      alert("서버 연결에 실패했습니다");
+    } finally {
+      setRoleChanging(null);
+    }
+  }
 
   useEffect(() => {
     fetchUsers();
@@ -177,18 +201,68 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  {/* 제재 바로가기 */}
-                  <Link
-                    href="/admin/bans"
-                    className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
-                    title="유저 제재"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" className="text-toss-gray-500"/>
-                      <path d="M4.5 4.5l5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-toss-gray-500"/>
-                    </svg>
-                  </Link>
+                  {/* 액션 버튼 */}
+                  {user.role !== "MASTER" && (
+                    <button
+                      onClick={() => setActionUserId(actionUserId === user.id ? null : user.id)}
+                      className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="3" r="1" fill="currentColor" className="text-toss-gray-500"/>
+                        <circle cx="7" cy="7" r="1" fill="currentColor" className="text-toss-gray-500"/>
+                        <circle cx="7" cy="11" r="1" fill="currentColor" className="text-toss-gray-500"/>
+                      </svg>
+                    </button>
+                  )}
                 </div>
+
+                {/* 액션 패널 */}
+                {actionUserId === user.id && user.role !== "MASTER" && (
+                  <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                    {/* 역할 변경 — 마스터만 */}
+                    {isMaster && (
+                      <div>
+                        <p className="text-[11px] font-semibold text-toss-gray-500 uppercase tracking-wide mb-2">역할 변경</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {([
+                            { value: "USER", label: "일반" },
+                            { value: "OPERATOR", label: "운영진" },
+                            { value: "VICE_MASTER", label: "부마스터" },
+                            { value: "VERIFIED_CREATOR", label: "크리에이터" },
+                          ] as const).map((opt) => (
+                            <button
+                              key={opt.value}
+                              disabled={user.role === opt.value || roleChanging === user.id}
+                              onClick={() => handleRoleChange(user.id, opt.value)}
+                              className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                                user.role === opt.value
+                                  ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                  : "bg-secondary text-toss-gray-600 hover:bg-secondary/80"
+                              } disabled:opacity-50`}
+                            >
+                              {roleChanging === user.id ? "..." : user.role === opt.value ? `${opt.label} (현재)` : opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {!isMaster && (
+                      <p className="text-[11px] text-toss-gray-400">역할 변경은 마스터만 가능합니다</p>
+                    )}
+
+                    {/* 제재 바로가기 */}
+                    <Link
+                      href="/admin/bans"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-toss-red/5 text-[12px] font-medium text-toss-red hover:bg-toss-red/10 transition-colors"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/>
+                        <path d="M4.5 4.5l5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                      유저 제재
+                    </Link>
+                  </div>
+                )}
 
                 {/* 최근 제재 정보 */}
                 {activeBan && (

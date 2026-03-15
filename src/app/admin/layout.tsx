@@ -80,6 +80,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const pathname = usePathname();
 
+  // 실제 역할이 변경되면 테스트 역할도 동기화
+  useEffect(() => {
+    if (userRole !== "USER") {
+      const stored = getStoredRole(userRole);
+      // 저장된 테스트 역할이 없거나, 실제 역할이 변경됐을 때 동기화
+      if (!localStorage.getItem("salog_test_role")) {
+        setTestRole(userRole);
+      }
+    }
+  }, [userRole]);
+
   // localStorage에 역할 테스트 상태 저장
   useEffect(() => {
     localStorage.setItem("salog_test_role", testRole);
