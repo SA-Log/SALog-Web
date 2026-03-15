@@ -130,6 +130,8 @@ export async function GET(req: Request) {
           status: true,
           hackTypes: true,
           description: true,
+          evidences: true,
+          youtubeUrl: true,
           createdAt: true,
           reporter: { select: { id: true, nickname: true, image: true } },
           votes: { select: { voteType: true } },

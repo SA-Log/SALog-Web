@@ -23,15 +23,41 @@ function formatRelative(dateStr: string) {
   return formatDateTime(dateStr);
 }
 
+function getYoutubeThumbnail(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
+}
+
+type EvidenceItem = { type: string; url: string; name: string };
+
+function getCardMedia(evidences?: EvidenceItem[] | null): { type: "image" | "youtube" | "link"; src: string } | null {
+  if (!evidences) return null;
+  const items = evidences as EvidenceItem[];
+
+  const screenshot = items.find(e => e.type === "screenshot" && e.url);
+  if (screenshot) return { type: "image", src: screenshot.url };
+
+  const yt = items.find(e => e.type === "youtube" && e.url);
+  if (yt) {
+    const thumb = getYoutubeThumbnail(yt.url);
+    if (thumb) return { type: "youtube", src: thumb };
+  }
+
+  const link = items.find(e => e.type === "link" && e.url);
+  if (link) return { type: "link", src: link.url };
+
+  return null;
+}
+
 interface MannerCardProps {
   tag: {
     id: string;
     nickname: string;
     tagType: string;
     description?: string | null;
+    evidences?: EvidenceItem[] | null;
     createdAt: string;
     reporter?: { id: string; nickname: string | null; image: string | null };
-    // mock 호환
     reporterId?: string;
     reporterName?: string;
   };
@@ -43,6 +69,7 @@ export function MannerCard({ tag }: MannerCardProps) {
 
   const reporterName = tag.reporter?.nickname ?? tag.reporterName ?? "유저";
   const reporterId = tag.reporter?.id ?? tag.reporterId ?? "";
+  const media = getCardMedia(tag.evidences);
 
   return (
     <div
@@ -70,13 +97,46 @@ export function MannerCard({ tag }: MannerCardProps) {
           </span>
         </div>
 
-        {/* Body */}
-        <div className="px-4 sm:px-5 pb-3.5">
-          <h3 className="text-[16px] sm:text-[17px] font-bold text-foreground tracking-tight truncate mb-1">{tag.nickname}</h3>
-          {tag.description && (
-            <p className="text-[13px] text-toss-gray-500 dark:text-toss-gray-400 line-clamp-2 leading-[1.6]">{tag.description}</p>
-          )}
+        {/* Target nickname */}
+        <div className="px-4 sm:px-5 pb-2">
+          <h3 className="text-[16px] sm:text-[17px] font-bold text-foreground tracking-tight truncate">{tag.nickname}</h3>
         </div>
+
+        {/* Thumbnail */}
+        {media && (
+          <div className="mx-4 sm:mx-5 mb-2">
+            {media.type === "image" && (
+              <div className="rounded-2xl overflow-hidden bg-toss-gray-50 dark:bg-toss-gray-800">
+                <img src={media.src} alt="증거" className="w-full max-h-[200px] object-cover" />
+              </div>
+            )}
+            {media.type === "youtube" && (
+              <div className="rounded-2xl overflow-hidden bg-black relative">
+                <img src={media.src} alt="YouTube" className="w-full max-h-[200px] object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4V4z" fill="white"/></svg>
+                  </div>
+                </div>
+              </div>
+            )}
+            {media.type === "link" && (
+              <div className="rounded-xl px-3 py-2.5 bg-toss-gray-50 dark:bg-toss-gray-800 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-toss-gray-400 shrink-0">
+                  <path d="M5.5 8.5l3-3M6 10.5l-.75.75a2.5 2.5 0 01-3.54-3.54L3.5 6M8 3.5l.75-.75a2.5 2.5 0 013.54 3.54L10.5 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                <span className="text-[12px] text-primary truncate">{media.src}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Description */}
+        {tag.description && (
+          <div className="px-4 sm:px-5 pb-3">
+            <p className="text-[13px] text-toss-gray-500 dark:text-toss-gray-400 line-clamp-3 leading-[1.6]">{tag.description}</p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-4 sm:px-5 py-3 border-t border-border/20">
