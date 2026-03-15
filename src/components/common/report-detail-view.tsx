@@ -166,9 +166,9 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
 
   async function handleComment() {
     if (!commentText.trim()) return;
-    if (type !== "hack") return; // 비매너 댓글은 추후 구현
+    const commentApi = type === "hack" ? `/api/reports/${report.id}/comment` : `/api/manner/${report.id}/comment`;
     try {
-      const res = await fetch(`/api/reports/${report.id}/comment`, {
+      const res = await fetch(commentApi, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: commentText.trim() }),

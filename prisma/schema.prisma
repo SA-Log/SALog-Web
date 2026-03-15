@@ -230,15 +230,19 @@ enum VoteType {
 
 model Comment {
   id           String     @id @default(cuid())
-  hackReportId String
+  hackReportId String?
+  mannerTagId  String?
   userId       String
   content      String     @db.Text
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  hackReport   HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id])
+  hackReport   HackReport? @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+  mannerTag    MannerTag?  @relation(fields: [mannerTagId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id])
 
+  @@index([hackReportId])
+  @@index([mannerTagId])
   @@map("comments")
 }
 
@@ -271,7 +275,8 @@ model MannerTag {
   reporterId      String
   createdAt       DateTime      @default(now())
 
-  reporter User @relation(fields: [reporterId], references: [id])
+  reporter User      @relation(fields: [reporterId], references: [id])
+  comments Comment[]
 
   @@index([barracksAddress])
   @@index([nickname])

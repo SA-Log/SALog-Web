@@ -37,6 +37,15 @@ export async function GET(
       reporter: {
         select: { id: true, nickname: true, image: true },
       },
+      comments: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          user: { select: { id: true, nickname: true, image: true } },
+        },
+        orderBy: { createdAt: "asc" as const },
+      },
     },
   });
 
