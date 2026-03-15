@@ -339,41 +339,39 @@ export default function UserProfilePage() {
         </div>
       </div>
 
-      {/* ─── Tabs ─── */}
+      {/* ─── Tabs — Apple style underline ─── */}
       <div className="flex mt-6 mb-1 border-b border-border/40">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`flex-1 pb-3 text-[13px] font-medium transition-colors relative ${
+            className={`relative pb-3 px-1 text-[13px] font-medium transition-colors flex-1 ${
               activeTab === tab.value
                 ? "text-foreground"
                 : "text-toss-gray-400 hover:text-toss-gray-600"
             }`}
           >
-            {tab.label}
-            <span className={`ml-1 text-[11px] tabular-nums ${activeTab === tab.value ? "text-primary" : "text-toss-gray-300"}`}>
-              {tab.count}
+            <span className="relative inline-block">
+              {tab.label}
+              <span className={`ml-1 text-[11px] tabular-nums ${activeTab === tab.value ? "text-primary" : "text-toss-gray-300"}`}>
+                {tab.count}
+              </span>
+              {activeTab === tab.value && (
+                <span className="absolute -bottom-3 left-0 right-0 h-[2px] rounded-full bg-primary" />
+              )}
             </span>
-            {activeTab === tab.value && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-primary" />
-            )}
           </button>
         ))}
       </div>
 
       {/* ─── Tab Content ─── */}
-      <div className="py-12">
-        <EmptyState
-          icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>}
-          title={
-            activeTab === "activity" ? "아직 신고 활동이 없습니다" :
-            activeTab === "blacklist" ? "블랙리스트가 비어있습니다" :
-            activeTab === "followers" ? "팔로워가 없습니다" :
-            "팔로잉이 없습니다"
-          }
-          description=""
-        />
+      <div className="py-6">
+        {activeTab === "activity" && <UserActivityTab userId={userId} />}
+        {activeTab === "blacklist" && (
+          <EmptyState icon={<path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>} title="블랙리스트는 비공개입니다" description="" />
+        )}
+        {activeTab === "followers" && <UserFollowTab userId={userId} type="followers" />}
+        {activeTab === "following" && <UserFollowTab userId={userId} type="following" />}
       </div>
     </div>
     </AuthGuard>
@@ -390,6 +388,186 @@ function EmptyState({ icon, title, description }: { icon: React.ReactNode; title
       </div>
       <p className="text-[15px] font-semibold text-foreground">{title}</p>
       {description && <p className="text-[13px] text-toss-gray-400 mt-1">{description}</p>}
+    </div>
+  );
+}
+
+// ─── Activity Tab ───
+
+type ActivityItem = {
+  id: string;
+  nickname: string;
+  reportType: "hack" | "manner";
+  status?: string;
+  evidences?: unknown;
+  description?: string | null;
+  createdAt: string;
+};
+
+function getYtThumb(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg` : null;
+}
+
+function getThumb(item: ActivityItem): string | null {
+  const evs = (item.evidences ?? []) as { type: string; url: string }[];
+  for (const e of evs) {
+    if (e.type === "screenshot") return e.url;
+    if (e.type === "youtube") { const t = getYtThumb(e.url); if (t) return t; }
+  }
+  return null;
+}
+
+const HACK_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  SUSPECT: { label: "의심", color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-500/20" },
+  PROBABLE: { label: "유력", color: "text-orange-700 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-500/20" },
+  CONFIRMED: { label: "확정", color: "text-white", bg: "bg-toss-red" },
+  DISMISSED: { label: "기각", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-500/20" },
+};
+
+function UserActivityTab({ userId }: { userId: string }) {
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/profile/activity?userId=${userId}`)
+      .then((r) => r.json())
+      .then((d) => setActivities(d.activities ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-3 gap-1.5">
+        {[1,2,3,4,5,6].map((i) => (
+          <div key={i} className="aspect-square rounded-2xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (activities.length === 0) {
+    return <EmptyState icon={<path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>} title="아직 신고 활동이 없습니다" description="" />;
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-1.5">
+      {activities.map((item) => {
+        const thumb = getThumb(item);
+        const isHack = item.reportType === "hack";
+        const href = isHack ? `/reports/${item.id}` : `/manner/${item.id}`;
+        const statusInfo = isHack && item.status ? HACK_STATUS_MAP[item.status] : null;
+        return (
+          <Link key={item.id} href={href} className="group relative aspect-square rounded-2xl overflow-hidden bg-toss-gray-100 dark:bg-toss-gray-800 border border-border/30 hover:shadow-toss-md transition-all hover:-translate-y-0.5">
+            {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <div className={`w-full h-full ${isHack ? "bg-gradient-to-br from-toss-red/10 to-toss-red/5" : "bg-gradient-to-br from-toss-orange/10 to-toss-orange/5"}`} />}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <div className="absolute top-2 left-2">
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isHack ? "bg-toss-red/90 text-white" : "bg-toss-orange/90 text-white"}`}>{isHack ? "핵" : "비매너"}</span>
+            </div>
+            {statusInfo && <div className="absolute top-2 right-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${statusInfo.bg} ${statusInfo.color}`}>{statusInfo.label}</span></div>}
+            <div className="absolute inset-x-0 bottom-0 p-2.5">
+              <p className="text-[12px] font-semibold text-white truncate">{item.nickname}</p>
+              {item.description && <p className="text-[10px] text-white/70 truncate mt-0.5">{item.description}</p>}
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Follow Tab ───
+
+type FollowUserItem = {
+  id: string;
+  nickname: string | null;
+  image: string | null;
+  barracksVerified: boolean;
+  isFollowingBack: boolean;
+};
+
+function UserFollowTab({ userId, type }: { userId: string; type: "followers" | "following" }) {
+  const [users, setUsers] = useState<FollowUserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/follow/list?userId=${userId}&type=${type}`)
+      .then((r) => r.json())
+      .then((d) => setUsers(d.users ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [userId, type]);
+
+  async function handleToggleFollow(targetId: string) {
+    setTogglingId(targetId);
+    try {
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: targetId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers((prev) => prev.map((u) => u.id === targetId ? { ...u, isFollowingBack: data.following } : u));
+      }
+    } catch { /* ignore */ }
+    finally { setTogglingId(null); }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1,2,3].map((i) => (
+          <div key={i} className="flex items-center gap-3 animate-pulse">
+            <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800" />
+            <div className="flex-1 space-y-1.5"><div className="h-4 w-24 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800" /></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return <EmptyState icon={<><circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></>} title={type === "followers" ? "팔로워가 없습니다" : "팔로잉이 없습니다"} description="" />;
+  }
+
+  return (
+    <div className="space-y-1">
+      {users.map((user) => {
+        const displayName = user.nickname ?? "유저";
+        return (
+          <div key={user.id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-secondary/50 transition-colors">
+            <Link href={`/profile/${user.id}`} className="shrink-0">
+              <div className="w-11 h-11 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center overflow-hidden">
+                {user.image ? <img src={user.image} alt="" className="w-full h-full object-cover" /> : <span className="text-[15px] font-bold text-toss-gray-500">{displayName.charAt(0)}</span>}
+              </div>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Link href={`/profile/${user.id}`} className="text-[14px] font-semibold text-foreground hover:text-primary transition-colors truncate">{displayName}</Link>
+                {user.barracksVerified && (
+                  <span className="w-[16px] h-[16px] rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <svg width="9" height="9" viewBox="0 0 14 14" fill="none"><path d="M3.5 7.5l2.5 2.5 5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => handleToggleFollow(user.id)}
+              disabled={togglingId === user.id}
+              className={`shrink-0 h-8 px-4 rounded-full text-[12px] font-semibold transition-all active:scale-[0.97] ${
+                user.isFollowingBack
+                  ? "bg-primary/10 text-primary border border-primary/20 hover:bg-red-50 hover:text-red-500 hover:border-red-200 dark:hover:bg-red-500/10 dark:hover:border-red-500/20"
+                  : "bg-primary text-white hover:bg-primary/90"
+              }`}
+            >
+              {user.isFollowingBack ? "팔로잉" : "팔로우"}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
