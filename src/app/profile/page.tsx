@@ -791,19 +791,21 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
           {entries.map((entry) => {
             const displayName = entry.nickname ?? entry.barracksAddress;
             return (
-              <div key={entry.id} className="flex items-center">
+              <div key={entry.id} className="flex items-stretch">
                 <a
                   href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-0 px-5 py-4 hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                  className="flex-1 min-w-0 px-5 py-4 hover:bg-secondary/40 active:bg-secondary/60 transition-colors flex flex-col justify-center"
+                  style={{ borderTopRightRadius: "9999px", borderBottomRightRadius: "9999px" }}
                 >
                   <p className="text-[15px] font-semibold text-foreground truncate">{displayName}</p>
                   {entry.memo && <p className="text-[12px] text-toss-gray-400 truncate mt-1">{entry.memo}</p>}
                 </a>
                 <button
                   onClick={() => handleDelete(entry.id)}
-                  className="shrink-0 w-10 h-10 mr-3 rounded-full flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                  className="shrink-0 self-stretch aspect-square flex items-center justify-center text-toss-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                  style={{ borderRadius: "9999px" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 </button>
