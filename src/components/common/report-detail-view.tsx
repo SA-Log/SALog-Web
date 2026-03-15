@@ -209,7 +209,15 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        window.location.reload();
+        // state 직접 업데이트
+        setReport((prev) => ({
+          ...prev,
+          description: editDescription.trim() || null,
+          evidences: editEvidences,
+          ...(type === "hack" ? { hackTypes: editHackTypes } : {}),
+          ...(type === "manner" ? { tagTypes: editTagTypes, tagType: editTagTypes[0] } : {}),
+        }));
+        setIsEditing(false);
       } else {
         alert("수정에 실패했습니다");
       }
@@ -576,6 +584,40 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
                 ) : (
                   <p className="text-[12px] text-toss-gray-400 text-center py-4">증거 자료가 없습니다</p>
                 )}
+
+                {/* 증거 추가 */}
+                <div className="flex gap-2 mt-3">
+                  <label className="flex-1 h-9 rounded-xl bg-secondary flex items-center justify-center gap-1.5 text-[12px] font-medium text-toss-gray-600 hover:bg-secondary/80 cursor-pointer transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3v8M3 7h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    스크린샷
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 4 * 1024 * 1024) { alert("4MB 이하 파일만 가능합니다"); return; }
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const res = await fetch("/api/upload", { method: "POST", body: fd });
+                      if (res.status === 413) { alert("파일이 너무 큽니다"); return; }
+                      const data = await res.json().catch(() => null);
+                      if (res.ok && data?.url) {
+                        setEditEvidences((prev) => [...prev, { type: "screenshot", url: data.url, name: file.name }]);
+                      } else { alert("업로드에 실패했습니다"); }
+                      e.target.value = "";
+                    }} />
+                  </label>
+                  <button
+                    onClick={() => {
+                      const url = prompt("YouTube URL 또는 링크를 입력하세요");
+                      if (!url?.trim()) return;
+                      const isYt = /youtu\.?be/.test(url);
+                      setEditEvidences((prev) => [...prev, { type: isYt ? "youtube" : "link", url: url.trim(), name: isYt ? "YouTube" : url.trim() }]);
+                    }}
+                    className="flex-1 h-9 rounded-xl bg-secondary flex items-center justify-center gap-1.5 text-[12px] font-medium text-toss-gray-600 hover:bg-secondary/80 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                    링크 추가
+                  </button>
+                </div>
               </div>
 
               {/* 액션 */}
