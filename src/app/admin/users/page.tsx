@@ -31,12 +31,12 @@ const ROLE_FILTERS: { value: UserRole | "ALL"; label: string }[] = [
 ];
 
 // Apple-style 역할 칩 — 각 역할에 고유한 색상
-const ROLE_CHIP: Record<string, { label: string; text: string; bg: string; ring: string }> = {
-  USER: { label: "일반", text: "text-slate-600 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800", ring: "ring-slate-200 dark:ring-slate-700" },
-  OPERATOR: { label: "운영진", text: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/15", ring: "ring-blue-200 dark:ring-blue-500/30" },
-  VICE_MASTER: { label: "부마스터", text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/15", ring: "ring-purple-200 dark:ring-purple-500/30" },
-  VERIFIED_CREATOR: { label: "크리에이터", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/15", ring: "ring-emerald-200 dark:ring-emerald-500/30" },
-  MASTER: { label: "마스터", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/15", ring: "ring-amber-200 dark:ring-amber-500/30" },
+const ROLE_CHIP: Record<string, { label: string; text: string; bg: string; ring: string; dot: string }> = {
+  USER: { label: "일반", text: "text-slate-600 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800", ring: "ring-slate-200 dark:ring-slate-700", dot: "bg-slate-400" },
+  OPERATOR: { label: "운영진", text: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/15", ring: "ring-blue-200 dark:ring-blue-500/30", dot: "bg-blue-500" },
+  VICE_MASTER: { label: "부마스터", text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/15", ring: "ring-purple-200 dark:ring-purple-500/30", dot: "bg-purple-500" },
+  VERIFIED_CREATOR: { label: "크리에이터", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/15", ring: "ring-emerald-200 dark:ring-emerald-500/30", dot: "bg-emerald-500" },
+  MASTER: { label: "마스터", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/15", ring: "ring-amber-200 dark:ring-amber-500/30", dot: "bg-amber-500" },
 };
 
 const BAN_CHIP: Record<string, { label: string; text: string; bg: string }> = {
@@ -289,29 +289,35 @@ export default function AdminUsersPage() {
                 {/* ─── 확장 패널 ─── */}
                 {isExpanded && user.role !== "MASTER" && (
                   <div className="border-t border-border/30">
-                    {/* 역할 변경 */}
+                    {/* 역할 변경 — iOS Settings 체크리스트 */}
                     {isMaster && (
                       <div className="px-4 py-4 border-b border-border/20">
-                        <p className="text-[11px] font-semibold text-toss-gray-400 uppercase tracking-wider mb-3">역할 변경</p>
-                        <div className="grid grid-cols-4 gap-2">
+                        <p className="text-[11px] font-semibold text-toss-gray-400 uppercase tracking-wider mb-2">역할 변경</p>
+                        <div className="bg-toss-gray-50 dark:bg-toss-gray-800/50 rounded-xl overflow-hidden divide-y divide-border/30">
                           {(Object.entries(ROLE_CHIP) as [string, typeof ROLE_CHIP[string]][])
                             .filter(([key]) => key !== "MASTER")
                             .map(([value, style]) => {
                               const isCurrent = user.role === value;
-                              const isChanging = roleChanging === user.id + value;
+                              const isThisChanging = roleChanging === user.id + value;
                               return (
                                 <button
                                   key={value}
                                   disabled={isCurrent || !!roleChanging}
                                   onClick={() => handleRoleChange(user.id, value)}
-                                  className={`py-2.5 rounded-xl text-[11px] font-semibold transition-all ${
-                                    isCurrent
-                                      ? `${style.bg} ${style.text} ring-1 ${style.ring}`
-                                      : "bg-toss-gray-50 dark:bg-toss-gray-800 text-toss-gray-500 hover:text-foreground hover:bg-toss-gray-100 dark:hover:bg-toss-gray-700"
-                                  } disabled:opacity-60`}
+                                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-toss-gray-100/50 dark:hover:bg-toss-gray-700/50 disabled:hover:bg-transparent"
                                 >
-                                  {isChanging ? "..." : style.label}
-                                  {isCurrent && <span className="block text-[9px] font-normal mt-0.5 opacity-60">현재</span>}
+                                  <span className={`w-2 h-2 rounded-full shrink-0 ${isCurrent ? style.dot ?? style.text.replace("text-", "bg-").split(" ")[0] : "bg-transparent"}`} />
+                                  <span className={`flex-1 text-[13px] font-medium ${isCurrent ? style.text : "text-toss-gray-600 dark:text-toss-gray-400"}`}>
+                                    {style.label}
+                                  </span>
+                                  {isThisChanging && (
+                                    <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                  )}
+                                  {isCurrent && !isThisChanging && (
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-primary">
+                                      <path d="M4 8.5l3 3 5.5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  )}
                                 </button>
                               );
                             })}
