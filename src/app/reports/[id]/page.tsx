@@ -446,6 +446,23 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
         </Link>
       </div>
 
+      {/* ─── Author actions ─── */}
+      {isAuthor && (
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={async () => {
+              if (!confirm("이 게시글을 삭제하시겠습니까? 되돌릴 수 없습니다.")) return;
+              const res = await fetch(`/api/reports/${id}`, { method: "DELETE" });
+              if (res.ok) window.location.href = "/reports";
+              else alert("삭제에 실패했습니다");
+            }}
+            className="h-9 px-4 rounded-xl bg-red-50 dark:bg-red-500/10 text-[12px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15 transition-colors"
+          >
+            삭제
+          </button>
+        </div>
+      )}
+
       {/* ─── Report Content (설명 + 증거 통합) ─── */}
       {(report.description || allEvidences.length > 0) && (
         <div className="bg-card rounded-2xl border border-border/40 shadow-toss mb-4">
