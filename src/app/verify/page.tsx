@@ -62,6 +62,8 @@ export default function VerifyPage() {
         return;
       }
       if (data.verified) {
+        // 세션 갱신하여 인증 마크 즉시 반영
+        await fetch("/api/auth/refresh-session", { method: "POST" }).catch(() => {});
         setSuccess(true);
       } else {
         setError(data.error || "자기소개에서 인증 코드를 찾을 수 없습니다");
@@ -97,9 +99,9 @@ export default function VerifyPage() {
             </div>
             <h2 className="text-[20px] font-bold text-foreground mb-2">인증 완료!</h2>
             <p className="text-[13px] text-toss-gray-500 mb-6">서든어택 계정이 성공적으로 인증되었습니다.</p>
-            <Link href="/profile" className="inline-flex h-11 px-6 rounded-xl bg-primary text-white text-[14px] font-semibold items-center btn-primary">
+            <a href="/profile" className="inline-flex h-11 px-6 rounded-xl bg-primary text-white text-[14px] font-semibold items-center btn-primary">
               프로필로 돌아가기
-            </Link>
+            </a>
           </div>
         </div>
       </AuthGuard>
