@@ -803,7 +803,7 @@ function ProfileBlacklistTab({ onCountChange }: { onCountChange?: (delta: number
                 </a>
                 <button
                   onClick={() => handleDelete(entry.id)}
-                  className="shrink-0 w-12 self-stretch rounded-2xl flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 transition-all active:scale-[0.95]"
+                  className="shrink-0 w-16 self-stretch rounded-2xl flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 transition-all active:scale-[0.95]"
                 >
                   <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
                 </button>
