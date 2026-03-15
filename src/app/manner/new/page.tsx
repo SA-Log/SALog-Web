@@ -41,37 +41,32 @@ export default function NewMannerTagPage() {
   const [submitMode, setSubmitMode] = useState<SubmitMode>(null);
 
   const canProceedStep1 = lookupResult?.found === true && (duplicateTag ? submitMode !== null : true);
-  const canProceedStep2 = tagTypes.length > 0;
+  const canProceedStep2 = tagTypes.length === 1;
 
-  function toggleTagType(value: MannerTagType) {
-    setTagTypes((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
+  function selectTagType(value: MannerTagType) {
+    setTagTypes([value]);
   }
   const canSubmit = !isSubmitting;
 
   async function handleSubmit() {
-    if (!lookupResult?.found || !lookupResult.nickname || tagTypes.length === 0) return;
+    if (!lookupResult?.found || !lookupResult.nickname || tagTypes.length !== 1) return;
     setIsSubmitting(true);
     setSubmitError("");
     try {
-      // 첫 번째 태그 타입으로 등록 (복수 선택 시 각각 등록)
-      for (const tagType of tagTypes) {
-        const res = await fetch("/api/manner", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            barracksAddress,
-            nickname: lookupResult.nickname,
-            tagType,
-            description: description.trim(),
-          }),
-        });
-        const data = await res.json().catch(() => null);
-        if (!res.ok) {
-          setSubmitError(data?.error || "등록에 실패했습니다");
-          return;
-        }
+      const res = await fetch("/api/manner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barracksAddress,
+          nickname: lookupResult.nickname,
+          tagType: tagTypes[0],
+          description: description.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setSubmitError(data?.error || "등록에 실패했습니다");
+        return;
       }
       router.push("/manner");
     } catch {
@@ -255,10 +250,10 @@ export default function NewMannerTagPage() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-semibold text-foreground mb-1">비매너 유형 <span className="font-normal text-toss-gray-500">(복수 선택 가능)</span></label>
+            <label className="block text-[13px] font-semibold text-foreground mb-1">비매너 유형 <span className="text-toss-red">*</span></label>
             <div className="grid grid-cols-2 gap-2">
               {TAG_OPTIONS.map((opt) => (
-                <button key={opt.value} onClick={() => toggleTagType(opt.value)}
+                <button key={opt.value} onClick={() => selectTagType(opt.value)}
                   className={`p-3 rounded-xl border text-left btn-chip ${
                     tagTypes.includes(opt.value)
                       ? "border-primary bg-primary/5"

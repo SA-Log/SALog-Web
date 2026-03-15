@@ -106,16 +106,16 @@ export function MannerCard({ tag }: MannerCardProps) {
         {media && (
           <div className="mx-4 sm:mx-5 mb-2">
             {media.type === "image" && (
-              <div className="rounded-2xl overflow-hidden bg-toss-gray-50 dark:bg-toss-gray-800">
-                <img src={media.src} alt="증거" className="w-full max-h-[200px] object-cover" />
+              <div className="rounded-2xl overflow-hidden bg-toss-gray-50 dark:bg-toss-gray-800 aspect-[16/9]">
+                <img src={media.src} alt="증거" className="w-full h-full object-cover" />
               </div>
             )}
             {media.type === "youtube" && (
-              <div className="rounded-2xl overflow-hidden bg-black relative">
-                <img src={media.src} alt="YouTube" className="w-full max-h-[200px] object-cover" />
+              <div className="rounded-2xl overflow-hidden bg-black relative aspect-[16/9]">
+                <img src={media.src} alt="YouTube" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4V4z" fill="white"/></svg>
+                  <div className="w-11 h-11 rounded-full bg-red-600/90 flex items-center justify-center shadow-lg backdrop-blur-sm">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M6 4l6 4-6 4V4z" fill="white"/></svg>
                   </div>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export function MannerCard({ tag }: MannerCardProps) {
 
         {/* Footer */}
         <div className="px-4 sm:px-5 py-3 border-t border-border/20">
-          <span className="text-[11px] text-toss-gray-300 tabular-nums">{formatDateTime(tag.createdAt)}</span>
+          <span className="text-[11px] text-toss-gray-400">{formatRelative(tag.createdAt)}</span>
         </div>
       </div>
     </div>
