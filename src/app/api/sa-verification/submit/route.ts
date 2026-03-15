@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
+const CRAWLER_URL = process.env.CRAWLER_URL ?? "http://localhost:3001";
+const CRAWLER_API_KEY = process.env.CRAWLER_API_KEY ?? "";
+
 const submitSchema = z.object({
-  verificationId: z.string().min(1),
-  saNickname: z.string().min(1, "서든어택 닉네임을 입력해주세요").max(20),
-  screenshotBase64: z.string().min(1, "스크린샷을 업로드해주세요"),
+  nexonSn: z.string().regex(/^\d+$/, "올바른 병영주소가 아닙니다"),
 });
 
 export async function POST(req: Request) {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
 
-  const rl = rateLimit(`sa-submit:${session.user.id}`, { limit: 3, windowSec: 300 });
+  const rl = rateLimit(`sa-submit:${session.user.id}`, { limit: 5, windowSec: 300 });
   if (!rl.success) {
     return NextResponse.json({ error: "요청이 너무 많습니다. 5분 후 다시 시도해주세요." }, { status: 429 });
   }
@@ -24,32 +25,69 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = submitSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "입력값이 올바르지 않습니다" }, { status: 400 });
+    return NextResponse.json({ error: "올바른 병영주소를 입력해주세요" }, { status: 400 });
   }
 
-  const { verificationId, saNickname, screenshotBase64 } = parsed.data;
+  const { nexonSn } = parsed.data;
 
-  // 본인의 PENDING 요청인지 확인
-  const verification = await prisma.saVerification.findFirst({
-    where: { id: verificationId, userId: session.user.id, status: "PENDING" },
+  // 유저의 인증 코드 조회
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { verificationCode: true, barracksVerified: true },
   });
 
-  if (!verification) {
-    return NextResponse.json({ error: "유효한 인증 요청을 찾을 수 없습니다" }, { status: 404 });
+  if (!user || !user.verificationCode) {
+    return NextResponse.json({ error: "인증 코드가 없습니다" }, { status: 400 });
   }
 
-  // Base64 이미지를 그대로 DB에 저장 (5MB 제한)
-  if (screenshotBase64.length > 7_000_000) {
-    return NextResponse.json({ error: "이미지 크기가 너무 큽니다 (최대 5MB)" }, { status: 400 });
+  if (user.barracksVerified) {
+    return NextResponse.json({ verified: true });
   }
 
-  await prisma.saVerification.update({
-    where: { id: verificationId },
-    data: {
-      saNickname: saNickname.trim(),
-      screenshotUrl: screenshotBase64,
-    },
-  });
+  // 동일 병영주소로 이미 인증된 유저가 있는지 확인
+  const existingBarracks = await prisma.user.findUnique({ where: { barracksAddress: nexonSn } });
+  if (existingBarracks && existingBarracks.id !== session.user.id) {
+    return NextResponse.json({ error: "이미 다른 계정에서 인증된 병영주소입니다" }, { status: 409 });
+  }
 
-  return NextResponse.json({ success: true });
+  // 크롤링 서버로 프로필 조회
+  try {
+    const res = await fetch(`${CRAWLER_URL}/api/barracks/profile?nexonSn=${nexonSn}`, {
+      headers: { "x-api-key": CRAWLER_API_KEY },
+    });
+
+    if (!res.ok) {
+      return NextResponse.json({ error: "병영수첩 조회에 실패했습니다" }, { status: 502 });
+    }
+
+    const data = await res.json();
+
+    if (!data.found) {
+      return NextResponse.json({ error: "해당 병영주소의 유저를 찾을 수 없습니다" });
+    }
+
+    // 자기소개에서 인증 코드 확인
+    const intro = (data.userIntro ?? "").trim();
+    if (!intro.includes(user.verificationCode)) {
+      return NextResponse.json({
+        error: "자기소개에서 인증 코드를 찾을 수 없습니다. 코드를 붙여넣고 저장했는지 확인해주세요.",
+        verified: false,
+      });
+    }
+
+    // 인증 성공 — DB 업데이트
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        barracksAddress: nexonSn,
+        barracksVerified: true,
+        nickname: data.nickname, // 서든어택 닉네임으로 변경
+      },
+    });
+
+    return NextResponse.json({ verified: true, nickname: data.nickname });
+  } catch (err) {
+    console.error("[sa-verification/submit] 에러:", err);
+    return NextResponse.json({ error: "인증 처리 중 오류가 발생했습니다" }, { status: 500 });
+  }
 }

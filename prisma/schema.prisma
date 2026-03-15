@@ -20,6 +20,7 @@ model User {
   phone             String?   @unique
   barracksAddress   String?   @unique
   barracksVerified  Boolean   @default(false)
+  verificationCode  String?
   isProfileComplete Boolean   @default(false)
   bio               String?
   isProfilePublic   Boolean   @default(true)
