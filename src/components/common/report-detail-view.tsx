@@ -142,7 +142,8 @@ function EvidenceGallery({ items, links }: { items: Evidence[]; links: Evidence[
   );
 }
 
-export function ReportDetailView({ report, type }: { report: ReportDetailData; type: "hack" | "manner" }) {
+export function ReportDetailView({ report: initialReport, type }: { report: ReportDetailData; type: "hack" | "manner" }) {
+  const [report, setReport] = useState(initialReport);
   const { user: authUser } = useAuth();
   const isAuthor = report.reporterId === authUser?.id;
   const [userVote, setUserVote] = useState<VoteType | null>(report.userVote ?? null);
@@ -152,9 +153,47 @@ export function ReportDetailView({ report, type }: { report: ReportDetailData; t
   const [disagreeOffset, setDisagreeOffset] = useState(0);
   const [commentText, setCommentText] = useState("");
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDescription, setEditDescription] = useState(report.description ?? "");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const listPath = type === "hack" ? "/reports" : "/manner";
   const apiPath = type === "hack" ? `/api/reports/${report.id}` : `/api/manner/${report.id}`;
   const accentColor = type === "hack" ? "toss-red" : "toss-orange";
+
+  async function handleComment() {
+    if (!commentText.trim()) return;
+    if (type !== "hack") return; // 비매너 댓글은 추후 구현
+    try {
+      const res = await fetch(`/api/reports/${report.id}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: commentText.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReport((prev) => ({ ...prev, comments: [...(prev.comments ?? []), data] }));
+        setCommentText("");
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function handleSaveEdit() {
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch(apiPath, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: editDescription.trim() }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert("수정에 실패했습니다");
+      }
+    } catch { alert("서버 연결에 실패했습니다"); }
+    finally { setIsSavingEdit(false); }
+  }
 
   function handleVote(vt: VoteType) {
     if (hasVoted || isAuthor) return;
@@ -208,7 +247,7 @@ export function ReportDetailView({ report, type }: { report: ReportDetailData; t
         </Link>
         {isAuthor && (
           <div className="flex items-center gap-2">
-            <button className="h-8 px-3 rounded-lg text-[12px] font-medium text-toss-gray-500 hover:text-foreground hover:bg-secondary transition-colors">편집</button>
+            <button onClick={() => { setEditDescription(report.description ?? ""); setIsEditing(true); }} className="h-8 px-3 rounded-lg text-[12px] font-medium text-toss-gray-500 hover:text-foreground hover:bg-secondary transition-colors">편집</button>
             <button
               onClick={async () => {
                 if (!confirm("이 게시글을 삭제하시겠습니까? 되돌릴 수 없습니다.")) return;
@@ -290,7 +329,7 @@ export function ReportDetailView({ report, type }: { report: ReportDetailData; t
       {(report.description || sortedEvidences.length > 0) && (
         <div className="bg-card rounded-2xl border border-border/40 shadow-toss mb-4">
           {report.description && (
-            <div className="p-5 pb-0">
+            <div className={`p-5 ${sortedEvidences.length > 0 ? "pb-0" : ""}`}>
               <h2 className="text-[15px] font-semibold text-foreground mb-3">신고 사유</h2>
               <p className="text-[14px] text-toss-gray-700 dark:text-toss-gray-300 leading-[1.7]">{report.description}</p>
             </div>
@@ -387,8 +426,8 @@ export function ReportDetailView({ report, type }: { report: ReportDetailData; t
             {authUser?.image ? <img src={authUser.image} alt="" className="w-full h-full object-cover" /> : <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 7C8.38 7 9.5 5.88 9.5 4.5S8.38 2 7 2 4.5 3.12 4.5 4.5 5.62 7 7 7ZM7 8.25C5.33 8.25 2 9.09 2 10.75V12H12V10.75C12 9.09 8.67 8.25 7 8.25Z" fill="#b0b8c1"/></svg>}
           </div>
           <div className="flex-1 relative">
-            <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="의견을 남겨주세요" className="w-full h-10 pl-4 pr-16 rounded-full bg-secondary border border-border/50 text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
-            <button disabled={!commentText.trim()} className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 px-3.5 rounded-full bg-primary text-white text-[12px] font-semibold disabled:opacity-30">등록</button>
+            <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && commentText.trim()) handleComment(); }} placeholder="의견을 남겨주세요" className="w-full h-10 pl-4 pr-16 rounded-full bg-secondary border border-border/50 text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+            <button disabled={!commentText.trim()} onClick={handleComment} className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 px-3.5 rounded-full bg-primary text-white text-[12px] font-semibold disabled:opacity-30">등록</button>
           </div>
         </div>
         {comments.length > 0 ? (
@@ -416,6 +455,42 @@ export function ReportDetailView({ report, type }: { report: ReportDetailData; t
       <p className="text-[11px] text-toss-gray-400 text-center leading-relaxed mt-6 px-4">
         {type === "hack" ? "본 정보는 커뮤니티 제보에 기반하며, SALog는 정보의 정확성을 보장하지 않습니다." : "비매너 신고는 커뮤니티 기반 참고 정보이며, 공식적인 제재와 무관합니다."}
       </p>
+
+      {/* ─── 편집 모달 ─── */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
+          <div className="relative w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border/40 shadow-toss-lg animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-toss-gray-200 dark:bg-toss-gray-700" />
+            </div>
+            <div className="px-6 pt-4 sm:pt-6 pb-6">
+              <h2 className="text-[20px] font-bold text-foreground mb-5">게시글 수정</h2>
+              <div className="mb-5">
+                <label className="block text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">신고 사유</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value.slice(0, 500))}
+                  rows={5}
+                  className="w-full px-4 py-3 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/50 text-[14px] outline-none focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed placeholder:text-toss-gray-400"
+                  placeholder="신고 사유를 입력해주세요"
+                />
+                <p className="text-[11px] text-toss-gray-400 mt-1.5 text-right tabular-nums">{editDescription.length}/500</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setIsEditing(false)} className="flex-1 h-12 rounded-2xl bg-secondary text-[15px] font-semibold text-toss-gray-600 transition-all active:scale-[0.98]">취소</button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSavingEdit}
+                  className="flex-1 h-12 rounded-2xl bg-primary text-white text-[15px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isSavingEdit ? "저장 중..." : "저장"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

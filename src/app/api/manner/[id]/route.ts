@@ -31,6 +31,7 @@ export async function GET(
       tagType: true,
       tagTypes: true,
       description: true,
+      evidences: true,
       reporterId: true,
       createdAt: true,
       reporter: {

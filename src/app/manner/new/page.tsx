@@ -55,6 +55,26 @@ export default function NewMannerTagPage() {
     setIsSubmitting(true);
     setSubmitError("");
     try {
+      // 파일 증거 업로드
+      const uploadedEvidences: { type: string; url: string; name: string }[] = [];
+      for (const item of evidence) {
+        if (item.type === "youtube" || item.type === "link") {
+          uploadedEvidences.push({ type: item.type, url: item.url!, name: item.name });
+        } else if (item.file) {
+          if (item.file.size > 4 * 1024 * 1024) {
+            setSubmitError(`파일 "${item.name}"의 크기가 4MB를 초과합니다`);
+            return;
+          }
+          const formData = new FormData();
+          formData.append("file", item.file);
+          const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+          if (uploadRes.status === 413) { setSubmitError("파일 크기가 너무 큽니다 (최대 4MB)"); return; }
+          const uploadData = await uploadRes.json().catch(() => null);
+          if (!uploadRes.ok || !uploadData) { setSubmitError(uploadData?.error || "파일 업로드에 실패했습니다"); return; }
+          uploadedEvidences.push({ type: uploadData.type, url: uploadData.url, name: uploadData.name });
+        }
+      }
+
       const res = await fetch("/api/manner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,6 +83,7 @@ export default function NewMannerTagPage() {
           nickname: lookupResult.nickname,
           tagTypes,
           description: description.trim(),
+          evidences: uploadedEvidences.length > 0 ? uploadedEvidences : undefined,
         }),
       });
       const data = await res.json().catch(() => null);

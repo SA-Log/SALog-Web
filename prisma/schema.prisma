@@ -267,6 +267,7 @@ model MannerTag {
   tagType         MannerTagType
   tagTypes        String[]      @default([])
   description     String?       @db.Text
+  evidences       Json?         // [{type, url, name}]
   reporterId      String
   createdAt       DateTime      @default(now())
 

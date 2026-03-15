@@ -11,6 +11,11 @@ const createSchema = z.object({
   nickname: z.string().min(1).max(50),
   tagTypes: z.array(z.enum(VALID_TAG_TYPES)).min(1, "비매너 유형을 1개 이상 선택해주세요"),
   description: z.string().max(500).optional().or(z.literal("")),
+  evidences: z.array(z.object({
+    type: z.enum(["youtube", "link", "screenshot"]),
+    url: z.string().url().max(2000),
+    name: z.string().max(200),
+  })).max(20).optional(),
 });
 
 export async function POST(req: Request) {
@@ -30,16 +35,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "입력값이 올바르지 않습니다" }, { status: 400 });
   }
 
-  const { barracksAddress, nickname, tagTypes, description } = parsed.data;
+  const { barracksAddress, nickname, tagTypes, description, evidences } = parsed.data;
 
   try {
     const report = await prisma.mannerTag.create({
       data: {
         barracksAddress,
         nickname,
-        tagType: tagTypes[0], // 대표 유형 (하위 호환)
+        tagType: tagTypes[0],
         tagTypes,
         description: description || null,
+        evidences: evidences ?? [],
         reporterId: session.user.id,
       },
     });
@@ -82,6 +88,7 @@ export async function GET(req: Request) {
         tagType: true,
         tagTypes: true,
         description: true,
+        evidences: true,
         createdAt: true,
         reporterId: true,
         reporter: { select: { id: true, nickname: true, image: true } },
