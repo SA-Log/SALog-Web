@@ -25,6 +25,7 @@ type MannerItem = {
   nickname: string;
   barracksAddress: string;
   tagType: string;
+  tagTypes: string[];
   description: string | null;
   createdAt: string;
   reporter: { id: string; nickname: string | null; image: string | null };
@@ -33,20 +34,20 @@ type MannerItem = {
 export default function MannerPage() {
   const [tagFilter, setTagFilter] = useState<MannerTagType | "ALL">("ALL");
   const [sortBy, setSortBy] = useState("latest");
-  const [tags, setTags] = useState<MannerItem[]>([]);
+  const [reports, setReports] = useState<MannerItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchTags(); }, [tagFilter, sortBy]);
+  useEffect(() => { fetchReports(); }, [tagFilter, sortBy]);
 
-  async function fetchTags() {
+  async function fetchReports() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ sort: sortBy });
       if (tagFilter !== "ALL") params.set("tagType", tagFilter);
       const res = await fetch(`/api/manner?${params}`);
       const data = await res.json();
-      setTags(data.tags ?? []);
+      setReports(data.reports ?? []);
       setTotal(data.total ?? 0);
     } catch { /* ignore */ }
     finally { setLoading(false); }
@@ -105,7 +106,7 @@ export default function MannerPage() {
             </div>
           ))}
         </div>
-      ) : tags.length === 0 ? (
+      ) : reports.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -118,8 +119,8 @@ export default function MannerPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {tags.map((tag) => (
-            <MannerCard key={tag.id} tag={tag} />
+          {reports.map((report) => (
+            <MannerCard key={report.id} tag={report} />
           ))}
         </div>
       )}

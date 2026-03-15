@@ -41,15 +41,17 @@ export default function NewMannerTagPage() {
   const [submitMode, setSubmitMode] = useState<SubmitMode>(null);
 
   const canProceedStep1 = lookupResult?.found === true && (duplicateTag ? submitMode !== null : true);
-  const canProceedStep2 = tagTypes.length === 1;
+  const canProceedStep2 = tagTypes.length > 0;
 
-  function selectTagType(value: MannerTagType) {
-    setTagTypes([value]);
+  function toggleTagType(value: MannerTagType) {
+    setTagTypes((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
   }
   const canSubmit = !isSubmitting;
 
   async function handleSubmit() {
-    if (!lookupResult?.found || !lookupResult.nickname || tagTypes.length !== 1) return;
+    if (!lookupResult?.found || !lookupResult.nickname || tagTypes.length === 0) return;
     setIsSubmitting(true);
     setSubmitError("");
     try {
@@ -59,7 +61,7 @@ export default function NewMannerTagPage() {
         body: JSON.stringify({
           barracksAddress,
           nickname: lookupResult.nickname,
-          tagType: tagTypes[0],
+          tagTypes,
           description: description.trim(),
         }),
       });
@@ -250,10 +252,10 @@ export default function NewMannerTagPage() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-semibold text-foreground mb-1">비매너 유형 <span className="text-toss-red">*</span></label>
+            <label className="block text-[13px] font-semibold text-foreground mb-1">비매너 유형 <span className="font-normal text-toss-gray-500">(복수 선택 가능)</span></label>
             <div className="grid grid-cols-2 gap-2">
               {TAG_OPTIONS.map((opt) => (
-                <button key={opt.value} onClick={() => selectTagType(opt.value)}
+                <button key={opt.value} onClick={() => toggleTagType(opt.value)}
                   className={`p-3 rounded-xl border text-left btn-chip ${
                     tagTypes.includes(opt.value)
                       ? "border-primary bg-primary/5"

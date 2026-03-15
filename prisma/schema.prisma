@@ -265,6 +265,7 @@ model MannerTag {
   barracksAddress String
   nickname        String
   tagType         MannerTagType
+  tagTypes        String[]      @default([])
   description     String?       @db.Text
   reporterId      String
   createdAt       DateTime      @default(now())

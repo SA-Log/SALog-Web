@@ -9,7 +9,7 @@ const VALID_TAG_TYPES = ["VERBAL_ABUSE", "BLOCKING", "GRIEFING", "AFK", "TEAM_KI
 const createSchema = z.object({
   barracksAddress: z.string().min(1).max(200),
   nickname: z.string().min(1).max(50),
-  tagType: z.enum(VALID_TAG_TYPES),
+  tagTypes: z.array(z.enum(VALID_TAG_TYPES)).min(1, "비매너 유형을 1개 이상 선택해주세요"),
   description: z.string().max(500).optional().or(z.literal("")),
 });
 
@@ -30,19 +30,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "입력값이 올바르지 않습니다" }, { status: 400 });
   }
 
-  const { barracksAddress, nickname, tagType, description } = parsed.data;
+  const { barracksAddress, nickname, tagTypes, description } = parsed.data;
 
-  const tag = await prisma.mannerTag.create({
-    data: {
-      barracksAddress,
-      nickname,
-      tagType,
-      description: description || null,
-      reporterId: session.user.id,
-    },
-  });
+  try {
+    const report = await prisma.mannerTag.create({
+      data: {
+        barracksAddress,
+        nickname,
+        tagType: tagTypes[0], // 대표 유형 (하위 호환)
+        tagTypes,
+        description: description || null,
+        reporterId: session.user.id,
+      },
+    });
 
-  return NextResponse.json({ id: tag.id, success: true }, { status: 201 });
+    return NextResponse.json({ id: report.id, success: true }, { status: 201 });
+  } catch (err) {
+    console.error("[manner/POST] 에러:", err);
+    return NextResponse.json({ error: "등록에 실패했습니다" }, { status: 500 });
+  }
 }
 
 export async function GET(req: Request) {
@@ -57,14 +63,14 @@ export async function GET(req: Request) {
 
   const where: Record<string, unknown> = {};
   if (tagType && tagType !== "ALL") {
-    where.tagType = tagType;
+    where.tagTypes = { has: tagType };
   }
 
   const orderBy = sort === "oldest"
     ? { createdAt: "asc" as const }
     : { createdAt: "desc" as const };
 
-  const [tags, total] = await Promise.all([
+  const [reports, total] = await Promise.all([
     prisma.mannerTag.findMany({
       where,
       orderBy,
@@ -74,13 +80,15 @@ export async function GET(req: Request) {
         nickname: true,
         barracksAddress: true,
         tagType: true,
+        tagTypes: true,
         description: true,
         createdAt: true,
+        reporterId: true,
         reporter: { select: { id: true, nickname: true, image: true } },
       },
     }),
     prisma.mannerTag.count({ where }),
   ]);
 
-  return NextResponse.json({ tags, total });
+  return NextResponse.json({ reports, total });
 }

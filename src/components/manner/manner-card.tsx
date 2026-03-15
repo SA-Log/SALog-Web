@@ -4,11 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MANNER_TAG_MAP } from "@/lib/mock-data";
 
-function formatDateTime(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-}
-
 function formatRelative(dateStr: string) {
   const d = new Date(dateStr);
   const now = new Date();
@@ -20,7 +15,7 @@ function formatRelative(dateStr: string) {
   if (hours < 24) return `${hours}시간 전`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}일 전`;
-  return formatDateTime(dateStr);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 
 function getYoutubeThumbnail(url: string): string | null {
@@ -33,19 +28,12 @@ type EvidenceItem = { type: string; url: string; name: string };
 function getCardMedia(evidences?: EvidenceItem[] | null): { type: "image" | "youtube" | "link"; src: string } | null {
   if (!evidences) return null;
   const items = evidences as EvidenceItem[];
-
   const screenshot = items.find(e => e.type === "screenshot" && e.url);
   if (screenshot) return { type: "image", src: screenshot.url };
-
   const yt = items.find(e => e.type === "youtube" && e.url);
-  if (yt) {
-    const thumb = getYoutubeThumbnail(yt.url);
-    if (thumb) return { type: "youtube", src: thumb };
-  }
-
+  if (yt) { const t = getYoutubeThumbnail(yt.url); if (t) return { type: "youtube", src: t }; }
   const link = items.find(e => e.type === "link" && e.url);
   if (link) return { type: "link", src: link.url };
-
   return null;
 }
 
@@ -54,6 +42,7 @@ interface MannerCardProps {
     id: string;
     nickname: string;
     tagType: string;
+    tagTypes?: string[];
     description?: string | null;
     evidences?: EvidenceItem[] | null;
     createdAt: string;
@@ -65,7 +54,7 @@ interface MannerCardProps {
 
 export function MannerCard({ tag }: MannerCardProps) {
   const router = useRouter();
-  const info = MANNER_TAG_MAP[tag.tagType as keyof typeof MANNER_TAG_MAP] ?? MANNER_TAG_MAP.OTHER;
+  const displayTypes = tag.tagTypes?.length ? tag.tagTypes : [tag.tagType];
 
   const reporterName = tag.reporter?.nickname ?? tag.reporterName ?? "유저";
   const reporterId = tag.reporter?.id ?? tag.reporterId ?? "";
@@ -92,9 +81,17 @@ export function MannerCard({ tag }: MannerCardProps) {
             </Link>
             <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatRelative(tag.createdAt)}</p>
           </div>
-          <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${info.bg} ${info.color}`}>
-            {info.emoji} {info.label}
-          </span>
+          {/* 태그 뱃지들 */}
+          <div className="flex gap-1 flex-wrap justify-end shrink-0">
+            {displayTypes.map((t) => {
+              const info = MANNER_TAG_MAP[t as keyof typeof MANNER_TAG_MAP] ?? MANNER_TAG_MAP.OTHER;
+              return (
+                <span key={t} className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${info.bg} ${info.color}`}>
+                  {info.emoji} {info.label}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         {/* Target nickname */}
