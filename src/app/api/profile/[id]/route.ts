@@ -32,8 +32,10 @@ export async function GET(
       nickname: true,
       image: true,
       role: true,
+      bio: true,
       isProfilePublic: true,
       barracksAddress: true,
+      barracksVerified: true,
       createdAt: true,
       _count: {
         select: {
@@ -79,8 +81,10 @@ export async function GET(
     nickname: user.nickname,
     image: user.image,
     role: user.role,
+    bio: user.bio,
     isProfilePublic: user.isProfilePublic,
     barracksAddress: user.barracksAddress,
+    barracksVerified: user.barracksVerified,
     createdAt: user.createdAt,
     reportCount: user._count.hackReports,
     recentReports,
