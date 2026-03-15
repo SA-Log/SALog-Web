@@ -23,11 +23,7 @@ function SignupPage() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
 
-  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
-  const [nicknameError, setNicknameError] = useState("");
-  const [isCheckingNickname, setIsCheckingNickname] = useState(false);
-  const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -35,35 +31,6 @@ function SignupPage() {
     router.replace("/login");
     return null;
   }
-
-  async function handleCheckNickname() {
-    if (nickname.trim().length < 2) {
-      setNicknameError("닉네임은 2자 이상이어야 합니다");
-      return;
-    }
-    if (!/^[가-힣a-zA-Z0-9_]{2,12}$/.test(nickname.trim())) {
-      setNicknameError("한글, 영문, 숫자, 밑줄만 사용 가능 (2~12자)");
-      return;
-    }
-    setIsCheckingNickname(true);
-    setNicknameError("");
-    try {
-      const res = await fetch("/api/auth/check-nickname", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: nickname.trim() }),
-      });
-      const data = await res.json();
-      setNicknameAvailable(data.available);
-      if (!data.available) setNicknameError("이미 사용 중인 닉네임입니다");
-    } catch {
-      setNicknameError("확인에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsCheckingNickname(false);
-    }
-  }
-
-  const canSubmit = nickname.trim().length >= 2 && nicknameAvailable === true;
 
   async function handleSubmit() {
     setIsSubmitting(true);
@@ -73,7 +40,6 @@ function SignupPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nickname: nickname.trim(),
           notificationEmail: email.trim(),
         }),
       });
@@ -118,7 +84,7 @@ function SignupPage() {
         </div>
         <h1 className="text-[22px] font-bold text-foreground">회원가입</h1>
         <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-400 mt-2">
-          카카오 계정으로 연동되었습니다. 추가 정보를 입력해주세요.
+          카카오 계정으로 연동되었습니다.
         </p>
       </div>
 
@@ -137,34 +103,16 @@ function SignupPage() {
       )}
 
       <div className="space-y-5">
-        {/* 닉네임 */}
-        <div>
-          <label className="block text-[13px] font-semibold text-foreground mb-2">
-            닉네임 <span className="text-toss-red">*</span>
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={nickname}
-              onChange={(e) => { setNickname(e.target.value); setNicknameAvailable(null); setNicknameError(""); }}
-              placeholder="2~12자 (한글, 영문, 숫자, 밑줄)"
-              maxLength={12}
-              className="flex-1 h-11 px-4 rounded-xl bg-card border border-border text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
-            />
-            <button
-              onClick={handleCheckNickname}
-              disabled={nickname.trim().length < 2 || isCheckingNickname}
-              className="h-11 px-4 rounded-xl bg-secondary text-toss-gray-700 dark:text-toss-gray-300 text-[13px] font-semibold disabled:opacity-40 btn-secondary shrink-0"
-            >
-              {isCheckingNickname ? "확인 중..." : "중복확인"}
-            </button>
+        {/* 닉네임 안내 */}
+        <div className="rounded-xl p-4 border border-primary/10 bg-primary/5 dark:bg-primary/10">
+          <div className="flex gap-2.5 items-start">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
+              <path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 5v3M8 10h.005" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-primary"/>
+            </svg>
+            <p className="text-[11px] text-primary leading-relaxed">
+              닉네임은 자동으로 부여됩니다. 병영수첩 인증을 완료하면 서든어택 닉네임으로 변경됩니다.
+            </p>
           </div>
-          {nicknameError && (
-            <p className="text-[11px] text-toss-red mt-1.5">{nicknameError}</p>
-          )}
-          {nicknameAvailable === true && (
-            <p className="text-[11px] text-toss-green mt-1.5">사용 가능한 닉네임입니다</p>
-          )}
         </div>
 
         {/* 이메일 */}
@@ -198,7 +146,7 @@ function SignupPage() {
 
         <button
           onClick={handleSubmit}
-          disabled={!canSubmit || isSubmitting}
+          disabled={isSubmitting}
           className="w-full h-12 rounded-xl bg-primary text-white text-[14px] font-semibold disabled:opacity-40 btn-primary"
         >
           {isSubmitting ? "가입 중..." : "가입 완료"}

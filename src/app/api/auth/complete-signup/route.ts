@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { nicknameSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const signupSchema = z.object({
-  nickname: nicknameSchema,
   notificationEmail: z.string().email("올바른 이메일 형식이 아닙니다").optional().or(z.literal("")),
 });
+
+function generateRandomNickname(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let suffix = "";
+  for (let i = 0; i < 4; i++) {
+    suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `신병_${suffix}`;
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -30,14 +37,22 @@ export async function POST(req: Request) {
     );
   }
 
-  const { nickname, notificationEmail } = parsed.data;
+  const { notificationEmail } = parsed.data;
 
-  const existingNickname = await prisma.user.findUnique({ where: { nickname } });
-  if (existingNickname && existingNickname.id !== session.user.id) {
-    return NextResponse.json({ error: "이미 사용 중인 닉네임입니다" }, { status: 409 });
+  // 중복 없는 랜덤 닉네임 생성 (최대 10회 시도)
+  let nickname = "";
+  for (let i = 0; i < 10; i++) {
+    const candidate = generateRandomNickname();
+    const existing = await prisma.user.findUnique({ where: { nickname: candidate } });
+    if (!existing) {
+      nickname = candidate;
+      break;
+    }
+  }
+  if (!nickname) {
+    return NextResponse.json({ error: "닉네임 생성에 실패했습니다. 다시 시도해주세요." }, { status: 500 });
   }
 
-  // 인증 코드: 유저 ID 끝 4자리 대문자
   const verificationCode = session.user.id.slice(-4).toUpperCase();
 
   try {
