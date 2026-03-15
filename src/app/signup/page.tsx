@@ -94,9 +94,9 @@ function SignupPage() {
           notificationEmail: email.trim(),
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitError(data.error || "가입에 실패했습니다");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        setSubmitError(data?.error || "가입에 실패했습니다");
         setIsSubmitting(false);
         return;
       }

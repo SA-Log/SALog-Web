@@ -44,16 +44,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "이미 사용 중인 닉네임입니다" }, { status: 409 });
   }
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: {
-      nickname,
-      barracksAddress,
-      barracksVerified: true,
-      notificationEmail: notificationEmail || null,
-      isProfileComplete: true,
-    },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        nickname,
+        barracksAddress,
+        barracksVerified: true,
+        notificationEmail: notificationEmail || null,
+        isProfileComplete: true,
+      },
+    });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[complete-signup] DB 에러:", err);
+    return NextResponse.json({ error: "가입 처리 중 오류가 발생했습니다" }, { status: 500 });
+  }
 }
