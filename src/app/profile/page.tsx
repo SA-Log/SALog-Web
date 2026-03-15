@@ -704,7 +704,7 @@ function ProfileActivityTab() {
   );
 }
 
-type BlacklistItem = { id: string; barracksAddress: string; memo: string | null; createdAt: string };
+type BlacklistItem = { id: string; barracksAddress: string; nickname: string | null; memo: string | null; createdAt: string };
 
 function ProfileBlacklistTab() {
   const [entries, setEntries] = useState<BlacklistItem[]>([]);
@@ -729,14 +729,22 @@ function ProfileBlacklistTab() {
     setAdding(true);
     setAddError("");
     try {
+      // 크롤링으로 닉네임 조회
+      let nickname: string | null = null;
+      try {
+        const profileRes = await fetch(`/api/barracks/profile?nexonSn=${sn}`);
+        const profileData = await profileRes.json();
+        if (profileData.found) nickname = profileData.nickname;
+      } catch { /* 닉네임 조회 실패해도 추가 진행 */ }
+
       const res = await fetch("/api/blacklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ barracksAddress: sn, memo: addMemo.trim() }),
+        body: JSON.stringify({ barracksAddress: sn, nickname, memo: addMemo.trim() }),
       });
       const data = await res.json().catch(() => null);
       if (res.ok) {
-        setEntries((prev) => [{ id: data.id, barracksAddress: sn, memo: addMemo.trim() || null, createdAt: new Date().toISOString() }, ...prev]);
+        setEntries((prev) => [{ id: data.id, barracksAddress: sn, nickname, memo: addMemo.trim() || null, createdAt: new Date().toISOString() }, ...prev]);
         setShowAdd(false);
         setAddAddress("");
         setAddMemo("");
@@ -808,21 +816,31 @@ function ProfileBlacklistTab() {
           description="의심 유저를 블랙리스트에 추가해보세요"
         />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {entries.map((entry) => (
-            <div key={entry.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/30 hover:bg-secondary/30 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-toss-gray-400"/></svg>
+            <div key={entry.id} className="bg-card rounded-2xl border border-border/30 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-toss-red/8 dark:bg-toss-red/15 flex items-center justify-center shrink-0">
+                  <span className="text-[16px] font-bold text-toss-red">{(entry.nickname ?? entry.barracksAddress).charAt(0)}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold text-foreground truncate">
+                    {entry.nickname ?? entry.barracksAddress}
+                  </p>
+                  {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
+                </div>
+                <button onClick={() => handleDelete(entry.id)} className="shrink-0 h-7 px-2.5 rounded-lg text-[11px] font-medium text-toss-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                  삭제
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-foreground hover:text-primary transition-colors">
-                  {entry.barracksAddress}
+              {/* 병영수첩 바로가기 */}
+              <div className="mt-3 flex gap-2">
+                <a href={`https://barracks.sa.nexon.com/${entry.barracksAddress}/match`} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[11px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  병영수첩
                 </a>
-                {entry.memo && <p className="text-[11px] text-toss-gray-400 truncate mt-0.5">{entry.memo}</p>}
               </div>
-              <button onClick={() => handleDelete(entry.id)} className="shrink-0 h-7 px-2.5 rounded-lg text-[11px] font-medium text-toss-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                삭제
-              </button>
             </div>
           ))}
         </div>

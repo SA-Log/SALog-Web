@@ -16,6 +16,7 @@ export async function GET() {
     select: {
       id: true,
       barracksAddress: true,
+      nickname: true,
       memo: true,
       createdAt: true,
     },
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
     data: {
       userId: session.user.id,
       barracksAddress,
+      nickname: nickname || null,
       memo,
     },
   });

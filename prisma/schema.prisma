@@ -252,6 +252,7 @@ model BlacklistEntry {
   id              String   @id @default(cuid())
   userId          String
   barracksAddress String
+  nickname        String?
   memo            String?
   notifyEmail     Boolean  @default(true)
   createdAt       DateTime @default(now())
