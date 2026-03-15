@@ -179,7 +179,7 @@ export function Header() {
                 </Link>
               ) : <span />}
               <button
-                onClick={() => { setMobileOpen(false); logout(); router.push("/login"); }}
+                onClick={() => { setMobileOpen(false); logout(); }}
                 className="py-2.5 text-[13px] font-medium text-toss-gray-400 hover:text-toss-gray-600 transition-colors"
               >
                 로그아웃

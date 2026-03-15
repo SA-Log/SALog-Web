@@ -506,7 +506,7 @@ export default function ProfilePage() {
           cancelText="취소"
           confirmText="로그아웃"
           onCancel={() => setShowLogoutConfirm(false)}
-          onConfirm={() => { logout(); router.push("/login"); }}
+          onConfirm={() => logout()}
         />
       )}
 
@@ -545,7 +545,7 @@ export default function ProfilePage() {
               </button>
               <button
                 disabled={deleteInput !== "탈퇴합니다"}
-                onClick={() => { logout(); router.push("/login"); }}
+                onClick={() => logout()}
                 className={`flex-1 h-12 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.98] ${
                   deleteInput === "탈퇴합니다"
                     ? "bg-toss-red text-white"
