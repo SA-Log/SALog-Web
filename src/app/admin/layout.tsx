@@ -76,28 +76,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userRole = (authUser?.role ?? "USER") as UserRole;
   const userName = authUser?.nickname ?? authUser?.name ?? "유저";
 
-  const [testRole, setTestRole] = useState<UserRole>(() => getStoredRole(userRole));
+  const [testRole, setTestRole] = useState<UserRole>(userRole);
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const pathname = usePathname();
 
   // 실제 역할이 변경되면 테스트 역할도 동기화
   useEffect(() => {
-    if (userRole !== "USER") {
-      const stored = getStoredRole(userRole);
-      // 저장된 테스트 역할이 없거나, 실제 역할이 변경됐을 때 동기화
-      if (!localStorage.getItem("salog_test_role")) {
-        setTestRole(userRole);
-      }
-    }
+    setTestRole(userRole);
+    localStorage.setItem("salog_test_role", userRole);
   }, [userRole]);
 
-  // localStorage에 역할 테스트 상태 저장
+  // localStorage에 역할 테스트 상태 저장 (마스터가 수동으로 변경한 경우)
   useEffect(() => {
     localStorage.setItem("salog_test_role", testRole);
   }, [testRole]);
 
   const currentRole = testRole;
-  const isMasterUser = userRole === "MASTER"; // 실제 역할이 마스터인 경우에만 역할 테스트 가능
+  const isMasterUser = userRole === "MASTER";
   const isAdmin = currentRole === "MASTER" || currentRole === "VICE_MASTER" || currentRole === "OPERATOR";
   const visibleNav = NAV_ITEMS.filter((item) => item.roles.includes(currentRole));
   const roleInfo = ROLE_MAP[currentRole];

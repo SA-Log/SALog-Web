@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 }
 
 // 밴 목록 조회
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -69,13 +69,55 @@ export async function GET() {
     return NextResponse.json({ error: "권한이 없습니다" }, { status: 403 });
   }
 
+  const url = new URL(req.url);
+  const typeFilter = url.searchParams.get("type");
+  const search = url.searchParams.get("search");
+
+  const where: Record<string, unknown> = {};
+  if (typeFilter && typeFilter !== "ALL") {
+    where.type = typeFilter;
+  }
+  if (search) {
+    where.OR = [
+      { user: { nickname: { contains: search, mode: "insensitive" } } },
+      { barracksAddress: { contains: search } },
+      { reason: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
   const bans = await prisma.ban.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     take: 100,
     include: {
-      user: { select: { nickname: true, barracksAddress: true } },
+      user: { select: { id: true, nickname: true, barracksAddress: true, image: true } },
     },
   });
 
   return NextResponse.json({ bans });
+}
+
+// 밴 해제
+export async function DELETE(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
+  }
+
+  const adminUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (!adminUser || !ADMIN_ROLES.includes(adminUser.role)) {
+    return NextResponse.json({ error: "권한이 없습니다" }, { status: 403 });
+  }
+
+  const { banId } = await req.json();
+  if (!banId) {
+    return NextResponse.json({ error: "banId가 필요합니다" }, { status: 400 });
+  }
+
+  await prisma.ban.delete({ where: { id: banId } });
+
+  return NextResponse.json({ success: true });
 }
