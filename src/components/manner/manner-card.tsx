@@ -28,12 +28,11 @@ type EvidenceItem = { type: string; url: string; name: string };
 function getCardMedia(evidences?: EvidenceItem[] | null): { type: "image" | "youtube" | "link"; src: string } | null {
   if (!evidences) return null;
   const items = evidences as EvidenceItem[];
-  const screenshot = items.find(e => e.type === "screenshot" && e.url);
-  if (screenshot) return { type: "image", src: screenshot.url };
-  const yt = items.find(e => e.type === "youtube" && e.url);
-  if (yt) { const t = getYoutubeThumbnail(yt.url); if (t) return { type: "youtube", src: t }; }
-  const link = items.find(e => e.type === "link" && e.url);
-  if (link) return { type: "link", src: link.url };
+  for (const item of items) {
+    if (item.type === "screenshot" && item.url) return { type: "image", src: item.url };
+    if (item.type === "youtube" && item.url) { const t = getYoutubeThumbnail(item.url); if (t) return { type: "youtube", src: t }; }
+    if (item.type === "link" && item.url) return { type: "link", src: item.url };
+  }
   return null;
 }
 

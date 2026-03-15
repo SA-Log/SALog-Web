@@ -242,13 +242,13 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   const unsurePercent = voteTotal > 0 ? Math.round((currentUnsure / voteTotal) * 100) : 0;
   const disagreePercent = voteTotal > 0 ? 100 - agreePercent - unsurePercent : 0;
 
-  const evidences = report.evidences ?? [];
+  const evidences = (report.evidences ?? []) as Evidence[];
   const hasLegacyYt = report.youtubeUrl && !evidences.some((e) => e.type === "youtube");
   const allEvidences: Evidence[] = [...evidences, ...(hasLegacyYt ? [{ type: "youtube", url: report.youtubeUrl!, name: "YouTube" }] : [])];
-  const sortOrder: Record<string, number> = { screenshot: 0, video: 1, youtube: 2, link: 3 };
-  const sortedEvidences = [...allEvidences].sort((a, b) => (sortOrder[a.type] ?? 9) - (sortOrder[b.type] ?? 9));
-  const visualEvidences = sortedEvidences.filter((e) => ["screenshot", "video", "youtube"].includes(e.type));
-  const linkEvidences = sortedEvidences.filter((e) => e.type === "link");
+  // 유저가 설정한 순서 유지 (정렬 없음)
+  const visualEvidences = allEvidences.filter((e) => ["screenshot", "video", "youtube"].includes(e.type));
+  const linkEvidences = allEvidences.filter((e) => e.type === "link");
+  const sortedEvidences = allEvidences;
 
   const displayTypes = report.tagTypes?.length ? report.tagTypes : report.tagType ? [report.tagType] : [];
   const barracksUrl = report.barracksAddress ? `https://barracks.sa.nexon.com/${report.barracksAddress}/match` : null;
@@ -591,18 +591,20 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3v8M3 7h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                     스크린샷
                     <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      if (file.size > 4 * 1024 * 1024) { alert("4MB 이하 파일만 가능합니다"); return; }
-                      const fd = new FormData();
-                      fd.append("file", file);
-                      const res = await fetch("/api/upload", { method: "POST", body: fd });
-                      if (res.status === 413) { alert("파일이 너무 큽니다"); return; }
-                      const data = await res.json().catch(() => null);
-                      if (res.ok && data?.url) {
-                        setEditEvidences((prev) => [...prev, { type: "screenshot", url: data.url, name: file.name }]);
-                      } else { alert("업로드에 실패했습니다"); }
-                      e.target.value = "";
+                      try {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 4 * 1024 * 1024) { alert("4MB 이하 파일만 가능합니다"); return; }
+                        const fd = new FormData();
+                        fd.append("file", file);
+                        const res = await fetch("/api/upload", { method: "POST", body: fd });
+                        if (res.status === 413) { alert("파일이 너무 큽니다"); return; }
+                        const data = await res.json().catch(() => null);
+                        if (res.ok && data?.url) {
+                          setEditEvidences((prev) => [...prev, { type: data.type || "screenshot", url: data.url, name: data.name || file.name }]);
+                        } else { alert(data?.error || "업로드에 실패했습니다"); }
+                      } catch { alert("업로드 중 오류가 발생했습니다"); }
+                      finally { e.target.value = ""; }
                     }} />
                   </label>
                   <button

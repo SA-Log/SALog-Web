@@ -35,24 +35,20 @@ function getCardMedia(evidences?: EvidenceItem[] | null, youtubeUrl?: string | n
 
   const items = (evidences ?? []) as EvidenceItem[];
 
-  // 1. 첫 번째 스크린샷
-  const screenshot = items.find(e => e.type === "screenshot" && e.url);
-  if (screenshot) return { type: "image", src: screenshot.url };
-
-  // 2. 유튜브 링크 → 썸네일
-  const ytEvidence = items.find(e => e.type === "youtube" && e.url);
-  if (ytEvidence) {
-    const thumb = getYoutubeThumbnail(ytEvidence.url);
-    if (thumb) return { type: "youtube", src: thumb };
+  // 첫 번째 항목이 메인 썸네일
+  for (const item of items) {
+    if (item.type === "screenshot" && item.url) return { type: "image", src: item.url };
+    if (item.type === "youtube" && item.url) {
+      const thumb = getYoutubeThumbnail(item.url);
+      if (thumb) return { type: "youtube", src: thumb };
+    }
+    if (item.type === "link" && item.url) return { type: "link", src: item.url };
   }
+
   if (youtubeUrl) {
     const thumb = getYoutubeThumbnail(youtubeUrl);
     if (thumb) return { type: "youtube", src: thumb };
   }
-
-  // 3. 기타 링크 → 텍스트로 표시
-  const link = items.find(e => e.type === "link" && e.url);
-  if (link) return { type: "link", src: link.url };
 
   return null;
 }
