@@ -53,15 +53,25 @@ export async function GET(
 
   const isOwn = session.user.id === id;
 
-  // 비공개 프로필은 본인만 전체 정보 확인 가능
+  // 비공개 프로필: 본인 또는 맞팔만 전체 정보 확인 가능
   if (!user.isProfilePublic && !isOwn) {
-    return NextResponse.json({
-      id: user.id,
-      nickname: user.nickname,
-      image: user.image,
-      role: user.role,
-      isPrivate: true,
-    });
+    // 맞팔 확인
+    const [iFollow, theyFollowMe] = await Promise.all([
+      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: id } } }),
+      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: id, followingId: session.user.id } } }),
+    ]);
+    const isMutual = !!(iFollow && theyFollowMe);
+
+    if (!isMutual) {
+      return NextResponse.json({
+        id: user.id,
+        nickname: user.nickname,
+        image: user.image,
+        role: user.role,
+        barracksVerified: user.barracksVerified,
+        isPrivate: true,
+      });
+    }
   }
 
   // 최근 신고 목록

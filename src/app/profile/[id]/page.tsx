@@ -198,7 +198,7 @@ export default function UserProfilePage() {
               </svg>
             </div>
             <p className="text-[15px] font-semibold text-foreground mb-1">비공개 프로필</p>
-            <p className="text-[13px] text-toss-gray-500 leading-relaxed">이 유저의 활동 정보는 비공개입니다.</p>
+            <p className="text-[13px] text-toss-gray-500 leading-relaxed">서로 팔로우 상태에서만 활동 정보를 볼 수 있습니다.</p>
           </div>
         </div>
       </AuthGuard>

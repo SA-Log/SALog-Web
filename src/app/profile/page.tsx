@@ -426,8 +426,8 @@ export default function ProfilePage() {
                         <p className="text-[14px] font-medium text-foreground">팔로잉 블랙리스트 알림</p>
                         <p className="text-[12px] text-toss-gray-400 mt-0.5">팔로잉한 유저가 블랙리스트를 추가하면 알림</p>
                       </div>
-                      <div className="w-[50px] h-[30px] rounded-full bg-toss-gray-300 dark:bg-toss-gray-600 p-[3px] cursor-pointer">
-                        <div className="w-6 h-6 rounded-full bg-white shadow-sm translate-x-0 transition-transform duration-200" />
+                      <div className="w-[50px] h-[30px] rounded-full bg-primary p-[3px] cursor-pointer">
+                        <div className="w-6 h-6 rounded-full bg-white shadow-sm translate-x-5 transition-transform duration-200" />
                       </div>
                     </div>
                   </div>
