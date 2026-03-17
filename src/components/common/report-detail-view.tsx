@@ -273,14 +273,41 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
     finally { setIsSavingEdit(false); }
   }
 
-  function handleVote(vt: VoteType) {
+  async function handleVote(vt: VoteType) {
     if (requireLogin()) return;
     if (hasVoted || isAuthor) return;
+
+    // 낙관적 업데이트
     setUserVote(vt);
     setHasVoted(true);
     if (vt === "AGREE") setAgreeOffset(1);
     else if (vt === "UNSURE") setUnsureOffset(1);
     else setDisagreeOffset(1);
+
+    // API 호출
+    try {
+      const voteApi = type === "hack" ? `/api/reports/${report.id}/vote` : `/api/manner/${report.id}/vote`;
+      const res = await fetch(voteApi, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voteType: vt }),
+      });
+      if (!res.ok) {
+        // 실패 시 롤백
+        setUserVote(null);
+        setHasVoted(false);
+        if (vt === "AGREE") setAgreeOffset(0);
+        else if (vt === "UNSURE") setUnsureOffset(0);
+        else setDisagreeOffset(0);
+      }
+    } catch {
+      // 네트워크 에러 시 롤백
+      setUserVote(null);
+      setHasVoted(false);
+      if (vt === "AGREE") setAgreeOffset(0);
+      else if (vt === "UNSURE") setUnsureOffset(0);
+      else setDisagreeOffset(0);
+    }
   }
 
   const currentAgree = (report.agreeCount ?? 0) + agreeOffset;
