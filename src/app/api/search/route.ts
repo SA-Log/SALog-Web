@@ -125,6 +125,7 @@ export async function GET(req: NextRequest) {
       nickname: true,
       tagType: true,
       tagTypes: true,
+      status: true,
       createdAt: true,
       barracksAddress: true,
     },

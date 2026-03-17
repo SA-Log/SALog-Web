@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { StatusBadge } from "@/components/hack/status-badge";
 import { LoginPrompt } from "@/components/common/login-prompt";
-import { MANNER_TAG_MAP } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/mock-data";
 
 interface Evidence {
   type: string;
@@ -35,6 +35,7 @@ export interface ReportDetailData {
   // 비매너 전용
   tagType?: string;
   tagTypes?: string[];
+  adminNote?: string | null;
   blacklisted?: boolean;
 }
 
@@ -374,7 +375,12 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 6C7.1 6 8 5.1 8 4S7.1 2 6 2 4 2.9 4 4 4.9 6 6 6ZM6 7C4.67 7 2 7.67 2 9V10H10V9C10 7.67 7.33 7 6 7Z" fill={type === "hack" ? "#f04452" : "#f59f00"}/></svg>
           </div>
           <span className={`text-[12px] font-semibold text-${accentColor}`}>신고 대상</span>
-          {report.status && <div className="ml-auto"><StatusBadge status={report.status} /></div>}
+          {report.status && <div className="ml-auto">
+            {type === "hack" ? <StatusBadge status={report.status} /> : (() => {
+              const info = MANNER_STATUS_MAP[report.status as MannerStatus] ?? MANNER_STATUS_MAP.PENDING;
+              return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${info.bg} ${info.color}`}>{info.label}</span>;
+            })()}
+          </div>}
         </div>
         <div>
           <h1 className="text-[20px] sm:text-[24px] font-bold text-foreground tracking-tight truncate">{report.nickname}</h1>
@@ -432,6 +438,17 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
           )}
         </div>
       </div>
+
+      {/* ─── Admin Note (반려 사유) ─── */}
+      {type === "manner" && report.status === "REJECTED" && report.adminNote && (
+        <div className="bg-toss-gray-50 dark:bg-toss-gray-900 rounded-2xl border border-border/40 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1C3.68 1 1 3.68 1 7s2.68 6 6 6 6-2.68 6-6S10.32 1 7 1zm0 9a.75.75 0 110-1.5.75.75 0 010 1.5zm.75-3a.75.75 0 01-1.5 0V4.5a.75.75 0 011.5 0V7z" fill="#6b7684"/></svg>
+            <span className="text-[12px] font-semibold text-toss-gray-600 dark:text-toss-gray-400">반려 사유</span>
+          </div>
+          <p className="text-[13px] text-toss-gray-700 dark:text-toss-gray-300 leading-relaxed">{report.adminNote}</p>
+        </div>
+      )}
 
       {/* ─── Reporter ─── */}
       <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4 mb-4">

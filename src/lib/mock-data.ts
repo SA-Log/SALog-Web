@@ -307,6 +307,14 @@ export const HACK_STATUS_MAP: Record<HackStatus, { label: string; color: string;
   DISMISSED: { label: "기각", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-500/20" },
 };
 
+export type MannerStatus = "PENDING" | "CONFIRMED" | "REJECTED";
+
+export const MANNER_STATUS_MAP: Record<MannerStatus, { label: string; color: string; bg: string }> = {
+  PENDING: { label: "검토 중", color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-500/20" },
+  CONFIRMED: { label: "비매너 확정", color: "text-white", bg: "bg-toss-red" },
+  REJECTED: { label: "반려", color: "text-toss-gray-600 dark:text-toss-gray-400", bg: "bg-toss-gray-100 dark:bg-toss-gray-700" },
+};
+
 export const MANNER_TAG_MAP: Record<MannerTagType, { label: string; emoji: string; color: string; bg: string }> = {
   VERBAL_ABUSE: { label: "욕설", emoji: "🤬", color: "text-red-700 dark:text-red-400", bg: "bg-red-100 dark:bg-red-500/20" },
   BLOCKING: { label: "길막", emoji: "🚧", color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-500/20" },

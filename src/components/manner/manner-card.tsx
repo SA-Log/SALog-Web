@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MANNER_TAG_MAP } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/mock-data";
 
 function formatRelative(dateStr: string) {
   const d = new Date(dateStr);
@@ -42,6 +42,7 @@ interface MannerCardProps {
     nickname: string;
     tagType: string;
     tagTypes?: string[];
+    status?: string;
     description?: string | null;
     evidences?: EvidenceItem[] | null;
     createdAt: string;
@@ -100,9 +101,13 @@ export function MannerCard({ tag }: MannerCardProps) {
           </div>
         </div>
 
-        {/* Target nickname */}
-        <div className="px-4 sm:px-5 pb-2">
+        {/* Target nickname + status */}
+        <div className="px-4 sm:px-5 pb-2 flex items-center gap-2">
           <h3 className="text-[16px] sm:text-[17px] font-bold text-foreground tracking-tight truncate">{tag.nickname}</h3>
+          {tag.status && tag.status !== "PENDING" && (() => {
+            const info = MANNER_STATUS_MAP[tag.status as MannerStatus] ?? MANNER_STATUS_MAP.PENDING;
+            return <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${info.bg} ${info.color}`}>{info.label}</span>;
+          })()}
         </div>
 
         {/* Thumbnail */}

@@ -273,6 +273,8 @@ model MannerTag {
   tagTypes        String[]      @default([])
   description     String?       @db.Text
   evidences       Json?         // [{type, url, name}]
+  status          MannerStatus  @default(PENDING)
+  adminNote       String?       @db.Text
   reporterId      String
   createdAt       DateTime      @default(now())
 
@@ -281,7 +283,14 @@ model MannerTag {
 
   @@index([barracksAddress])
   @@index([nickname])
+  @@index([status])
   @@map("manner_tags")
+}
+
+enum MannerStatus {
+  PENDING    // 검토 중
+  CONFIRMED  // 확정
+  REJECTED   // 반려
 }
 
 enum MannerTagType {

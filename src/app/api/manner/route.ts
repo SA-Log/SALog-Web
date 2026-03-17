@@ -69,11 +69,15 @@ export async function GET(req: Request) {
   // 비로그인 조회 허용
   const url = new URL(req.url);
   const tagType = url.searchParams.get("tagType");
+  const status = url.searchParams.get("status");
   const sort = url.searchParams.get("sort") ?? "latest";
 
   const where: Record<string, unknown> = {};
   if (tagType && tagType !== "ALL") {
     where.tagTypes = { has: tagType };
+  }
+  if (status && status !== "ALL") {
+    where.status = status;
   }
 
   const orderBy = sort === "oldest"
@@ -93,6 +97,8 @@ export async function GET(req: Request) {
         tagTypes: true,
         description: true,
         evidences: true,
+        status: true,
+        adminNote: true,
         createdAt: true,
         reporterId: true,
         reporter: { select: { id: true, nickname: true, image: true, barracksVerified: true } },

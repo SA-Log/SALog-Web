@@ -30,6 +30,8 @@ export async function GET(
       tagTypes: true,
       description: true,
       evidences: true,
+      status: true,
+      adminNote: true,
       reporterId: true,
       createdAt: true,
       reporter: {
