@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireVerified } from "@/lib/require-verified";
 import { notifyNewReport } from "@/lib/discord";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -24,6 +25,9 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
+
+  const verifyErr = await requireVerified(session.user.id);
+  if (verifyErr) return NextResponse.json({ error: verifyErr }, { status: 403 });
 
   const rl = rateLimit(`manner:${session.user.id}`, { limit: 10, windowSec: 60 });
   if (!rl.success) {

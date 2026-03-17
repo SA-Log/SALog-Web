@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireVerified } from "@/lib/require-verified";
 
 // 블랙리스트 목록 조회
 export async function GET() {
@@ -31,6 +32,9 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
+
+  const verifyErr = await requireVerified(session.user.id);
+  if (verifyErr) return NextResponse.json({ error: verifyErr }, { status: 403 });
 
   const rl = rateLimit(`blacklist:${session.user.id}`, { limit: 20, windowSec: 60 });
   if (!rl.success) {
