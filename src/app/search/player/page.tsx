@@ -510,6 +510,83 @@ function PlayerContent() {
         </div>
       )}
 
+      {/* ========== SALog 연동 ========== */}
+      {salog && (() => {
+        const confirmed = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "CONFIRMED");
+        const probable = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "PROBABLE" || r.status === "SUSPECT");
+        const hasAny = salog.blacklistCount > 0 || salog.hackReportCount > 0 || salog.mannerReports.length > 0;
+
+        return (
+          <div className="space-y-4 mb-4">
+            <h2 className="text-[15px] font-bold text-foreground">SALog 연동</h2>
+
+            {/* 상태 배너 */}
+            {confirmed.length > 0 ? (
+              <div className="bg-toss-red/5 border border-toss-red/20 rounded-2xl p-4">
+                <p className="text-[14px] font-bold text-toss-red">🚨 핵 사용이 확정된 유저입니다</p>
+                <p className="text-[12px] text-toss-gray-500 mt-1">관리자 검토를 거쳐 핵 사용이 확정되었습니다. {confirmed.length}건의 확정 판정</p>
+              </div>
+            ) : probable.length > 0 ? (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+                <p className="text-[14px] font-bold text-amber-600 dark:text-amber-400">⚠️ 핵 사용이 의심되는 유저입니다</p>
+                <p className="text-[12px] text-toss-gray-500 mt-1">{salog.hackReportCount}건의 신고가 접수되어 커뮤니티 검토 중입니다.</p>
+              </div>
+            ) : !hasAny ? (
+              <div className="bg-toss-green/5 border border-toss-green/20 rounded-2xl p-4">
+                <p className="text-[14px] font-bold text-toss-green">✅ SALog에 등록된 신고 내역이 없습니다</p>
+              </div>
+            ) : null}
+
+            {/* 커뮤니티 요약 */}
+            {hasAny && (
+              <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-red/5">
+                    <span className="text-[18px] font-bold text-toss-red tabular-nums">{salog.blacklistCount}</span>
+                    <span className="text-[12px] text-toss-gray-500">명이 의심</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/5">
+                    <span className="text-[18px] font-bold text-amber-500 tabular-nums">{salog.hackReportCount}</span>
+                    <span className="text-[12px] text-toss-gray-500">건 핵 신고</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-orange/5">
+                    <span className="text-[18px] font-bold text-toss-orange tabular-nums">{salog.mannerReports.length}</span>
+                    <span className="text-[12px] text-toss-gray-500">건 비매너 신고</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 핵 탭 */}
+            {(confirmed.length > 0 || probable.length > 0) && (
+              <div className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
+                <SalogHackTabs confirmed={confirmed} probable={probable} />
+              </div>
+            )}
+
+            {/* 비매너 */}
+            {salog.mannerReports.length > 0 && (
+              <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
+                <p className="text-[13px] font-semibold text-toss-orange mb-3">
+                  비매너 유저로 {salog.mannerReports.length}회 신고되었어요
+                </p>
+                <div className="space-y-2">
+                  {salog.mannerReports.map((r: SalogCommunity["mannerReports"][0]) => (
+                    <Link key={r.id} href={`/manner/${r.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/40 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-foreground truncate">{r.nickname}</p>
+                        <p className="text-[11px] text-toss-gray-400">{formatDate(r.createdAt)}</p>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ========== TABS ========== */}
       <div className="flex gap-1 mb-4 bg-secondary rounded-xl p-1">
         <button onClick={() => setActiveTab("overview")}
@@ -650,60 +727,6 @@ function PlayerContent() {
         { href: "/reports/new", label: "핵 신고", color: "red" },
         { href: "/manner/new", label: "비매너 신고", color: "orange" },
       ]} />
-
-      {/* ─── SALog 연동 ─── */}
-      {salog && (() => {
-        const confirmed = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "CONFIRMED");
-        const probable = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "PROBABLE" || r.status === "SUSPECT");
-        return (
-          <div className="mt-6 space-y-4">
-            <h2 className="text-[15px] font-bold text-foreground">SALog 연동</h2>
-
-            {/* 커뮤니티 요약 */}
-            <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-red/5">
-                  <span className="text-[18px] font-bold text-toss-red tabular-nums">{salog.blacklistCount}</span>
-                  <span className="text-[12px] text-toss-gray-500">명이 의심</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/5">
-                  <span className="text-[18px] font-bold text-amber-500 tabular-nums">{salog.hackReportCount}</span>
-                  <span className="text-[12px] text-toss-gray-500">건 핵 신고</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-orange/5">
-                  <span className="text-[18px] font-bold text-toss-orange tabular-nums">{salog.mannerReports.length}</span>
-                  <span className="text-[12px] text-toss-gray-500">건 비매너 신고</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 핵 탭: 확정 / 유력 */}
-            <div className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
-              <SalogHackTabs confirmed={confirmed} probable={probable} />
-            </div>
-
-            {/* 비매너 */}
-            {salog.mannerReports.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
-                <p className="text-[13px] font-semibold text-toss-orange mb-3">
-                  비매너 유저로 {salog.mannerReports.length}회 신고되었어요
-                </p>
-                <div className="space-y-2">
-                  {salog.mannerReports.map((r: SalogCommunity["mannerReports"][0]) => (
-                    <Link key={r.id} href={`/manner/${r.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/40 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-foreground truncate">{r.nickname}</p>
-                        <p className="text-[11px] text-toss-gray-400">{formatDate(r.createdAt)}</p>
-                      </div>
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
     </div>
   );
