@@ -85,14 +85,39 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 크롤링 서버에서 프로필 + 전투 정보 조회
-    const profileRes = await fetch(`${CRAWLER_URL}/api/barracks/matches?nexonSn=${nexonSn}`, {
-      headers: { "x-api-key": CRAWLER_API_KEY },
-    });
-    const profile = await profileRes.json();
+    // 크롤링 서버에서 프로필 조회 (matches 엔드포인트 → profile fallback)
+    let profile;
+    try {
+      const matchesRes = await fetch(`${CRAWLER_URL}/api/barracks/matches?nexonSn=${nexonSn}`, {
+        headers: { "x-api-key": CRAWLER_API_KEY },
+      });
+      profile = await matchesRes.json();
+    } catch { profile = null; }
 
-    if (!profile.found) {
-      return NextResponse.json({ error: "유저를 찾을 수 없습니다" }, { status: 404 });
+    // fallback: 기본 프로필 API
+    if (!profile?.found) {
+      const profileRes = await fetch(`${CRAWLER_URL}/api/barracks/profile?nexonSn=${nexonSn}`, {
+        headers: { "x-api-key": CRAWLER_API_KEY },
+      });
+      const basic = await profileRes.json();
+      if (!basic.found) {
+        return NextResponse.json({ error: "유저를 찾을 수 없습니다" }, { status: 404 });
+      }
+      profile = {
+        found: true,
+        nickname: basic.nickname,
+        nexonSn: basic.nexonSn,
+        level: basic.level ?? 0,
+        seasonLevel: 0,
+        clanName: basic.clanName,
+        rankNo: "-",
+        rankPer: "-",
+        totalRankNo: "-",
+        totalSp: "-",
+        userImg: basic.userImg,
+        userIntro: basic.userIntro ?? "",
+        battleInfo: null,
+      };
     }
 
     // 블랙리스트 공유 네트워크 — 이 유저를 몇 명이 블랙리스트에 등록했는지
