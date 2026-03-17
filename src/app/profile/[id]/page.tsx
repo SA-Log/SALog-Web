@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { TitleBadge, RankBadge } from "@/components/common/title-badge";
-import { AuthGuard } from "@/components/common/auth-guard";
 import {
   getExpProgress,
   getAccuracyColor,
@@ -42,7 +41,7 @@ interface UserProfile {
 export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const { user: authUser } = useAuth();
+  const { user: authUser, isLoggedIn } = useAuth();
   const userId = params.id as string;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -107,7 +106,7 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <AuthGuard>
+      
         <div className="mx-auto max-w-screen-md px-5 py-8">
           <div className="bg-card rounded-3xl border border-border/40 shadow-toss overflow-hidden">
             <div className="px-6 pt-6 pb-5 flex flex-col items-center">
@@ -117,13 +116,13 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
-      </AuthGuard>
+      
     );
   }
 
   if (notFound || !profile) {
     return (
-      <AuthGuard>
+      
         <div className="mx-auto max-w-screen-md px-5 py-8 text-center py-20">
           <div className="w-14 h-14 rounded-full bg-toss-gray-50 dark:bg-secondary flex items-center justify-center mx-auto mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-toss-gray-300">
@@ -134,7 +133,7 @@ export default function UserProfilePage() {
           <p className="text-[15px] text-foreground font-semibold">존재하지 않는 유저입니다</p>
           <Link href="/" className="text-[13px] text-primary mt-2 inline-block">홈으로 돌아가기</Link>
         </div>
-      </AuthGuard>
+      
     );
   }
 
@@ -155,17 +154,19 @@ export default function UserProfilePage() {
   const title = getTitleForAccuracy(accuracy);
   const { progress, next } = getExpProgress(exp);
 
-  const tabs: { value: ProfileTab; label: string; count: number }[] = [
+  const allTabs: { value: ProfileTab; label: string; count: number }[] = [
     { value: "activity", label: "활동", count: totalReports },
     { value: "blacklist", label: "블랙리스트", count: 0 },
     { value: "followers", label: "팔로워", count: followerCount },
     { value: "following", label: "팔로잉", count: followingCount },
   ];
+  // 비로그인 시 활동만 표시
+  const tabs = isLoggedIn ? allTabs : allTabs.filter(t => t.value === "activity");
 
   // 비공개 프로필
   if (profile.isPrivate) {
     return (
-      <AuthGuard>
+      
         <div className="mx-auto max-w-screen-md px-5 py-8">
           <div className="bg-card rounded-3xl border border-border/40 shadow-toss overflow-hidden">
             <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
@@ -201,12 +202,12 @@ export default function UserProfilePage() {
             <p className="text-[13px] text-toss-gray-500 leading-relaxed">서로 팔로우 상태에서만 활동 정보를 볼 수 있습니다.</p>
           </div>
         </div>
-      </AuthGuard>
+      
     );
   }
 
   return (
-    <AuthGuard>
+    
     <div className="mx-auto max-w-screen-md px-5 py-8">
 
       {/* ─── Hero Card ─── */}
@@ -374,7 +375,7 @@ export default function UserProfilePage() {
         {activeTab === "following" && <UserFollowTab userId={userId} type="following" />}
       </div>
     </div>
-    </AuthGuard>
+    
   );
 }
 

@@ -143,7 +143,6 @@ export default function SearchPage() {
   const recentManners = mockMannerTags.slice(0, 3);
 
   return (
-    <AuthGuard>
     <div className="mx-auto max-w-screen-lg px-5 py-6">
       <div className="mb-6">
         <h1 className="text-[22px] font-bold text-foreground">검색</h1>
@@ -479,7 +478,6 @@ export default function SearchPage() {
         </div>
       )}
     </div>
-    </AuthGuard>
   );
 }
 
