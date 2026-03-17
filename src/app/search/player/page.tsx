@@ -140,13 +140,17 @@ export default function PlayerPage() {
   );
 }
 
+type SalogCommunity = { blacklistCount: number; hackReportCount: number; hackReports: { id: string; nickname: string; status: string; createdAt: string }[]; mannerReports: { id: string; nickname: string; tagType: string; tagTypes: string[]; createdAt: string }[] };
+
 function PlayerContent() {
   const searchParams = useSearchParams();
   const ouid = searchParams.get("ouid");
   const name = searchParams.get("name");
+  const nexonSn = searchParams.get("nexonSn");
 
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [meta, setMeta] = useState<MetaData | null>(null);
+  const [salog, setSalog] = useState<SalogCommunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
@@ -195,6 +199,30 @@ function PlayerContent() {
     load().finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [ouid]);
+
+  // SALog 연동 데이터
+  useEffect(() => {
+    if (!nexonSn) return;
+    fetch(`/api/search?q=${nexonSn}&type=barracks`)
+      .then(r => r.json())
+      .then(data => {
+        setSalog({
+          blacklistCount: 0,
+          hackReportCount: data.hackReports?.length ?? 0,
+          hackReports: data.hackReports ?? [],
+          mannerReports: data.mannerReports ?? [],
+        });
+        // 블랙리스트 카운트 별도 조회
+        return fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.community) {
+          setSalog(prev => prev ? { ...prev, blacklistCount: data.community.blacklistCount } : prev);
+        }
+      })
+      .catch(() => {});
+  }, [nexonSn]);
 
   const loadMatchDetail = useCallback(async (matchId: string, matchMode: string) => {
     if (matchDetails[matchId]) {
@@ -539,6 +567,61 @@ function PlayerContent() {
         { href: "/manner/new", label: "비매너 신고", color: "orange" },
       ]} />
 
+      {/* ─── SALog 연동 ─── */}
+      {salog && (salog.blacklistCount > 0 || salog.hackReportCount > 0 || salog.hackReports.length > 0 || salog.mannerReports.length > 0) && (
+        <div className="mt-6 space-y-4">
+          <h2 className="text-[15px] font-bold text-foreground">SALog 연동</h2>
+          {(salog.blacklistCount > 0 || salog.hackReportCount > 0) && (
+            <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
+              <div className="flex gap-4">
+                {salog.blacklistCount > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-red/5">
+                    <span className="text-[18px] font-bold text-toss-red tabular-nums">{salog.blacklistCount}</span>
+                    <span className="text-[12px] text-toss-gray-500">명이 경고</span>
+                  </div>
+                )}
+                {salog.hackReportCount > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/5">
+                    <span className="text-[18px] font-bold text-amber-500 tabular-nums">{salog.hackReportCount}</span>
+                    <span className="text-[12px] text-toss-gray-500">건 핵 신고</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {salog.hackReports.length > 0 && (
+            <div>
+              <h3 className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">핵 신고 내역</h3>
+              <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
+                {salog.hackReports.map((r: SalogCommunity["hackReports"][0]) => (
+                  <Link key={r.id} href={`/reports/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
+                      <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatDate(r.createdAt)}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {salog.mannerReports.length > 0 && (
+            <div>
+              <h3 className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">비매너 신고 내역</h3>
+              <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
+                {salog.mannerReports.map((r: SalogCommunity["mannerReports"][0]) => (
+                  <Link key={r.id} href={`/manner/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
+                      <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatDate(r.createdAt)}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }
@@ -720,6 +803,7 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
           ) : null}
         </div>
       )}
+
     </div>
   );
 }
