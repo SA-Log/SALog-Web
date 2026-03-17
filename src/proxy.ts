@@ -7,6 +7,9 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/terms", "/privacy", "/banned"];
 
+// 비로그인 조회 가능 라우트 (읽기 전용)
+const VIEWABLE_ROUTES = ["/reports", "/manner", "/search", "/ranking", "/profile"];
+
 // 악성 봇 User-Agent 패턴 (robots.txt 무시하는 봇 대응)
 const BLOCKED_BOTS = /meta-externalagent|facebookexternalhit|FacebookBot|GPTBot|ChatGPT-User|CCBot|ClaudeBot|anthropic-ai|PerplexityBot|Amazonbot|Bytespider|AhrefsBot|SemrushBot|MJ12bot|DotBot|PetalBot|BLEXBot/i;
 
@@ -35,9 +38,14 @@ export async function proxy(req: NextRequest) {
     );
     const session = authReq.auth;
 
-    // 로그인 안 된 상태 → 공개 라우트만 허용
+    // 조회 가능 라우트 체크
+    const isViewable = VIEWABLE_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(route + "/")
+    );
+
+    // 로그인 안 된 상태 → 공개/조회 라우트만 허용
     if (!session) {
-      if (isPublic) return NextResponse.next();
+      if (isPublic || isViewable) return NextResponse.next();
       return NextResponse.redirect(new URL("/login", authReq.url));
     }
 

@@ -100,13 +100,11 @@ export async function POST(req: Request) {
 // 신고 목록 조회 + 오늘 신고 수
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("mode"); // "list" | null (default: todayCount)
 
+  // 목록 조회는 비로그인 허용
   if (mode === "list") {
     const status = url.searchParams.get("status"); // SUSPECT, PROBABLE, CONFIRMED, DISMISSED
     const sort = url.searchParams.get("sort") ?? "latest"; // latest, oldest
@@ -157,7 +155,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ reports: mapped, total, page, totalPages: Math.ceil(total / limit) });
   }
 
-  // 기본: 오늘 신고 수 조회
+  // 기본: 오늘 신고 수 조회 (로그인 필요)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 

@@ -59,9 +59,5 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  return (
-    <AuthGuard>
-      <ReportDetailView report={report} type="hack" />
-    </AuthGuard>
-  );
+  return <ReportDetailView report={report} type="hack" />;
 }

@@ -62,11 +62,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  // 비로그인 조회 허용
   const url = new URL(req.url);
   const tagType = url.searchParams.get("tagType");
   const sort = url.searchParams.get("sort") ?? "latest";

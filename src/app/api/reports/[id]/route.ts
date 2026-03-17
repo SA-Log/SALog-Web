@@ -8,11 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = session?.user?.id ?? "anon";
 
-  const rl = rateLimit(`report-detail:${session.user.id}`, {
+  const rl = rateLimit(`report-detail:${userId}`, {
     limit: 30,
     windowSec: 60,
   });
@@ -79,12 +77,12 @@ export async function GET(
   const agreeCount = report.votes.filter((v) => v.voteType === "AGREE").length;
   const disagreeCount = report.votes.filter((v) => v.voteType === "DISAGREE").length;
   const unsureCount = report.votes.length - agreeCount - disagreeCount;
-  const userVote = report.votes.find((v) => v.userId === session.user!.id);
+  const userVote = session?.user?.id ? report.votes.find((v) => v.userId === session.user!.id) : null;
 
-  // 블랙리스트 여부
-  const blacklisted = report.barracksAddress
+  // 블랙리스트 여부 (로그인 시만)
+  const blacklisted = session?.user?.id && report.barracksAddress
     ? !!(await prisma.blacklistEntry.findUnique({
-        where: { userId_barracksAddress: { userId: session.user!.id, barracksAddress: report.barracksAddress } },
+        where: { userId_barracksAddress: { userId: session.user.id, barracksAddress: report.barracksAddress } },
       }))
     : false;
 

@@ -8,11 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const currentUserId = session?.user?.id ?? "anon";
 
-  const rl = rateLimit(`profile:${session.user.id}`, {
+  const rl = rateLimit(`profile:${currentUserId}`, {
     limit: 30,
     windowSec: 60,
   });
@@ -51,15 +49,15 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const isOwn = session.user.id === id;
+  const isOwn = currentUserId !== "anon" && currentUserId === id;
 
   // 비공개 프로필: 본인 또는 맞팔만 전체 정보 확인 가능
   if (!user.isProfilePublic && !isOwn) {
     // 맞팔 확인
-    const [iFollow, theyFollowMe] = await Promise.all([
-      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: id } } }),
-      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: id, followingId: session.user.id } } }),
-    ]);
+    const [iFollow, theyFollowMe] = currentUserId !== "anon" ? await Promise.all([
+      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: currentUserId, followingId: id } } }),
+      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: id, followingId: currentUserId } } }),
+    ]) : [null, null];
     const isMutual = !!(iFollow && theyFollowMe);
 
     if (!isMutual) {

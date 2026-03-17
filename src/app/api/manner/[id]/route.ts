@@ -8,11 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = session?.user?.id ?? "anon";
 
-  const rl = rateLimit(`manner-detail:${session.user.id}`, { limit: 30, windowSec: 60 });
+  const rl = rateLimit(`manner-detail:${userId}`, { limit: 30, windowSec: 60 });
   if (!rl.success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -53,9 +51,9 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const blacklisted = report.barracksAddress
+  const blacklisted = session?.user?.id && report.barracksAddress
     ? !!(await prisma.blacklistEntry.findUnique({
-        where: { userId_barracksAddress: { userId: session.user!.id, barracksAddress: report.barracksAddress } },
+        where: { userId_barracksAddress: { userId: session.user.id, barracksAddress: report.barracksAddress } },
       }))
     : false;
 

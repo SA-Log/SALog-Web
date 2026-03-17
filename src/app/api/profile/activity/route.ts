@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = req.nextUrl.searchParams.get("userId") ?? session?.user?.id;
 
-  const userId = req.nextUrl.searchParams.get("userId") ?? session.user.id;
+  if (!userId) {
+    return NextResponse.json({ error: "userId가 필요합니다" }, { status: 400 });
+  }
 
   const [hackReports, mannerReports] = await Promise.all([
     prisma.hackReport.findMany({

@@ -52,8 +52,6 @@ export default function MannerDetailPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <AuthGuard>
-      <ReportDetailView report={report} type="manner" />
-    </AuthGuard>
+  <ReportDetailView report={report} type="manner" />
   );
 }
