@@ -151,6 +151,7 @@ function PlayerContent() {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [meta, setMeta] = useState<MetaData | null>(null);
   const [salog, setSalog] = useState<SalogCommunity | null>(null);
+  const [barracksProfile, setBarracksProfile] = useState<{ userImg: string | null; userIntro: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
@@ -199,6 +200,15 @@ function PlayerContent() {
     load().finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [ouid]);
+
+  // 크롤링 프로필 (이미지, 자기소개)
+  useEffect(() => {
+    if (!nexonSn) return;
+    fetch(`/api/barracks/profile?nexonSn=${nexonSn}`)
+      .then(r => r.json())
+      .then(d => { if (d.found) setBarracksProfile({ userImg: d.userImg, userIntro: d.userIntro }); })
+      .catch(() => {});
+  }, [nexonSn]);
 
   // SALog 연동 데이터
   useEffect(() => {
@@ -263,8 +273,8 @@ function PlayerContent() {
       })()
     : null;
 
-  const barracksUrl = player?.basic?.user_name
-    ? `https://barracks.sa.nexon.com/search?searchType=user&searchText=${encodeURIComponent(player.basic.user_name)}`
+  const barracksUrl = nexonSn
+    ? `https://barracks.sa.nexon.com/${nexonSn}/match`
     : null;
 
   if (!ouid) {
@@ -318,8 +328,12 @@ function PlayerContent() {
         <div className="relative px-5 pb-5">
           {/* Avatar */}
           <div className="absolute -top-10 left-5">
-            <div className="w-20 h-20 rounded-2xl bg-card border-4 border-card shadow-toss-md flex items-center justify-center">
-              <span className="text-[32px] font-bold text-primary">{b.user_name.charAt(0)}</span>
+            <div className="w-20 h-20 rounded-2xl bg-card border-4 border-card shadow-toss-md flex items-center justify-center overflow-hidden">
+              {barracksProfile?.userImg ? (
+                <img src={barracksProfile.userImg} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[32px] font-bold text-primary">{b.user_name.charAt(0)}</span>
+              )}
             </div>
           </div>
 
@@ -332,7 +346,10 @@ function PlayerContent() {
                 )}
               </div>
               {b.title_name && <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-400 mt-0.5">{b.title_name}</p>}
-              <div className="flex items-center gap-3 mt-1.5">
+              {barracksProfile?.userIntro && (
+                <p className="text-[12px] text-toss-gray-500 mt-1 leading-relaxed">{barracksProfile.userIntro}</p>
+              )}
+              <div className="flex items-center gap-3 mt-2">
                 <p className="text-[12px] text-toss-gray-500 dark:text-toss-gray-400">가입일 {formatDate(b.user_date_create)}</p>
                 {manner && (
                   <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold ${manner.bg} ${manner.color}`}>
@@ -340,6 +357,13 @@ function PlayerContent() {
                   </span>
                 )}
               </div>
+              {/* 병영수첩 바로가기 */}
+              {barracksUrl && (
+                <a href={barracksUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-xl bg-primary/5 dark:bg-primary/10 text-[12px] font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5L8.5 5.5M6 5H5a2 2 0 0 0 0 4h1M8 5h1a2 2 0 0 1 0 4H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  병영수첩 바로가기
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -528,20 +552,6 @@ function PlayerContent() {
 
       {/* Footer */}
       <div className="mt-6 flex items-center justify-between">
-        {barracksUrl && (
-          <button
-            onClick={async () => {
-              await navigator.clipboard.writeText(b.user_name);
-              setCopied(true);
-              setTimeout(() => {
-                setCopied(false);
-                window.open(barracksUrl, "_blank");
-              }, 1200);
-            }}
-            className="text-[12px] text-toss-gray-500 dark:text-toss-gray-400 hover:text-primary transition-toss cursor-pointer">
-            넥슨 병영수첩에서 검색 →
-          </button>
-        )}
 
       {/* 닉네임 복사 완료 팝업 */}
       {copied && (
@@ -568,9 +578,11 @@ function PlayerContent() {
       ]} />
 
       {/* ─── SALog 연동 ─── */}
-      {salog && (salog.blacklistCount > 0 || salog.hackReportCount > 0 || salog.hackReports.length > 0 || salog.mannerReports.length > 0) && (
+      {salog && (
         <div className="mt-6 space-y-4">
           <h2 className="text-[15px] font-bold text-foreground">SALog 연동</h2>
+
+          {/* 커뮤니티 경고 */}
           {(salog.blacklistCount > 0 || salog.hackReportCount > 0) && (
             <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
               <div className="flex gap-4">
@@ -589,22 +601,61 @@ function PlayerContent() {
               </div>
             </div>
           )}
-          {salog.hackReports.length > 0 && (
-            <div>
-              <h3 className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">핵 신고 내역</h3>
-              <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
-                {salog.hackReports.map((r: SalogCommunity["hackReports"][0]) => (
-                  <Link key={r.id} href={`/reports/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
-                      <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatDate(r.createdAt)}</p>
+
+          {/* 핵 확정 */}
+          {(() => {
+            const confirmed = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "CONFIRMED");
+            const pending = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status !== "CONFIRMED");
+            return (
+              <>
+                {confirmed.length > 0 && (
+                  <div>
+                    <h3 className="text-[12px] font-semibold text-toss-red uppercase tracking-wider mb-2">핵 확정</h3>
+                    <div className="bg-toss-red/5 rounded-2xl border border-toss-red/20 overflow-hidden divide-y divide-toss-red/10">
+                      {confirmed.map((r: SalogCommunity["hackReports"][0]) => (
+                        <Link key={r.id} href={`/reports/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-toss-red/10 transition-colors">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-toss-red text-white shrink-0">확정</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
+                            <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatDate(r.createdAt)}</p>
+                          </div>
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </Link>
+                      ))}
                     </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-          {salog.mannerReports.length > 0 && (
+                  </div>
+                )}
+
+                {/* 핵 신고 (미확정) */}
+                {pending.length > 0 && (
+                  <div>
+                    <h3 className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">핵 신고 내역</h3>
+                    <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
+                      {pending.map((r: SalogCommunity["hackReports"][0]) => (
+                        <Link key={r.id} href={`/reports/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 shrink-0">{r.status === "PROBABLE" ? "유력" : "의심"}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
+                            <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatDate(r.createdAt)}</p>
+                          </div>
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {confirmed.length === 0 && pending.length === 0 && (
+                  <div className="bg-card rounded-2xl border border-border/30 p-5 text-center">
+                    <p className="text-[13px] text-toss-gray-400">핵 신고 내역이 없습니다</p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          {/* 비매너 신고 */}
+          {salog.mannerReports.length > 0 ? (
             <div>
               <h3 className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-2">비매너 신고 내역</h3>
               <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
@@ -614,9 +665,14 @@ function PlayerContent() {
                       <p className="text-[13px] font-semibold text-foreground truncate">{r.nickname}</p>
                       <p className="text-[11px] text-toss-gray-400 mt-0.5">{formatDate(r.createdAt)}</p>
                     </div>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </Link>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div className="bg-card rounded-2xl border border-border/30 p-5 text-center">
+              <p className="text-[13px] text-toss-gray-400">비매너 신고 내역이 없습니다</p>
             </div>
           )}
         </div>
