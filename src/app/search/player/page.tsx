@@ -895,7 +895,28 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
                                 {isMe ? (
                                   <span className="text-[12px] font-semibold truncate text-primary">{p.user_name}</span>
                                 ) : (
-                                  <Link href={`/search?q=${encodeURIComponent(p.user_name)}`} className="text-[12px] font-semibold truncate text-foreground hover:text-primary transition-colors">{p.user_name}</Link>
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const btn = e.currentTarget;
+                                      const original = btn.textContent;
+                                      btn.textContent = "조회 중...";
+                                      try {
+                                        const res = await fetch(`/api/search?q=${encodeURIComponent(p.user_name)}`);
+                                        const data = await res.json();
+                                        const found = data.barracksUsers?.[0];
+                                        if (found?.nexonSn) {
+                                          window.open(`https://barracks.sa.nexon.com/${found.nexonSn}/match`, "_blank");
+                                        } else {
+                                          window.open(`https://barracks.sa.nexon.com/search?searchType=user&searchText=${encodeURIComponent(p.user_name)}`, "_blank");
+                                        }
+                                      } catch {
+                                        window.open(`https://barracks.sa.nexon.com/search?searchType=user&searchText=${encodeURIComponent(p.user_name)}`, "_blank");
+                                      }
+                                      btn.textContent = original;
+                                    }}
+                                    className="text-[12px] font-semibold truncate text-foreground hover:text-primary transition-colors text-left"
+                                  >{p.user_name}</button>
                                 )}
                                 {p.guild_name && <span className="text-[10px] text-toss-gray-500 dark:text-toss-gray-400">[{p.guild_name}]</span>}
                               </div>
