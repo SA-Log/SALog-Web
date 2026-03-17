@@ -212,29 +212,53 @@ function PlayerContent() {
 
   // SALog 연동 데이터
   useEffect(() => {
-    const searchQuery = nexonSn || name;
-    if (!searchQuery) return;
-    fetch(`/api/search?q=${encodeURIComponent(searchQuery)}${nexonSn ? "&type=barracks" : ""}`)
-      .then(r => r.json())
-      .then(data => {
-        setSalog({
-          blacklistCount: 0,
-          hackReportCount: data.hackReports?.length ?? 0,
-          hackReports: data.hackReports ?? [],
-          mannerReports: data.mannerReports ?? [],
-        });
-        if (nexonSn) {
-          return fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
-        }
-        return null;
-      })
-      .then(r => r ? r.json() : null)
-      .then(data => {
-        if (data?.community) {
-          setSalog(prev => prev ? { ...prev, blacklistCount: data.community.blacklistCount } : prev);
-        }
-      })
-      .catch(() => {});
+    if (!nexonSn && !name) return;
+
+    async function loadSalog() {
+      let hackReports: SalogCommunity["hackReports"] = [];
+      let mannerReports: SalogCommunity["mannerReports"] = [];
+      let blacklistCount = 0;
+
+      // 병영주소로 검색 (barracksAddress 매칭)
+      if (nexonSn) {
+        try {
+          const res = await fetch(`/api/search?q=${nexonSn}&type=barracks`);
+          const data = await res.json();
+          hackReports = data.hackReports ?? [];
+          mannerReports = data.mannerReports ?? [];
+        } catch {}
+
+        // 블랙리스트 카운트
+        try {
+          const res = await fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
+          const data = await res.json();
+          blacklistCount = data.community?.blacklistCount ?? 0;
+        } catch {}
+      }
+
+      // 닉네임으로도 추가 검색 (병영주소 없이 등록된 게시글 포함)
+      if (name) {
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(name)}`);
+          const data = await res.json();
+          const existingIds = new Set([...hackReports.map(r => r.id), ...mannerReports.map(r => r.id)]);
+          for (const r of (data.hackReports ?? [])) {
+            if (!existingIds.has(r.id)) hackReports.push(r);
+          }
+          for (const r of (data.mannerReports ?? [])) {
+            if (!existingIds.has(r.id)) mannerReports.push(r);
+          }
+        } catch {}
+      }
+
+      setSalog({
+        blacklistCount,
+        hackReportCount: hackReports.length,
+        hackReports,
+        mannerReports,
+      });
+    }
+    loadSalog();
   }, [nexonSn, name]);
 
   const loadMatchDetail = useCallback(async (matchId: string, matchMode: string) => {
@@ -291,12 +315,12 @@ function PlayerContent() {
     return {
       total,
       breakdown: [
-        { label: "킬", value: Math.round(killScore), max: 30 },
-        { label: "생존", value: Math.round(surviveScore), max: 15 },
-        { label: "정밀", value: Math.round(precisionScore), max: 15 },
-        { label: "기여", value: Math.round(contribScore), max: 15 },
-        { label: "대미지", value: Math.round(damageScore), max: 15 },
-        { label: "승률", value: Math.round(winScore), max: 10 },
+        { label: "킬 수", value: Math.round(killScore), max: 30, desc: `매치당 평균 ${(ms.totalK / ms.total).toFixed(1)}킬` },
+        { label: "생존율", value: Math.round(surviveScore), max: 15, desc: `매치당 평균 ${(ms.totalD / ms.total).toFixed(1)}데스` },
+        { label: "저격 숙련", value: Math.round(precisionScore), max: 15, desc: `저격 비율 ${ri.recent_sniper_rate.toFixed(1)}%` },
+        { label: "어시스트", value: Math.round(contribScore), max: 15, desc: `매치당 평균 ${(ms.totalA / ms.total).toFixed(1)}어시` },
+        { label: "K/D 비율", value: Math.round(damageScore), max: 15, desc: `K/D ${ri.recent_kill_death_rate.toFixed(2)}` },
+        { label: "승률", value: Math.round(winScore), max: 10, desc: `최근 승률 ${ms.winRate}%` },
       ],
     };
   })();
@@ -493,21 +517,34 @@ function PlayerContent() {
                 {playStyle.icon} {playStyle.label}
               </span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <span className="text-[28px] font-bold text-primary tabular-nums">{combatPower.total}</span>
-              <span className="text-[12px] text-toss-gray-400">/100</span>
+              <div className="text-right">
+                <span className={`text-[12px] font-bold ${combatPower.total >= 70 ? "text-toss-green" : combatPower.total >= 50 ? "text-primary" : combatPower.total >= 30 ? "text-amber-500" : "text-toss-gray-400"}`}>
+                  {combatPower.total >= 70 ? "상위" : combatPower.total >= 50 ? "평균 이상" : combatPower.total >= 30 ? "평균" : "평균 이하"}
+                </span>
+                <p className="text-[10px] text-toss-gray-400">/100점</p>
+              </div>
             </div>
           </div>
-          <div className="space-y-2.5">
-            {combatPower.breakdown.map((b) => (
-              <div key={b.label} className="flex items-center gap-3">
-                <span className="text-[11px] text-toss-gray-500 w-10 shrink-0 text-right">{b.label}</span>
-                <div className="flex-1 h-2 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
-                  <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${b.max > 0 ? (b.value / b.max) * 100 : 0}%` }} />
+          <div className="space-y-3">
+            {combatPower.breakdown.map((b: { label: string; value: number; max: number; desc: string }) => {
+              const pct = b.max > 0 ? (b.value / b.max) * 100 : 0;
+              return (
+                <div key={b.label}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[12px] font-medium text-foreground">{b.label}</span>
+                    <span className="text-[11px] text-toss-gray-400">{b.desc}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-700 ${pct >= 70 ? "bg-toss-green" : pct >= 40 ? "bg-primary" : "bg-toss-gray-400"}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[12px] font-bold text-foreground w-6 tabular-nums text-right">{b.value}</span>
+                  </div>
                 </div>
-                <span className="text-[11px] font-semibold text-foreground w-8 tabular-nums">{b.value}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

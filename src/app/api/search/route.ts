@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "요청이 너무 많습니다" }, { status: 429 });
   }
 
-  // 병영주소 감지 (URL만)
+  // 병영주소 감지 (URL 또는 type=barracks일 때 숫자도 허용)
   const barracksMatch = query.match(/barracks\.sa\.nexon\.com\/(\d+)/);
-  const nexonSn = barracksMatch ? barracksMatch[1] : null;
+  const nexonSn = barracksMatch ? barracksMatch[1] : (type === "barracks" && /^\d+$/.test(query) ? query : null);
 
   const results: {
     salogUsers: unknown[];
