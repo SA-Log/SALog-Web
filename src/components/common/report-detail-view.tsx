@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { StatusBadge } from "@/components/hack/status-badge";
+import { LoginPrompt } from "@/components/common/login-prompt";
 import { MANNER_TAG_MAP } from "@/lib/mock-data";
 
 interface Evidence {
@@ -145,7 +146,13 @@ function EvidenceGallery({ items, links }: { items: Evidence[]; links: Evidence[
 
 export function ReportDetailView({ report: initialReport, type }: { report: ReportDetailData; type: "hack" | "manner" }) {
   const [report, setReport] = useState(initialReport);
-  const { user: authUser } = useAuth();
+  const { user: authUser, isLoggedIn } = useAuth();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  function requireLogin(): boolean {
+    if (!isLoggedIn) { setShowLoginPrompt(true); return true; }
+    return false;
+  }
   const isAuthor = report.reporterId === authUser?.id;
   const [userVote, setUserVote] = useState<VoteType | null>(report.userVote ?? null);
   const [hasVoted, setHasVoted] = useState(!!report.userVote);
@@ -168,6 +175,7 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   const accentColor = type === "hack" ? "toss-red" : "toss-orange";
 
   async function handleComment() {
+    if (requireLogin()) return;
     if (!commentText.trim()) return;
     const commentApi = type === "hack" ? `/api/reports/${report.id}/comment` : `/api/manner/${report.id}/comment`;
     try {
@@ -185,6 +193,7 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   }
 
   async function handleBlacklist() {
+    if (requireLogin()) return;
     if (!report.barracksAddress) return;
     setBlacklistLoading(true);
     try {
@@ -252,6 +261,7 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   }
 
   function handleVote(vt: VoteType) {
+    if (requireLogin()) return;
     if (hasVoted || isAuthor) return;
     setUserVote(vt);
     setHasVoted(true);
@@ -698,6 +708,9 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
           </div>
         </div>
       )}
+
+      {/* 로그인 유도 팝업 */}
+      {showLoginPrompt && <LoginPrompt onClose={() => setShowLoginPrompt(false)} />}
     </div>
   );
 }
