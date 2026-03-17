@@ -55,6 +55,8 @@ export default function SearchPage() {
 
   const [salogUsers, setSalogUsers] = useState<SALogUser[]>([]);
   const [barracksUsers, setBarracksUsers] = useState<BarracksUser[]>([]);
+  const [showAllBarracks, setShowAllBarracks] = useState(false);
+  const [showAllSalog, setShowAllSalog] = useState(false);
   const [hackReports, setHackReports] = useState<HackReport[]>([]);
   const [mannerReports, setMannerReports] = useState<MannerReport[]>([]);
 
@@ -63,6 +65,8 @@ export default function SearchPage() {
     if (!q) return;
     setLoading(true);
     setSearched(true);
+    setShowAllBarracks(false);
+    setShowAllSalog(false);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
@@ -134,7 +138,7 @@ export default function SearchPage() {
                 <span className="text-[11px] text-toss-gray-400">{barracksUsers.length}명</span>
               </div>
               <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
-                {barracksUsers.slice(0, 5).map((user) => (
+                {(showAllBarracks ? barracksUsers : barracksUsers.slice(0, 5)).map((user) => (
                   <Link
                     key={user.nexonSn}
                     href={`/search/${user.nexonSn}`}
@@ -155,8 +159,10 @@ export default function SearchPage() {
                   </Link>
                 ))}
               </div>
-              {barracksUsers.length > 5 && (
-                <p className="text-[12px] text-primary font-medium text-center mt-2 py-2">+{barracksUsers.length - 5}명 더보기</p>
+              {barracksUsers.length > 5 && !showAllBarracks && (
+                <button onClick={() => setShowAllBarracks(true)} className="w-full text-[12px] text-primary font-medium text-center mt-2 py-2 hover:bg-primary/5 rounded-xl transition-colors">
+                  +{barracksUsers.length - 5}명 더보기
+                </button>
               )}
             </section>
           )}
@@ -169,7 +175,7 @@ export default function SearchPage() {
                 <span className="text-[11px] text-toss-gray-400">{salogUsers.length}명</span>
               </div>
               <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
-                {salogUsers.slice(0, 5).map((user) => (
+                {(showAllSalog ? salogUsers : salogUsers.slice(0, 5)).map((user) => (
                   <Link
                     key={user.id}
                     href={`/profile/${user.id}`}
@@ -196,8 +202,10 @@ export default function SearchPage() {
                   </Link>
                 ))}
               </div>
-              {salogUsers.length > 5 && (
-                <p className="text-[12px] text-primary font-medium text-center mt-2 py-2">+{salogUsers.length - 5}명 더보기</p>
+              {salogUsers.length > 5 && !showAllSalog && (
+                <button onClick={() => setShowAllSalog(true)} className="w-full text-[12px] text-primary font-medium text-center mt-2 py-2 hover:bg-primary/5 rounded-xl transition-colors">
+                  +{salogUsers.length - 5}명 더보기
+                </button>
               )}
             </section>
           )}

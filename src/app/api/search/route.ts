@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
         barracksAddress: true,
         role: true,
       },
-      take: 20,
+      take: 50,
     });
 
     // 정확히 일치하는 유저를 상위로, 나머지는 가나다순
