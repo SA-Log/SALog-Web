@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { TitleBadge, RankBadge } from "@/components/common/title-badge";
+import { LoginPrompt } from "@/components/common/login-prompt";
 import {
   getExpProgress,
   getAccuracyColor,
@@ -87,7 +88,10 @@ export default function UserProfilePage() {
       .catch(() => {});
   }, [userId]);
 
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   async function handleFollow() {
+    if (!isLoggedIn) { setShowLoginPrompt(true); return; }
     setFollowLoading(true);
     try {
       const res = await fetch("/api/follow", {
@@ -374,8 +378,8 @@ export default function UserProfilePage() {
         {activeTab === "followers" && <UserFollowTab userId={userId} type="followers" />}
         {activeTab === "following" && <UserFollowTab userId={userId} type="following" />}
       </div>
+      {showLoginPrompt && <LoginPrompt onClose={() => setShowLoginPrompt(false)} />}
     </div>
-    
   );
 }
 

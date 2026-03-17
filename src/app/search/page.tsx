@@ -94,7 +94,7 @@ export default function SearchPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          placeholder="닉네임 또는 병영주소 (URL/숫자)"
+          placeholder="닉네임 또는 병영주소 URL"
           className="w-full h-12 pl-11 pr-20 rounded-2xl bg-toss-gray-50 dark:bg-secondary border-none text-[14px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20"
         />
         <button
@@ -129,9 +129,12 @@ export default function SearchPage() {
           {/* 서든어택 유저 (병영수첩) */}
           {barracksUsers.length > 0 && (
             <section>
-              <h2 className="text-[13px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-3">서든어택 유저</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[13px] font-semibold text-toss-gray-500 uppercase tracking-wider">서든어택 유저</h2>
+                <span className="text-[11px] text-toss-gray-400">{barracksUsers.length}명</span>
+              </div>
               <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
-                {barracksUsers.map((user) => (
+                {barracksUsers.slice(0, 5).map((user) => (
                   <Link
                     key={user.nexonSn}
                     href={`/search/${user.nexonSn}`}
@@ -146,23 +149,27 @@ export default function SearchPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-semibold text-foreground truncate">{user.nickname}</p>
-                      <p className="text-[11px] text-toss-gray-400 mt-0.5">
-                        Lv.{user.level}{user.clanName ? ` · ${user.clanName}` : ""}
-                      </p>
+                      {user.clanName && <p className="text-[11px] text-toss-gray-400 mt-0.5">{user.clanName}</p>}
                     </div>
                     <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-toss-orange/10 text-toss-orange">서든</span>
                   </Link>
                 ))}
               </div>
+              {barracksUsers.length > 5 && (
+                <p className="text-[12px] text-primary font-medium text-center mt-2 py-2">+{barracksUsers.length - 5}명 더보기</p>
+              )}
             </section>
           )}
 
           {/* SALog 유저 */}
           {salogUsers.length > 0 && (
             <section>
-              <h2 className="text-[13px] font-semibold text-toss-gray-500 uppercase tracking-wider mb-3">SALog 유저</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[13px] font-semibold text-toss-gray-500 uppercase tracking-wider">SALog 유저</h2>
+                <span className="text-[11px] text-toss-gray-400">{salogUsers.length}명</span>
+              </div>
               <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/20">
-                {salogUsers.map((user) => (
+                {salogUsers.slice(0, 5).map((user) => (
                   <Link
                     key={user.id}
                     href={`/profile/${user.id}`}
@@ -189,6 +196,9 @@ export default function SearchPage() {
                   </Link>
                 ))}
               </div>
+              {salogUsers.length > 5 && (
+                <p className="text-[12px] text-primary font-medium text-center mt-2 py-2">+{salogUsers.length - 5}명 더보기</p>
+              )}
             </section>
           )}
 

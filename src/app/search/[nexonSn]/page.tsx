@@ -106,9 +106,7 @@ export default function BarracksUserPage({ params }: { params: Promise<{ nexonSn
             )}
           </div>
           <h1 className="text-[22px] font-bold text-foreground tracking-tight">{profile.nickname}</h1>
-          <p className="text-[13px] text-toss-gray-500 mt-1">
-            Lv.{profile.level}{profile.clanName ? ` · ${profile.clanName}` : ""}
-          </p>
+          {profile.clanName && <p className="text-[13px] text-toss-gray-500 mt-1">{profile.clanName}</p>}
           {profile.userIntro && (
             <p className="text-[13px] text-toss-gray-400 mt-2 max-w-xs leading-relaxed">{profile.userIntro}</p>
           )}

@@ -7,11 +7,9 @@ const CRAWLER_API_KEY = process.env.CRAWLER_API_KEY ?? "";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요합니다", found: false }, { status: 401 });
-  }
+  const ip = session?.user?.id ?? req.headers.get("x-forwarded-for") ?? "anon";
 
-  const rl = rateLimit(`barracks-profile:${session.user.id}`, { limit: 10, windowSec: 60 });
+  const rl = rateLimit(`barracks-profile:${ip}`, { limit: 10, windowSec: 60 });
   if (!rl.success) {
     return NextResponse.json({ error: "요청이 너무 많습니다", found: false }, { status: 429 });
   }
