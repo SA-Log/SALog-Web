@@ -273,6 +273,50 @@ function PlayerContent() {
       })()
     : null;
 
+  // SALog 전투력 + 플레이 스타일
+  const combatPower = (() => {
+    if (!matchStats || !player?.recentInfo || matchStats.total === 0) return null;
+    const ri = player.recentInfo;
+    const ms = matchStats;
+    const killScore = Math.min((ms.totalK / ms.total) * 15, 30);
+    const surviveScore = Math.min((1 - Math.min(ms.totalD / ms.total / 5, 1)) * 15, 15);
+    const precisionScore = Math.min((ri.recent_sniper_rate / 100) * 15, 15);
+    const contribScore = Math.min((ms.totalA / ms.total) * 10, 15);
+    const damageScore = Math.min((ri.recent_kill_death_rate / 200) * 15, 15);
+    const winScore = Math.min((ms.winRate / 100) * 10, 10);
+    const total = Math.round(Math.min(killScore + surviveScore + precisionScore + contribScore + damageScore + winScore, 100));
+    return {
+      total,
+      breakdown: [
+        { label: "킬", value: Math.round(killScore), max: 30 },
+        { label: "생존", value: Math.round(surviveScore), max: 15 },
+        { label: "정밀", value: Math.round(precisionScore), max: 15 },
+        { label: "기여", value: Math.round(contribScore), max: 15 },
+        { label: "대미지", value: Math.round(damageScore), max: 15 },
+        { label: "승률", value: Math.round(winScore), max: 10 },
+      ],
+    };
+  })();
+
+  // 플레이 스타일
+  const playStyle = (() => {
+    if (!matchStats || matchStats.total === 0) return null;
+    const ms = matchStats;
+    const kpr = ms.totalK / ms.total;
+    const dpr = ms.totalD / ms.total;
+    const apr = ms.totalA / ms.total;
+    const scores = [
+      { style: "killer", label: "학살자", icon: "🎯", score: kpr },
+      { style: "death", label: "데스왕", icon: "💀", score: dpr },
+      { style: "assist", label: "도움왕", icon: "🤝", score: apr },
+    ];
+    const values = scores.map(s => s.score);
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    const stdDev = Math.sqrt(values.reduce((a, b) => a + (b - avg) ** 2, 0) / values.length);
+    if (stdDev < avg * 0.3 && avg > 0) return { style: "balanced", label: "만능형", icon: "⭐" };
+    return scores.sort((a, b) => b.score - a.score)[0];
+  })();
+
   const barracksUrl = nexonSn
     ? `https://barracks.sa.nexon.com/${nexonSn}/match`
     : null;
@@ -421,6 +465,36 @@ function PlayerContent() {
           </div>
         )}
       </div>
+
+      {/* ========== SALog 전투력 + 플레이 스타일 ========== */}
+      {combatPower && playStyle && (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-[15px] font-bold text-foreground">SALog 전투력</h2>
+              {/* 플레이 스타일 뱃지 */}
+              <span className="px-2.5 py-1 rounded-xl bg-primary/10 text-[12px] font-bold text-primary">
+                {playStyle.icon} {playStyle.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[28px] font-bold text-primary tabular-nums">{combatPower.total}</span>
+              <span className="text-[12px] text-toss-gray-400">/100</span>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {combatPower.breakdown.map((b) => (
+              <div key={b.label} className="flex items-center gap-3">
+                <span className="text-[11px] text-toss-gray-500 w-10 shrink-0 text-right">{b.label}</span>
+                <div className="flex-1 h-2 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${b.max > 0 ? (b.value / b.max) * 100 : 0}%` }} />
+                </div>
+                <span className="text-[11px] font-semibold text-foreground w-8 tabular-nums">{b.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ========== RECENT TRENDS ========== */}
       {ri && (
@@ -589,13 +663,19 @@ function PlayerContent() {
                 {salog.blacklistCount > 0 && (
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-red/5">
                     <span className="text-[18px] font-bold text-toss-red tabular-nums">{salog.blacklistCount}</span>
-                    <span className="text-[12px] text-toss-gray-500">명이 경고</span>
+                    <span className="text-[12px] text-toss-gray-500">명이 의심</span>
                   </div>
                 )}
                 {salog.hackReportCount > 0 && (
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/5">
                     <span className="text-[18px] font-bold text-amber-500 tabular-nums">{salog.hackReportCount}</span>
                     <span className="text-[12px] text-toss-gray-500">건 핵 신고</span>
+                  </div>
+                )}
+                {salog.mannerReports.length > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-orange/5">
+                    <span className="text-[18px] font-bold text-toss-orange tabular-nums">{salog.mannerReports.length}</span>
+                    <span className="text-[12px] text-toss-gray-500">건 비매너 신고</span>
                   </div>
                 )}
               </div>
