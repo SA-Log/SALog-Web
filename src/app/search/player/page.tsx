@@ -140,7 +140,8 @@ export default function PlayerPage() {
   );
 }
 
-type SalogCommunity = { blacklistCount: number; hackReportCount: number; hackReports: { id: string; nickname: string; status: string; createdAt: string }[]; mannerReports: { id: string; nickname: string; tagType: string; tagTypes: string[]; createdAt: string }[] };
+type SeasonRecord = { winRate: string | null; killRate: string | null; headshotRate: string | null; saveRate: string | null; damageAvg: string | null; seasonRank: string | null };
+type SalogCommunity = { blacklistCount: number; hackReportCount: number; hackReports: { id: string; nickname: string; status: string; createdAt: string }[]; mannerReports: { id: string; nickname: string; tagType: string; tagTypes: string[]; status?: string; createdAt: string }[] };
 
 function PlayerContent() {
   const searchParams = useSearchParams();
@@ -151,6 +152,7 @@ function PlayerContent() {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [meta, setMeta] = useState<MetaData | null>(null);
   const [salog, setSalog] = useState<SalogCommunity | null>(null);
+  const [seasonRecord, setSeasonRecord] = useState<SeasonRecord | null>(null);
   const [barracksProfile, setBarracksProfile] = useState<{ userImg: string | null; userIntro: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -160,6 +162,7 @@ function PlayerContent() {
   const [activeTab, setActiveTab] = useState<"overview" | "matches">("overview");
   const [matchPage, setMatchPage] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [mapStats, setMapStats] = useState<{ name: string; total: number; wins: number; winRate: number; avgKills: number; kd: number }[] | null>(null);
   const MATCHES_PER_PAGE = 20;
 
   useEffect(() => {
@@ -228,11 +231,12 @@ function PlayerContent() {
           mannerReports = data.mannerReports ?? [];
         } catch {}
 
-        // 블랙리스트 카운트
+        // 블랙리스트 카운트 + 시즌 레코드
         try {
           const res = await fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
           const data = await res.json();
           blacklistCount = data.community?.blacklistCount ?? 0;
+          if (data.seasonRecord) setSeasonRecord(data.seasonRecord);
         } catch {}
       }
 
@@ -260,6 +264,23 @@ function PlayerContent() {
     }
     loadSalog();
   }, [nexonSn, name]);
+
+  // 맵 숙련도 (최근 매치 상세에서 추출)
+  useEffect(() => {
+    if (!player?.matches || player.matches.length === 0 || !player.basic) return;
+    const recent = player.matches.slice(0, 15);
+    fetch("/api/sa/map-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        matches: recent.map(m => ({ match_id: m.match_id, match_mode: m.match_mode })),
+        playerName: player.basic.user_name,
+      }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.maps) setMapStats(d.maps); })
+      .catch(() => {});
+  }, [player]);
 
   const loadMatchDetail = useCallback(async (matchId: string, matchMode: string) => {
     if (matchDetails[matchId]) {
@@ -549,6 +570,67 @@ function PlayerContent() {
         </div>
       )}
 
+      {/* ========== 시즌 상세 통계 ========== */}
+      {seasonRecord && (seasonRecord.winRate || seasonRecord.killRate) && (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-[15px] font-bold text-foreground">시즌 상세 통계</h2>
+            {seasonRecord.seasonRank && (
+              <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-[11px] font-bold text-primary tabular-nums">
+                시즌 랭킹 {Number(seasonRecord.seasonRank).toLocaleString()}위
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {seasonRecord.winRate && (
+              <SeasonStatCard
+                label="승률"
+                value={`${parseFloat(seasonRecord.winRate).toFixed(1)}%`}
+                color={parseFloat(seasonRecord.winRate) >= 55 ? "text-toss-green" : parseFloat(seasonRecord.winRate) >= 45 ? "text-foreground" : "text-toss-red"}
+                bar={parseFloat(seasonRecord.winRate)}
+                barColor={parseFloat(seasonRecord.winRate) >= 55 ? "bg-toss-green" : parseFloat(seasonRecord.winRate) >= 45 ? "bg-primary" : "bg-toss-red"}
+              />
+            )}
+            {seasonRecord.killRate && (
+              <SeasonStatCard
+                label="K/D 비율"
+                value={`${(parseFloat(seasonRecord.killRate) / 100).toFixed(2)}`}
+                color={parseFloat(seasonRecord.killRate) >= 150 ? "text-toss-green" : parseFloat(seasonRecord.killRate) >= 100 ? "text-foreground" : "text-toss-red"}
+                bar={Math.min(parseFloat(seasonRecord.killRate) / 2, 100)}
+                barColor={parseFloat(seasonRecord.killRate) >= 150 ? "bg-toss-green" : parseFloat(seasonRecord.killRate) >= 100 ? "bg-primary" : "bg-toss-red"}
+              />
+            )}
+            {seasonRecord.headshotRate && (
+              <SeasonStatCard
+                label="헤드샷 비율"
+                value={`${parseFloat(seasonRecord.headshotRate).toFixed(1)}%`}
+                color={parseFloat(seasonRecord.headshotRate) >= 40 ? "text-toss-green" : "text-foreground"}
+                bar={parseFloat(seasonRecord.headshotRate)}
+                barColor={parseFloat(seasonRecord.headshotRate) >= 40 ? "bg-toss-green" : "bg-primary"}
+              />
+            )}
+            {seasonRecord.damageAvg && (
+              <SeasonStatCard
+                label="평균 데미지"
+                value={parseFloat(seasonRecord.damageAvg).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                color="text-foreground"
+                bar={Math.min(parseFloat(seasonRecord.damageAvg) / 500 * 100, 100)}
+                barColor="bg-primary"
+              />
+            )}
+            {seasonRecord.saveRate && (
+              <SeasonStatCard
+                label="세이브율"
+                value={`${parseFloat(seasonRecord.saveRate).toFixed(1)}%`}
+                color={parseFloat(seasonRecord.saveRate) >= 15 ? "text-toss-green" : "text-foreground"}
+                bar={Math.min(parseFloat(seasonRecord.saveRate) * 2, 100)}
+                barColor={parseFloat(seasonRecord.saveRate) >= 15 ? "bg-toss-green" : "bg-primary"}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ========== SALog 연동 ========== */}
       {salog && (() => {
         const confirmed = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "CONFIRMED");
@@ -682,6 +764,47 @@ function PlayerContent() {
               </div>
             </div>
           </div>
+
+          {/* 맵 숙련도 TOP 3 */}
+          {mapStats && mapStats.length > 0 && (
+            <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
+              <h2 className="text-[14px] font-semibold text-foreground mb-4">맵 숙련도</h2>
+              <div className="space-y-3">
+                {mapStats.slice(0, 3).map((m, i) => {
+                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉";
+                  return (
+                    <div key={m.name} className="flex items-center gap-3">
+                      <span className="text-[16px] w-6 text-center shrink-0">{medal}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[13px] font-semibold text-foreground truncate">{m.name}</span>
+                          <span className="text-[11px] text-toss-gray-400 shrink-0 ml-2">{m.total}판</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px]">
+                          <span className={`font-semibold ${m.winRate >= 60 ? "text-toss-green" : m.winRate >= 40 ? "text-foreground" : "text-toss-red"}`}>
+                            승률 {m.winRate}%
+                          </span>
+                          <span className="text-toss-gray-400">평균 {m.avgKills}킬</span>
+                          <span className="text-toss-gray-400">K/D {m.kd}</span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ${m.winRate >= 60 ? "bg-toss-green" : m.winRate >= 40 ? "bg-primary" : "bg-toss-red"}`}
+                            style={{ width: `${m.winRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {mapStats.length > 3 && (
+                <p className="text-[11px] text-toss-gray-400 text-center mt-3">
+                  외 {mapStats.length - 3}개 맵에서 플레이
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Recent 5 matches */}
           <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
@@ -970,6 +1093,18 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
   );
 }
 
+function SeasonStatCard({ label, value, color, bar, barColor }: { label: string; value: string; color: string; bar: number; barColor: string }) {
+  return (
+    <div className="bg-secondary/50 rounded-xl p-3">
+      <p className="text-[11px] text-toss-gray-500 mb-1">{label}</p>
+      <p className={`text-[18px] font-bold tabular-nums ${color}`}>{value}</p>
+      <div className="mt-2 h-1.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${Math.min(bar, 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function SalogReportTabs({ reports, type }: { reports: { id: string; nickname: string; status?: string; createdAt: string }[]; type: "hack" | "manner" }) {
   const isHack = type === "hack";
   const tabs = isHack
@@ -979,8 +1114,9 @@ function SalogReportTabs({ reports, type }: { reports: { id: string; nickname: s
         { key: "suspect", label: "의심", filter: (r: { status?: string }) => r.status === "SUSPECT" || r.status === "DISMISSED", color: "text-amber-500", bar: "bg-amber-500" },
       ]
     : [
-        { key: "confirmed", label: "확정", filter: () => false, color: "text-toss-red", bar: "bg-toss-red" }, // TODO: 비매너 확정 상태 추가 후
-        { key: "pending", label: "검토 중", filter: () => true, color: "text-amber-500", bar: "bg-amber-500" },
+        { key: "confirmed", label: "확정", filter: (r: { status?: string }) => r.status === "CONFIRMED", color: "text-toss-red", bar: "bg-toss-red" },
+        { key: "pending", label: "검토 중", filter: (r: { status?: string }) => r.status === "PENDING" || !r.status, color: "text-amber-500", bar: "bg-amber-500" },
+        { key: "rejected", label: "반려", filter: (r: { status?: string }) => r.status === "REJECTED", color: "text-toss-gray-400", bar: "bg-toss-gray-400" },
       ];
 
   const [activeTab, setActiveTab] = useState(tabs[0].key);
@@ -1009,13 +1145,14 @@ function SalogReportTabs({ reports, type }: { reports: { id: string; nickname: s
           <div className="space-y-2">
             {filtered.map((r: { id: string; nickname: string; status?: string; createdAt: string }) => (
               <Link key={r.id} href={`${basePath}/${r.id}`} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${activeTabInfo.key === "confirmed" ? "bg-toss-red/5 hover:bg-toss-red/10" : "hover:bg-secondary/40"}`}>
-                {isHack && r.status && (
+                {r.status && (
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                     r.status === "CONFIRMED" ? "bg-toss-red text-white" :
                     r.status === "PROBABLE" ? "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400" :
+                    r.status === "REJECTED" ? "bg-toss-gray-200 dark:bg-toss-gray-700 text-toss-gray-500" :
                     "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400"
                   }`}>
-                    {r.status === "CONFIRMED" ? "확정" : r.status === "PROBABLE" ? "유력" : "의심"}
+                    {r.status === "CONFIRMED" ? "확정" : r.status === "PROBABLE" ? "유력" : r.status === "REJECTED" ? "반려" : isHack ? "의심" : "검토 중"}
                   </span>
                 )}
                 <div className="flex-1 min-w-0">
