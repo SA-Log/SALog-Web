@@ -212,8 +212,9 @@ function PlayerContent() {
 
   // SALog 연동 데이터
   useEffect(() => {
-    if (!nexonSn) return;
-    fetch(`/api/search?q=${nexonSn}&type=barracks`)
+    const searchQuery = nexonSn || name;
+    if (!searchQuery) return;
+    fetch(`/api/search?q=${encodeURIComponent(searchQuery)}${nexonSn ? "&type=barracks" : ""}`)
       .then(r => r.json())
       .then(data => {
         setSalog({
@@ -222,17 +223,19 @@ function PlayerContent() {
           hackReports: data.hackReports ?? [],
           mannerReports: data.mannerReports ?? [],
         });
-        // 블랙리스트 카운트 별도 조회
-        return fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
+        if (nexonSn) {
+          return fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
+        }
+        return null;
       })
-      .then(r => r.json())
+      .then(r => r ? r.json() : null)
       .then(data => {
-        if (data.community) {
+        if (data?.community) {
           setSalog(prev => prev ? { ...prev, blacklistCount: data.community.blacklistCount } : prev);
         }
       })
       .catch(() => {});
-  }, [nexonSn]);
+  }, [nexonSn, name]);
 
   const loadMatchDetail = useCallback(async (matchId: string, matchMode: string) => {
     if (matchDetails[matchId]) {
@@ -466,13 +469,26 @@ function PlayerContent() {
         )}
       </div>
 
+      {/* ========== RECENT TRENDS ========== */}
+      {ri && (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-foreground mb-4">최근 동향</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <TrendStat label="승률" value={`${ri.recent_win_rate.toFixed(1)}%`} color={ri.recent_win_rate >= 50 ? "text-toss-green" : "text-toss-red"} />
+            <TrendStat label="K/D 비율" value={ri.recent_kill_death_rate.toFixed(2)} color={ri.recent_kill_death_rate >= 1 ? "text-toss-green" : "text-toss-red"} />
+            <TrendStat label="돌격" value={`${ri.recent_assault_rate.toFixed(1)}%`} color="text-toss-blue" />
+            <TrendStat label="저격" value={`${ri.recent_sniper_rate.toFixed(1)}%`} color="text-toss-orange" />
+            <TrendStat label="특수" value={`${ri.recent_special_rate.toFixed(1)}%`} color="text-purple-500" />
+          </div>
+        </div>
+      )}
+
       {/* ========== SALog 전투력 + 플레이 스타일 ========== */}
       {combatPower && playStyle && (
         <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <h2 className="text-[15px] font-bold text-foreground">SALog 전투력</h2>
-              {/* 플레이 스타일 뱃지 */}
               <span className="px-2.5 py-1 rounded-xl bg-primary/10 text-[12px] font-bold text-primary">
                 {playStyle.icon} {playStyle.label}
               </span>
@@ -492,20 +508,6 @@ function PlayerContent() {
                 <span className="text-[11px] font-semibold text-foreground w-8 tabular-nums">{b.value}</span>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========== RECENT TRENDS ========== */}
-      {ri && (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-foreground mb-4">최근 동향</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <TrendStat label="승률" value={`${ri.recent_win_rate.toFixed(1)}%`} color={ri.recent_win_rate >= 50 ? "text-toss-green" : "text-toss-red"} />
-            <TrendStat label="K/D 비율" value={ri.recent_kill_death_rate.toFixed(2)} color={ri.recent_kill_death_rate >= 1 ? "text-toss-green" : "text-toss-red"} />
-            <TrendStat label="돌격" value={`${ri.recent_assault_rate.toFixed(1)}%`} color="text-toss-blue" />
-            <TrendStat label="저격" value={`${ri.recent_sniper_rate.toFixed(1)}%`} color="text-toss-orange" />
-            <TrendStat label="특수" value={`${ri.recent_special_rate.toFixed(1)}%`} color="text-purple-500" />
           </div>
         </div>
       )}
