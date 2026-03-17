@@ -164,6 +164,19 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
   const [isEditing, setIsEditing] = useState(false);
   const [blacklisted, setBlacklisted] = useState(!!initialReport.blacklisted);
   const [blacklistLoading, setBlacklistLoading] = useState(false);
+  const [relatedReports, setRelatedReports] = useState<{ hackReports: { id: string; nickname: string; status: string; createdAt: string }[]; mannerReports: { id: string; nickname: string; createdAt: string }[] } | null>(null);
+
+  // 동일 병영주소의 다른 신고 내역
+  useEffect(() => {
+    if (!report.barracksAddress) return;
+    fetch(`/api/search?q=${report.barracksAddress}&type=barracks`)
+      .then(r => r.json())
+      .then(d => setRelatedReports({
+        hackReports: (d.hackReports ?? []).filter((r: { id: string }) => r.id !== report.id),
+        mannerReports: (d.mannerReports ?? []).filter((r: { id: string }) => r.id !== report.id),
+      }))
+      .catch(() => {});
+  }, [report.barracksAddress, report.id]);
   const [editDescription, setEditDescription] = useState(report.description ?? "");
   const [editHackTypes, setEditHackTypes] = useState<string[]>(report.hackTypes ?? []);
   const [editTagTypes, setEditTagTypes] = useState<string[]>(report.tagTypes ?? (report.tagType ? [report.tagType] : []));
@@ -552,6 +565,38 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
           <div className="text-center py-6"><p className="text-[13px] text-toss-gray-400">아직 댓글이 없습니다</p></div>
         )}
       </div>
+
+      {/* ─── 이 유저의 다른 신고 내역 ─── */}
+      {relatedReports && (relatedReports.hackReports.length > 0 || relatedReports.mannerReports.length > 0) && (
+        <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-toss mb-4">
+          <h2 className="text-[15px] font-semibold text-foreground mb-3">이 유저의 다른 신고</h2>
+          {relatedReports.hackReports.length > 0 && (
+            <div className="space-y-2 mb-3">
+              <p className="text-[11px] font-semibold text-toss-gray-500 uppercase tracking-wider">핵 신고</p>
+              {relatedReports.hackReports.map((r) => (
+                <Link key={r.id} href={`/reports/${r.id}`} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-secondary/40 transition-colors">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${r.status === "CONFIRMED" ? "bg-toss-red text-white" : r.status === "PROBABLE" ? "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400" : "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400"}`}>
+                    {r.status === "CONFIRMED" ? "확정" : r.status === "PROBABLE" ? "유력" : "의심"}
+                  </span>
+                  <p className="text-[13px] font-medium text-foreground truncate flex-1">{r.nickname}</p>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </Link>
+              ))}
+            </div>
+          )}
+          {relatedReports.mannerReports.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold text-toss-gray-500 uppercase tracking-wider">비매너 신고</p>
+              {relatedReports.mannerReports.map((r) => (
+                <Link key={r.id} href={`/manner/${r.id}`} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-secondary/40 transition-colors">
+                  <p className="text-[13px] font-medium text-foreground truncate flex-1">{r.nickname}</p>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-toss-gray-300 shrink-0"><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <p className="text-[11px] text-toss-gray-400 text-center leading-relaxed mt-6 px-4">
         {type === "hack" ? "본 정보는 커뮤니티 제보에 기반하며, SALog는 정보의 정확성을 보장하지 않습니다." : "비매너 신고는 커뮤니티 기반 참고 정보이며, 공식적인 제재와 무관합니다."}
