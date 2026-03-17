@@ -900,7 +900,11 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 {isMe && <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
-                                <span className={`text-[12px] font-semibold truncate ${isMe ? "text-primary" : "text-foreground"}`}>{p.user_name}</span>
+                                {isMe ? (
+                                  <span className="text-[12px] font-semibold truncate text-primary">{p.user_name}</span>
+                                ) : (
+                                  <a href={`https://barracks.sa.nexon.com/search?searchType=user&searchText=${encodeURIComponent(p.user_name)}`} target="_blank" rel="noopener noreferrer" className="text-[12px] font-semibold truncate text-foreground hover:text-primary transition-colors">{p.user_name}</a>
+                                )}
                                 {p.guild_name && <span className="text-[10px] text-toss-gray-500 dark:text-toss-gray-400">[{p.guild_name}]</span>}
                               </div>
                               <p className="text-[10px] text-toss-gray-500 dark:text-toss-gray-400">{p.season_grade}</p>

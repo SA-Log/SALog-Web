@@ -130,21 +130,35 @@ export async function GET(req: NextRequest) {
       where: { barracksAddress: nexonSn },
     });
 
+    // 시즌 레코드에서 상세 통계 조회 시도
+    let seasonRecord = null;
+    try {
+      const srRes = await fetch(`${CRAWLER_URL}/api/barracks/season-record?nexonSn=${nexonSn}`, {
+        headers: { "x-api-key": CRAWLER_API_KEY },
+      });
+      const srData = await srRes.json();
+      if (srData.found && srData.record) seasonRecord = srData.record;
+    } catch { /* fallback to battleInfo */ }
+
     // 기본 battleInfo에서 통계 추출
     const bi = profile.battleInfo;
-    const winRate = bi ? parseFloat(bi.win_per) / 100 : 0;
-    const kdRate = bi ? parseFloat(bi.kill_death_per) / 100 : 0;
+    const sr = seasonRecord;
 
-    // TODO: 실제 매치 데이터에서 상세 통계 계산 (Phase 2.5)
-    // 현재는 battleInfo 기반 추정치
+    // 시즌 레코드가 있으면 정밀 통계, 없으면 battleInfo 추정치
+    const winRate = sr ? parseFloat(sr.y_total_win_rate || "0") / 100 : (bi ? parseFloat(bi.win_per) / 100 : 0);
+    const kdRate = sr ? parseFloat(sr.y_total_kill_rate || "0") / 100 : (bi ? parseFloat(bi.kill_death_per) / 100 : 0);
+    const headshotRate = sr ? parseFloat(sr.y_total_headshot_rate || "0") / 100 : 0.25;
+    const saveRate = sr ? parseFloat(sr.y_total_save_rate || "0") / 100 : 0.1;
+    const damageAvg = sr ? parseFloat(sr.y_total_damage_avg || "0") : (kdRate * 300);
+
     const estimatedStats = {
       killPerRound: kdRate * 0.8,
       deathPerRound: 0.8 / (kdRate || 1),
-      headshotRate: 0.25, // 기본값 (매치 상세에서 추출 필요)
+      headshotRate,
       assistPerRound: 0.3,
-      savePerRound: 0.1,
+      savePerRound: saveRate,
       missionPerRound: 0.1,
-      damagePerDeath: kdRate * 300,
+      damagePerDeath: damageAvg,
       winRate,
     };
 
@@ -168,6 +182,14 @@ export async function GET(req: NextRequest) {
       },
       combatPower,
       playStyle,
+      seasonRecord: seasonRecord ? {
+        winRate: sr ? sr.y_total_win_rate : null,
+        killRate: sr ? sr.y_total_kill_rate : null,
+        headshotRate: sr ? sr.y_total_headshot_rate : null,
+        saveRate: sr ? sr.y_total_save_rate : null,
+        damageAvg: sr ? sr.y_total_damage_avg : null,
+        seasonRank: sr ? sr.y_rank_chart_season_rank : null,
+      } : null,
       community: {
         blacklistCount,
         hackReportCount,
