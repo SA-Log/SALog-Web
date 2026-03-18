@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "matches 필요" }, { status: 400 });
   }
 
-  // 최대 15개만 처리
-  const subset = matches.slice(0, 15);
+  // 최대 30개 처리
+  const subset = matches.slice(0, 30);
 
   const details = await Promise.allSettled(
     subset.map(async (m) => {
@@ -71,5 +71,5 @@ export async function POST(req: NextRequest) {
     }))
     .sort((a, b) => b.total - a.total || b.winRate - a.winRate);
 
-  return NextResponse.json({ maps: sorted });
+  return NextResponse.json({ maps: sorted, matchCount: subset.length });
 }
