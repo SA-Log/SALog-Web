@@ -256,17 +256,15 @@ export default function UserProfilePage() {
             <p className="text-[13px] text-toss-gray-500 mt-3 max-w-xs leading-relaxed">{profile.bio}</p>
           )}
 
-          {/* 병영수첩 바로가기 */}
-          {barracksUrl && (
-            <a
-              href={barracksUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+          {/* 서든어택 전적 보기 */}
+          {profile.barracksAddress && (
+            <Link
+              href={`/search/player?name=${encodeURIComponent(profile.nickname ?? "")}&nexonSn=${profile.barracksAddress}`}
               className="inline-flex items-center gap-1.5 text-[12px] text-primary hover:text-primary/80 transition-colors mt-3"
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 1H2.5C1.67 1 1 1.67 1 2.5V9.5C1 10.33 1.67 11 2.5 11H9.5C10.33 11 11 10.33 11 9.5V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M7 1H11V5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 1L5.5 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              병영수첩 바로가기
-            </a>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v4M4 3l2-2 2 2M1 7.5C1 6.67 1.67 6 2.5 6h7c.83 0 1.5.67 1.5 1.5V10c0 .83-.67 1.5-1.5 1.5h-7C1.67 11.5 1 10.83 1 10V7.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              서든어택 전적 보기
+            </Link>
           )}
 
           {/* 팔로우 버튼 */}
