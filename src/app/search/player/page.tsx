@@ -161,7 +161,7 @@ function PlayerContent() {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [matchDetails, setMatchDetails] = useState<Record<string, MatchDetail>>({});
   const [loadingMatch, setLoadingMatch] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "matches">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "matches" | "rank" | "maps" | "salog">("overview");
   const [matchPage, setMatchPage] = useState(1);
   const [copied, setCopied] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -518,108 +518,39 @@ function PlayerContent() {
         )}
       </div>
 
-      {/* ========== RECENT TRENDS ========== */}
-      {ri && (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-foreground mb-4">최근 동향</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <TrendStat label="승률" value={`${ri.recent_win_rate.toFixed(1)}%`} color={ri.recent_win_rate >= 50 ? "text-toss-green" : "text-toss-red"} />
-            <TrendStat label="K/D 비율" value={ri.recent_kill_death_rate.toFixed(2)} color={ri.recent_kill_death_rate >= 1 ? "text-toss-green" : "text-toss-red"} />
-            <TrendStat label="돌격" value={`${ri.recent_assault_rate.toFixed(1)}%`} color="text-toss-blue" />
-            <TrendStat label="저격" value={`${ri.recent_sniper_rate.toFixed(1)}%`} color="text-toss-orange" />
-            <TrendStat label="특수" value={`${ri.recent_special_rate.toFixed(1)}%`} color="text-purple-500" />
-          </div>
-        </div>
-      )}
-
-      {/* ========== 랭크 시즌 상세 통계 ========== */}
-      {nexonSn && <RankSeasonStats nexonSn={nexonSn} />}
-
-      {/* ========== SALog 연동 ========== */}
-      {salog && (() => {
-        const confirmed = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "CONFIRMED");
-        const hasAny = salog.blacklistCount > 0 || salog.hackReportCount > 0 || salog.mannerReports.length > 0;
-
-        return (
-          <div className="space-y-4 mb-4">
-            <h2 className="text-[15px] font-bold text-foreground">SALog 연동</h2>
-
-            {/* 상태 배너 */}
-            {confirmed.length > 0 ? (
-              <div className="bg-toss-red/5 border border-toss-red/20 rounded-2xl p-4">
-                <p className="text-[14px] font-bold text-toss-red">🚨 핵 사용이 확정된 유저입니다</p>
-                <p className="text-[12px] text-toss-gray-500 mt-1">관리자 검토를 거쳐 핵 사용이 확정되었습니다. {confirmed.length}건의 확정 판정</p>
-              </div>
-            ) : salog.hackReportCount > 0 ? (
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
-                <p className="text-[14px] font-bold text-amber-600 dark:text-amber-400">⚠️ 핵 사용이 의심되는 유저입니다</p>
-                <p className="text-[12px] text-toss-gray-500 mt-1">{salog.hackReportCount}건의 신고가 접수되어 커뮤니티 검토 중입니다.</p>
-              </div>
-            ) : !hasAny ? (
-              <div className="bg-toss-green/5 border border-toss-green/20 rounded-2xl p-4">
-                <p className="text-[14px] font-bold text-toss-green">✅ SALog에 등록된 신고 내역이 없습니다</p>
-              </div>
-            ) : null}
-
-            {/* 커뮤니티 요약 */}
-            {hasAny && (
-              <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-red/5">
-                    <span className="text-[18px] font-bold text-toss-red tabular-nums">{salog.blacklistCount}</span>
-                    <span className="text-[12px] text-toss-gray-500">명이 의심</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/5">
-                    <span className="text-[18px] font-bold text-amber-500 tabular-nums">{salog.hackReportCount}</span>
-                    <span className="text-[12px] text-toss-gray-500">건 핵 신고</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-orange/5">
-                    <span className="text-[18px] font-bold text-toss-orange tabular-nums">{salog.mannerReports.length}</span>
-                    <span className="text-[12px] text-toss-gray-500">건 비매너 신고</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 핵 탭 */}
-            {/* 핵 신고 탭: 확정/유력/의심 */}
-            {salog.hackReports.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
-                <div className="px-4 pt-3 pb-0"><p className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider">핵 신고</p></div>
-                <SalogReportTabs reports={salog.hackReports} type="hack" />
-              </div>
-            )}
-
-            {/* 비매너 신고 탭: 검토 중/확정 */}
-            {salog.mannerReports.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
-                <div className="px-4 pt-3 pb-0">
-                  <p className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider">비매너 신고</p>
-                  <p className="text-[11px] text-toss-gray-400 mt-0.5">{salog.mannerReports.length}건의 신고가 접수되어 커뮤니티 검토 중입니다.</p>
-                </div>
-                <SalogReportTabs reports={salog.mannerReports} type="manner" />
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* ========== TABS ========== */}
+      {/* ========== 4-TAB NAVIGATION ========== */}
       <div className="flex gap-1 mb-4 bg-secondary rounded-xl p-1">
-        <button onClick={() => setActiveTab("overview")}
-          className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium btn-chip ${activeTab === "overview" ? "bg-card text-foreground shadow-toss" : "text-toss-gray-600 dark:text-toss-gray-400"}`}>
-          전적 요약
-        </button>
-        <button onClick={() => setActiveTab("matches")}
-          className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium btn-chip ${activeTab === "matches" ? "bg-card text-foreground shadow-toss" : "text-toss-gray-600 dark:text-toss-gray-400"}`}>
-          매치 기록 {matchStats && <span className="text-toss-gray-500 ml-1">{matchStats.total}</span>}
-        </button>
+        {([
+          { key: "overview", label: "전적 요약" },
+          { key: "rank", label: "랭크" },
+          { key: "maps", label: "맵" },
+          { key: "salog", label: "SALog" },
+        ] as const).map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key as typeof activeTab)}
+            className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium btn-chip ${activeTab === tab.key ? "bg-card text-foreground shadow-toss" : "text-toss-gray-600 dark:text-toss-gray-400"}`}>
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* ========== OVERVIEW TAB ========== */}
+      {/* ========== 전적 요약 TAB ========== */}
       {activeTab === "overview" && matchStats && (
         <div className="space-y-4">
-          {/* Match summary */}
+          {/* 최근 동향 */}
+          {ri && (
+            <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
+              <h2 className="text-[14px] font-semibold text-foreground mb-4">최근 동향</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <TrendStat label="승률" value={`${ri.recent_win_rate.toFixed(1)}%`} color={ri.recent_win_rate >= 50 ? "text-toss-green" : "text-toss-red"} />
+                <TrendStat label="K/D 비율" value={ri.recent_kill_death_rate.toFixed(2)} color={ri.recent_kill_death_rate >= 1 ? "text-toss-green" : "text-toss-red"} />
+                <TrendStat label="돌격" value={`${ri.recent_assault_rate.toFixed(1)}%`} color="text-toss-blue" />
+                <TrendStat label="저격" value={`${ri.recent_sniper_rate.toFixed(1)}%`} color="text-toss-orange" />
+                <TrendStat label="특수" value={`${ri.recent_special_rate.toFixed(1)}%`} color="text-purple-500" />
+              </div>
+            </div>
+          )}
+
+          {/* 최근 전적 요약 */}
           <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[14px] font-semibold text-foreground">최근 전적 요약</h2>
@@ -639,8 +570,6 @@ function PlayerContent() {
                 <p className="text-[11px] text-toss-gray-600 dark:text-toss-gray-400">패배</p>
               </div>
             </div>
-
-            {/* Win rate bar */}
             <div className="mb-4">
               <div className="flex justify-between text-[12px] mb-1.5">
                 <span className="text-toss-green font-semibold">승률 {matchStats.winRate}%</span>
@@ -650,8 +579,6 @@ function PlayerContent() {
                 <div className="h-full rounded-full bg-toss-green transition-all duration-500" style={{ width: `${matchStats.winRate}%` }} />
               </div>
             </div>
-
-            {/* K/D/A */}
             <div className="grid grid-cols-4 gap-3 pt-4 border-t border-border/50">
               <div className="text-center">
                 <p className="text-[18px] font-bold text-toss-red">{matchStats.totalK}</p>
@@ -672,14 +599,41 @@ function PlayerContent() {
             </div>
           </div>
 
-          {/* 맵 숙련도 (바라크스 API) */}
-          {mapSkills && mapSkills.length > 0 && (
+          {/* 최근 5경기 */}
+          <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[14px] font-semibold text-foreground">최근 경기</h2>
+              <button onClick={() => setActiveTab("matches")} className="text-[12px] text-primary hover:underline btn-ghost">전체보기</button>
+            </div>
+            <div className="space-y-2">
+              {player.matches.slice(0, 5).map((m) => (
+                <MatchRow key={m.match_id} match={m} playerName={b.user_name} onExpand={loadMatchDetail} expanded={expandedMatch === m.match_id} detail={matchDetails[m.match_id]} loading={loadingMatch === m.match_id} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== 랭크 TAB ========== */}
+      {activeTab === "rank" && (
+        <div>
+          {nexonSn ? <RankSeasonStats nexonSn={nexonSn} /> : (
+            <div className="text-center py-12"><p className="text-[13px] text-toss-gray-400">병영수첩 연동 정보가 없습니다</p></div>
+          )}
+        </div>
+      )}
+
+      {/* ========== 맵 TAB ========== */}
+      {activeTab === "maps" && (
+        <div>
+          {mapSkills && mapSkills.length > 0 ? (
             <div className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
               <div className="px-5 pt-4 pb-3">
                 <h2 className="text-[14px] font-semibold text-foreground">맵 숙련도</h2>
+                <p className="text-[11px] text-toss-gray-400 mt-0.5">{mapSkills.length}개 맵</p>
               </div>
               <div className="grid grid-cols-2 gap-px bg-border/30">
-                {mapSkills.slice(0, 6).map((m, i) => {
+                {mapSkills.map((m, i) => {
                   const mapName = m.map_name || `맵 ${i + 1}`;
                   const mapImg = m.map_img || null;
                   const level = m.map_level || 0;
@@ -715,20 +669,77 @@ function PlayerContent() {
                 })}
               </div>
             </div>
+          ) : (
+            <div className="text-center py-12"><p className="text-[13px] text-toss-gray-400">맵 숙련도 데이터를 불러오는 중...</p></div>
           )}
+        </div>
+      )}
 
-          {/* Recent 5 matches */}
-          <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[14px] font-semibold text-foreground">최근 경기</h2>
-              <button onClick={() => setActiveTab("matches")} className="text-[12px] text-primary hover:underline btn-ghost">전체보기</button>
-            </div>
-            <div className="space-y-2">
-              {player.matches.slice(0, 5).map((m) => (
-                <MatchRow key={m.match_id} match={m} playerName={b.user_name} onExpand={loadMatchDetail} expanded={expandedMatch === m.match_id} detail={matchDetails[m.match_id]} loading={loadingMatch === m.match_id} />
-              ))}
-            </div>
-          </div>
+      {/* ========== SALog TAB ========== */}
+      {activeTab === "salog" && (
+        <div className="space-y-4">
+          {salog ? (() => {
+            const confirmed = salog.hackReports.filter((r: SalogCommunity["hackReports"][0]) => r.status === "CONFIRMED");
+            const hasAny = salog.blacklistCount > 0 || salog.hackReportCount > 0 || salog.mannerReports.length > 0;
+
+            return (
+              <>
+                {confirmed.length > 0 ? (
+                  <div className="bg-toss-red/5 border border-toss-red/20 rounded-2xl p-4">
+                    <p className="text-[14px] font-bold text-toss-red">🚨 핵 사용이 확정된 유저입니다</p>
+                    <p className="text-[12px] text-toss-gray-500 mt-1">관리자 검토를 거쳐 핵 사용이 확정되었습니다. {confirmed.length}건의 확정 판정</p>
+                  </div>
+                ) : salog.hackReportCount > 0 ? (
+                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+                    <p className="text-[14px] font-bold text-amber-600 dark:text-amber-400">⚠️ 핵 사용이 의심되는 유저입니다</p>
+                    <p className="text-[12px] text-toss-gray-500 mt-1">{salog.hackReportCount}건의 신고가 접수되어 커뮤니티 검토 중입니다.</p>
+                  </div>
+                ) : !hasAny ? (
+                  <div className="bg-toss-green/5 border border-toss-green/20 rounded-2xl p-4">
+                    <p className="text-[14px] font-bold text-toss-green">✅ SALog에 등록된 신고 내역이 없습니다</p>
+                  </div>
+                ) : null}
+
+                {hasAny && (
+                  <div className="bg-card rounded-2xl border border-border/40 shadow-toss p-4">
+                    <div className="flex flex-wrap gap-3">
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-red/5">
+                        <span className="text-[18px] font-bold text-toss-red tabular-nums">{salog.blacklistCount}</span>
+                        <span className="text-[12px] text-toss-gray-500">명이 의심</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/5">
+                        <span className="text-[18px] font-bold text-amber-500 tabular-nums">{salog.hackReportCount}</span>
+                        <span className="text-[12px] text-toss-gray-500">건 핵 신고</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-toss-orange/5">
+                        <span className="text-[18px] font-bold text-toss-orange tabular-nums">{salog.mannerReports.length}</span>
+                        <span className="text-[12px] text-toss-gray-500">건 비매너 신고</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {salog.hackReports.length > 0 && (
+                  <div className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
+                    <div className="px-4 pt-3 pb-0"><p className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider">핵 신고</p></div>
+                    <SalogReportTabs reports={salog.hackReports} type="hack" />
+                  </div>
+                )}
+
+                {salog.mannerReports.length > 0 && (
+                  <div className="bg-card rounded-2xl border border-border/40 shadow-toss overflow-hidden">
+                    <div className="px-4 pt-3 pb-0">
+                      <p className="text-[12px] font-semibold text-toss-gray-500 uppercase tracking-wider">비매너 신고</p>
+                      <p className="text-[11px] text-toss-gray-400 mt-0.5">{salog.mannerReports.length}건의 신고가 접수되어 커뮤니티 검토 중입니다.</p>
+                    </div>
+                    <SalogReportTabs reports={salog.mannerReports} type="manner" />
+                  </div>
+                )}
+              </>
+            );
+          })() : (
+            <div className="text-center py-12"><p className="text-[13px] text-toss-gray-400">SALog 데이터를 불러오는 중...</p></div>
+          )}
         </div>
       )}
 
