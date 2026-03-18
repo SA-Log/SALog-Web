@@ -373,11 +373,40 @@ function PlayerContent() {
     ? `https://barracks.sa.nexon.com/${nexonSn}/match`
     : null;
 
-  if (!ouid) {
+  // ouid가 없지만 name이 있으면 ouid 조회 후 리다이렉트
+  const [resolving, setResolving] = useState(false);
+  useEffect(() => {
+    if (ouid || !name || resolving) return;
+    setResolving(true);
+    fetch(`/api/sa/search?q=${encodeURIComponent(name)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.ouid) {
+          const params = new URLSearchParams({ ouid: d.ouid, name });
+          if (nexonSn) params.set("nexonSn", nexonSn);
+          window.location.replace(`/search/player?${params}`);
+        } else {
+          setError(true);
+          setLoading(false);
+        }
+      })
+      .catch(() => { setError(true); setLoading(false); });
+  }, [ouid, name, nexonSn, resolving]);
+
+  if (!ouid && !name) {
     return (
       <div className="mx-auto max-w-screen-lg px-5 py-16 text-center">
         <p className="text-[14px] text-toss-gray-600 dark:text-toss-gray-400">잘못된 접근입니다</p>
         <Link href="/search" className="text-[13px] text-primary mt-4 inline-block">검색으로 돌아가기</Link>
+      </div>
+    );
+  }
+
+  if (!ouid) {
+    return (
+      <div className="mx-auto max-w-screen-lg px-5 py-16 text-center">
+        <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-[14px] text-toss-gray-600 dark:text-toss-gray-400">유저 정보를 조회 중...</p>
       </div>
     );
   }
@@ -626,50 +655,59 @@ function PlayerContent() {
       {/* ========== 맵 TAB ========== */}
       {activeTab === "maps" && (
         <div>
-          {mapSkills && mapSkills.length > 0 ? (
-            <div className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
-              <div className="px-5 pt-4 pb-3">
-                <h2 className="text-[14px] font-semibold text-foreground">맵 숙련도</h2>
-                <p className="text-[11px] text-toss-gray-400 mt-0.5">{mapSkills.length}개 맵</p>
-              </div>
-              <div className="grid grid-cols-2 gap-px bg-border/30">
-                {mapSkills.map((m, i) => {
+          {mapSkills && mapSkills.length > 0 ? (() => {
+            // 종료된 맵 필터 (close === true)
+            const activeMaps = mapSkills.filter((m) => !m.close);
+            return (
+              <div className="space-y-2">
+                {activeMaps.map((m, i) => {
                   const mapName = m.map_name || `맵 ${i + 1}`;
                   const mapImg = m.map_img || null;
                   const level = m.map_level || 0;
                   const proficiency = m.workmanship || "";
-                  const proficiencyRate = m.workmanship_rate || "";
-                  const killRate = m.kill_rate || "";
+                  const proficiencyRate = parseFloat(m.workmanship_rate || "0");
+                  const killRate = parseFloat(m.kill_rate || "0");
 
                   return (
-                    <div key={mapName + i} className="bg-card p-3 flex flex-col">
-                      {mapImg && (
-                        <div className="relative rounded-lg overflow-hidden mb-2 aspect-[16/9] bg-toss-gray-100 dark:bg-toss-gray-800">
-                          <img src={mapImg} alt={mapName} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                          <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-white drop-shadow-sm truncate">{mapName}</span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/40 backdrop-blur-sm text-white font-bold shrink-0">Lv.{level}</span>
+                    <div key={mapName + i} className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
+                      <div className="flex">
+                        {/* 맵 썸네일 */}
+                        {mapImg && (
+                          <div className="relative w-28 sm:w-36 shrink-0">
+                            <img src={mapImg} alt={mapName} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        {/* 정보 */}
+                        <div className="flex-1 p-3.5 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-[14px] font-bold text-foreground truncate">{mapName}</h3>
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">Lv.{level}</span>
+                          </div>
+                          {/* 숙련도 바 */}
+                          <div className="mb-2.5">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[11px] text-toss-gray-500">숙련도</span>
+                              <span className="text-[11px] font-semibold text-toss-green tabular-nums">{proficiencyRate.toFixed(1)}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+                              <div className="h-full rounded-full bg-toss-green transition-all duration-500" style={{ width: `${Math.min(proficiencyRate, 100)}%` }} />
+                            </div>
+                          </div>
+                          {/* 스탯 */}
+                          <div className="flex items-center gap-4 text-[11px]">
+                            <span className="text-toss-gray-500"><span className={`font-semibold ${killRate >= 55 ? "text-toss-green" : killRate >= 45 ? "text-foreground" : "text-toss-red"}`}>{killRate.toFixed(1)}%</span> K/D</span>
+                            {proficiency && <span className="text-toss-gray-400 tabular-nums">{proficiency}P</span>}
+                            {m.map_mode && <span className="text-toss-gray-400">{m.map_mode}</span>}
                           </div>
                         </div>
-                      )}
-                      {!mapImg && (
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[12px] font-semibold text-foreground truncate">{mapName}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold shrink-0">Lv.{level}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between text-[11px]">
-                        {proficiencyRate && <span className="font-bold text-toss-green tabular-nums">{proficiencyRate}%</span>}
-                        {killRate && <span className="text-toss-gray-400 tabular-nums">K/D {killRate}%</span>}
                       </div>
-                      {proficiency && <p className="text-[10px] text-toss-gray-400 mt-0.5 tabular-nums">{proficiency}</p>}
                     </div>
                   );
                 })}
+                <p className="text-[11px] text-toss-gray-400 text-center pt-2">{activeMaps.length}개 맵</p>
               </div>
-            </div>
-          ) : (
+            );
+          })() : (
             <div className="text-center py-12"><p className="text-[13px] text-toss-gray-400">맵 숙련도 데이터를 불러오는 중...</p></div>
           )}
         </div>
@@ -950,20 +988,15 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
                                         const res = await fetch(`/api/search?q=${encodeURIComponent(p.user_name)}`);
                                         const data = await res.json();
                                         const found = data.barracksUsers?.[0];
-                                        if (found?.nexonSn) {
-                                          // SALog 유저 상세 프로필로 이동
-                                          const ouidRes = await fetch(`/api/sa/search?user_name=${encodeURIComponent(p.user_name)}`);
-                                          const ouidData = await ouidRes.json();
-                                          if (ouidData.ouid) {
-                                            window.location.href = `/search/player?ouid=${ouidData.ouid}&name=${encodeURIComponent(p.user_name)}&nexonSn=${found.nexonSn}`;
-                                          } else {
-                                            window.location.href = `/search/player?ouid=&name=${encodeURIComponent(p.user_name)}&nexonSn=${found.nexonSn}`;
-                                          }
-                                        } else {
-                                          window.location.href = `/search?q=${encodeURIComponent(p.user_name)}`;
-                                        }
+                                        // SALog 유저 상세 프로필로 이동
+                                        const ouidRes = await fetch(`/api/sa/search?q=${encodeURIComponent(p.user_name)}`);
+                                        const ouidData = await ouidRes.json();
+                                        const params = new URLSearchParams({ name: p.user_name });
+                                        if (ouidData.ouid) params.set("ouid", ouidData.ouid);
+                                        if (found?.nexonSn) params.set("nexonSn", found.nexonSn);
+                                        window.location.href = `/search/player?${params}`;
                                       } catch {
-                                        window.location.href = `/search?q=${encodeURIComponent(p.user_name)}`;
+                                        window.location.href = `/search/player?name=${encodeURIComponent(p.user_name)}`;
                                       }
                                       btn.textContent = original;
                                     }}
@@ -1034,15 +1067,18 @@ function buildSeasonList(): SeasonOption[] {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const seasons: SeasonOption[] = [];
+  const START_YEAR = 2019;
 
-  // 현재 연도 (서든어택은 보통 2개월 단위 시즌)
+  // 현재 연도
   const maxSeason = Math.ceil(currentMonth / 2);
   for (let s = maxSeason; s >= 1; s--) {
     seasons.push({ id: makeSeasonId(currentYear, s), label: `${currentYear}년 시즌${s}` });
   }
-  // 작년
-  for (let s = 6; s >= 1; s--) {
-    seasons.push({ id: makeSeasonId(currentYear - 1, s), label: `${currentYear - 1}년 시즌${s}` });
+  // 과거 연도 (작년 ~ 2019년)
+  for (let y = currentYear - 1; y >= START_YEAR; y--) {
+    for (let s = 6; s >= 1; s--) {
+      seasons.push({ id: makeSeasonId(y, s), label: `${y}년 시즌${s}` });
+    }
   }
   return seasons;
 }
@@ -1173,7 +1209,6 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
               </div>
               <div className="text-right">
                 {ranking && ranking !== "-" && <p className="text-[13px] font-bold text-foreground tabular-nums">{Number(ranking.replace(/,/g, "")).toLocaleString()}위</p>}
-                {rpRate && <p className="text-[11px] text-toss-gray-400">상위 {parseFloat(rpRate).toFixed(1)}%</p>}
               </div>
             </div>
           )}
