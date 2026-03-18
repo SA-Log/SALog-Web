@@ -266,9 +266,10 @@ function PlayerContent() {
   }, [nexonSn, name]);
 
   // 맵 숙련도 (최근 매치 상세에서 추출)
+  const [mapMatchCount, setMapMatchCount] = useState(0);
   useEffect(() => {
     if (!player?.matches || player.matches.length === 0 || !player.basic) return;
-    const recent = player.matches.slice(0, 15);
+    const recent = player.matches.slice(0, 30);
     fetch("/api/sa/map-stats", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -278,7 +279,7 @@ function PlayerContent() {
       }),
     })
       .then(r => r.json())
-      .then(d => { if (d.maps) setMapStats(d.maps); })
+      .then(d => { if (d.maps) { setMapStats(d.maps); setMapMatchCount(d.matchCount ?? recent.length); } })
       .catch(() => {});
   }, [player]);
 
@@ -309,15 +310,17 @@ function PlayerContent() {
     return meta?.tier.find((t) => t.tier === tierName)?.tier_image;
   }
 
-  // Compute match stats
+  // Compute match stats (최근 50판 기준)
+  const RECENT_LIMIT = 50;
+  const recentMatches = player?.matches?.slice(0, RECENT_LIMIT) ?? [];
   const matchStats = player?.matches
     ? (() => {
-        const total = player.matches.length;
-        const wins = player.matches.filter((m) => m.match_result === "1").length;
-        const totalK = player.matches.reduce((s, m) => s + m.kill, 0);
-        const totalD = player.matches.reduce((s, m) => s + m.death, 0);
-        const totalA = player.matches.reduce((s, m) => s + m.assist, 0);
-        return { total, wins, losses: total - wins, winRate: total > 0 ? Math.round((wins / total) * 100) : 0, totalK, totalD, totalA };
+        const total = recentMatches.length;
+        const wins = recentMatches.filter((m) => m.match_result === "1").length;
+        const totalK = recentMatches.reduce((s, m) => s + m.kill, 0);
+        const totalD = recentMatches.reduce((s, m) => s + m.death, 0);
+        const totalA = recentMatches.reduce((s, m) => s + m.assist, 0);
+        return { total, wins, losses: total - wins, winRate: total > 0 ? Math.round((wins / total) * 100) : 0, totalK, totalD, totalA, allTotal: player.matches.length };
       })()
     : null;
 
@@ -570,66 +573,8 @@ function PlayerContent() {
         </div>
       )}
 
-      {/* ========== 시즌 상세 통계 ========== */}
-      {seasonRecord && (seasonRecord.winRate || seasonRecord.killRate) && (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[15px] font-bold text-foreground">시즌 상세 통계</h2>
-            {seasonRecord.seasonRank && (
-              <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-[11px] font-bold text-primary tabular-nums">
-                시즌 랭킹 {Number(seasonRecord.seasonRank).toLocaleString()}위
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {seasonRecord.winRate && (
-              <SeasonStatCard
-                label="승률"
-                value={`${parseFloat(seasonRecord.winRate).toFixed(1)}%`}
-                color={parseFloat(seasonRecord.winRate) >= 55 ? "text-toss-green" : parseFloat(seasonRecord.winRate) >= 45 ? "text-foreground" : "text-toss-red"}
-                bar={parseFloat(seasonRecord.winRate)}
-                barColor={parseFloat(seasonRecord.winRate) >= 55 ? "bg-toss-green" : parseFloat(seasonRecord.winRate) >= 45 ? "bg-primary" : "bg-toss-red"}
-              />
-            )}
-            {seasonRecord.killRate && (
-              <SeasonStatCard
-                label="K/D 비율"
-                value={`${(parseFloat(seasonRecord.killRate) / 100).toFixed(2)}`}
-                color={parseFloat(seasonRecord.killRate) >= 150 ? "text-toss-green" : parseFloat(seasonRecord.killRate) >= 100 ? "text-foreground" : "text-toss-red"}
-                bar={Math.min(parseFloat(seasonRecord.killRate) / 2, 100)}
-                barColor={parseFloat(seasonRecord.killRate) >= 150 ? "bg-toss-green" : parseFloat(seasonRecord.killRate) >= 100 ? "bg-primary" : "bg-toss-red"}
-              />
-            )}
-            {seasonRecord.headshotRate && (
-              <SeasonStatCard
-                label="헤드샷 비율"
-                value={`${parseFloat(seasonRecord.headshotRate).toFixed(1)}%`}
-                color={parseFloat(seasonRecord.headshotRate) >= 40 ? "text-toss-green" : "text-foreground"}
-                bar={parseFloat(seasonRecord.headshotRate)}
-                barColor={parseFloat(seasonRecord.headshotRate) >= 40 ? "bg-toss-green" : "bg-primary"}
-              />
-            )}
-            {seasonRecord.damageAvg && (
-              <SeasonStatCard
-                label="평균 데미지"
-                value={parseFloat(seasonRecord.damageAvg).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                color="text-foreground"
-                bar={Math.min(parseFloat(seasonRecord.damageAvg) / 500 * 100, 100)}
-                barColor="bg-primary"
-              />
-            )}
-            {seasonRecord.saveRate && (
-              <SeasonStatCard
-                label="세이브율"
-                value={`${parseFloat(seasonRecord.saveRate).toFixed(1)}%`}
-                color={parseFloat(seasonRecord.saveRate) >= 15 ? "text-toss-green" : "text-foreground"}
-                bar={Math.min(parseFloat(seasonRecord.saveRate) * 2, 100)}
-                barColor={parseFloat(seasonRecord.saveRate) >= 15 ? "bg-toss-green" : "bg-primary"}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {/* ========== 랭크 시즌 상세 통계 ========== */}
+      {nexonSn && <RankSeasonStats nexonSn={nexonSn} fallback={seasonRecord} />}
 
       {/* ========== SALog 연동 ========== */}
       {salog && (() => {
@@ -717,7 +662,10 @@ function PlayerContent() {
         <div className="space-y-4">
           {/* Match summary */}
           <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
-            <h2 className="text-[14px] font-semibold text-foreground mb-4">최근 전적 요약</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[14px] font-semibold text-foreground">최근 전적 요약</h2>
+              <span className="text-[11px] text-toss-gray-400">최근 {matchStats.total}판{matchStats.allTotal > RECENT_LIMIT ? ` / 전체 ${matchStats.allTotal}판` : ""}</span>
+            </div>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-[24px] font-bold text-foreground">{matchStats.total}</p>
@@ -768,7 +716,10 @@ function PlayerContent() {
           {/* 맵 숙련도 TOP 3 */}
           {mapStats && mapStats.length > 0 && (
             <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
-              <h2 className="text-[14px] font-semibold text-foreground mb-4">맵 숙련도</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[14px] font-semibold text-foreground">맵 숙련도</h2>
+                <span className="text-[11px] text-toss-gray-400">최근 {mapMatchCount}판 기준</span>
+              </div>
               <div className="space-y-3">
                 {mapStats.slice(0, 3).map((m, i) => {
                   const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉";
@@ -1089,6 +1040,211 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
         </div>
       )}
 
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseSeasonStats(raw: any): { winRate: string; killRate: string; headshotRate: string; saveRate: string; damageAvg: string; seasonRank: string | null } | null {
+  if (!raw) return null;
+  // 바라크스 API는 다양한 키 패턴 사용 — 유연하게 추출
+  const get = (keys: string[]) => {
+    for (const k of keys) { if (raw[k] !== undefined && raw[k] !== null && raw[k] !== "") return String(raw[k]); }
+    return null;
+  };
+  const winRate = get(["win_rate", "y_total_win_rate", "winRate", "s_win_rate"]);
+  const killRate = get(["kill_rate", "y_total_kill_rate", "killRate", "s_kill_rate", "kill_death_rate"]);
+  if (!winRate && !killRate) return null;
+  return {
+    winRate: winRate ?? "0",
+    killRate: killRate ?? "0",
+    headshotRate: get(["headshot_rate", "y_total_headshot_rate", "headshotRate", "s_headshot_rate"]) ?? "0",
+    saveRate: get(["save_rate", "y_total_save_rate", "saveRate", "s_save_rate"]) ?? "0",
+    damageAvg: get(["damage_avg", "y_total_damage_avg", "damageAvg", "s_damage_avg"]) ?? "0",
+    seasonRank: get(["season_rank", "y_rank_chart_season_rank", "seasonRank", "s_rank"]),
+  };
+}
+
+function RankSeasonStats({ nexonSn, fallback }: { nexonSn: string; fallback: SeasonRecord | null }) {
+  const [seasons, setSeasons] = useState<{ id: string; label: string; solo?: unknown; party?: unknown }[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState(0);
+  const [modeTab, setModeTab] = useState<"solo" | "party">("solo");
+  const [loading, setLoading] = useState(true);
+  const [rawData, setRawData] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const currentYear = new Date().getFullYear();
+
+    // 현재 연도와 작년 데이터 병렬 조회
+    Promise.all([
+      fetch(`/api/sa/rank-record?nexonSn=${nexonSn}&year=${currentYear}`).then(r => r.json()).catch(() => null),
+      fetch(`/api/sa/rank-record?nexonSn=${nexonSn}&year=${currentYear - 1}`).then(r => r.json()).catch(() => null),
+    ]).then(([cur, prev]) => {
+      const allSeasons: { id: string; label: string; solo?: unknown; party?: unknown; record?: unknown }[] = [];
+
+      // 시즌별 데이터 파싱 시도
+      for (const [yearData, year] of [[cur, currentYear], [prev, currentYear - 1]] as [unknown, number][]) {
+        const d = yearData as Record<string, unknown> | null;
+        if (!d || !d.found) continue;
+        setRawData(d);
+
+        // seasonRecords 배열이 있으면 시즌별로 분리
+        const records = (d.seasonRecords as unknown[]) ?? [];
+        if (records.length > 0) {
+          for (const rec of records) {
+            const r = rec as Record<string, unknown>;
+            const sNum = r.season_no || r.seasonNo || r.season;
+            allSeasons.push({
+              id: `${year}-S${sNum}`,
+              label: `${year}년 시즌${sNum}`,
+              solo: r.solo || r.solo_record || r,
+              party: r.party || r.party_record || r,
+            });
+          }
+        } else if (d.recordInfo) {
+          // 통합 레코드만 있는 경우
+          allSeasons.push({
+            id: `${year}`,
+            label: `${year}년 통합`,
+            record: d.recordInfo,
+          });
+        }
+      }
+
+      // fallback: 시즌 데이터가 없으면 통합 기록 사용
+      if (allSeasons.length === 0 && fallback && (fallback.winRate || fallback.killRate)) {
+        allSeasons.push({
+          id: "total",
+          label: `${currentYear}년 통합`,
+          solo: fallback,
+          party: fallback,
+        });
+      }
+
+      setSeasons(allSeasons);
+      setLoading(false);
+    });
+  }, [nexonSn, fallback]);
+
+  if (loading) {
+    return (
+      <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
+        <div className="h-4 w-32 bg-toss-gray-100 dark:bg-toss-gray-800 rounded animate-pulse mb-4" />
+        <div className="grid grid-cols-2 gap-3">
+          {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (seasons.length === 0) return null;
+
+  const current = seasons[selectedSeason];
+  if (!current) return null;
+
+  // 솔로/파티 구분이 있는지 체크
+  const hasModes = !!(current.solo !== current.party && current.solo && current.party);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeData = hasModes ? (modeTab === "solo" ? current.solo : current.party) : (current.solo || current.party || (current as any).record);
+  const stats = parseSeasonStats(activeData);
+
+  // stats가 없으면 fallback 직접 사용
+  const display = stats || (fallback ? {
+    winRate: fallback.winRate ?? "0",
+    killRate: fallback.killRate ?? "0",
+    headshotRate: fallback.headshotRate ?? "0",
+    saveRate: fallback.saveRate ?? "0",
+    damageAvg: fallback.damageAvg ?? "0",
+    seasonRank: fallback.seasonRank,
+  } : null);
+
+  if (!display) return null;
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
+      {/* 헤더: 시즌 선택 + 랭킹 */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-[15px] font-bold text-foreground">랭크 시즌 통계</h2>
+        {display.seasonRank && (
+          <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-[11px] font-bold text-primary tabular-nums">
+            시즌 랭킹 {Number(display.seasonRank).toLocaleString()}위
+          </span>
+        )}
+      </div>
+
+      {/* 시즌 선택 드롭다운 */}
+      {seasons.length > 1 ? (
+        <select
+          value={selectedSeason}
+          onChange={(e) => { setSelectedSeason(Number(e.target.value)); setModeTab("solo"); }}
+          className="w-full h-9 px-3 rounded-lg border border-border bg-secondary text-[13px] text-foreground outline-none focus:ring-2 focus:ring-primary/20 mb-3"
+        >
+          {seasons.map((s, i) => (
+            <option key={s.id} value={i}>{s.label}</option>
+          ))}
+        </select>
+      ) : (
+        <p className="text-[12px] text-toss-gray-400 mb-3">{seasons[0]?.label}</p>
+      )}
+
+      {/* 솔로/파티 탭 */}
+      {hasModes && (
+        <div className="flex gap-1 mb-4 bg-secondary rounded-lg p-0.5">
+          <button onClick={() => setModeTab("solo")}
+            className={`flex-1 py-2 rounded-md text-[12px] font-medium transition-colors ${modeTab === "solo" ? "bg-card text-foreground shadow-sm" : "text-toss-gray-500"}`}>
+            솔로
+          </button>
+          <button onClick={() => setModeTab("party")}
+            className={`flex-1 py-2 rounded-md text-[12px] font-medium transition-colors ${modeTab === "party" ? "bg-card text-foreground shadow-sm" : "text-toss-gray-500"}`}>
+            파티
+          </button>
+        </div>
+      )}
+
+      {/* 통계 카드 */}
+      <div className="grid grid-cols-2 gap-3">
+        <SeasonStatCard
+          label="승률"
+          value={`${parseFloat(display.winRate).toFixed(1)}%`}
+          color={parseFloat(display.winRate) >= 55 ? "text-toss-green" : parseFloat(display.winRate) >= 45 ? "text-foreground" : "text-toss-red"}
+          bar={parseFloat(display.winRate)}
+          barColor={parseFloat(display.winRate) >= 55 ? "bg-toss-green" : parseFloat(display.winRate) >= 45 ? "bg-primary" : "bg-toss-red"}
+        />
+        <SeasonStatCard
+          label="K/D 비율"
+          value={`${(parseFloat(display.killRate) / 100).toFixed(2)}`}
+          color={parseFloat(display.killRate) >= 150 ? "text-toss-green" : parseFloat(display.killRate) >= 100 ? "text-foreground" : "text-toss-red"}
+          bar={Math.min(parseFloat(display.killRate) / 2, 100)}
+          barColor={parseFloat(display.killRate) >= 150 ? "bg-toss-green" : parseFloat(display.killRate) >= 100 ? "bg-primary" : "bg-toss-red"}
+        />
+        <SeasonStatCard
+          label="헤드샷 비율"
+          value={`${parseFloat(display.headshotRate).toFixed(1)}%`}
+          color={parseFloat(display.headshotRate) >= 40 ? "text-toss-green" : "text-foreground"}
+          bar={parseFloat(display.headshotRate)}
+          barColor={parseFloat(display.headshotRate) >= 40 ? "bg-toss-green" : "bg-primary"}
+        />
+        <SeasonStatCard
+          label="평균 데미지"
+          value={parseFloat(display.damageAvg).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          color="text-foreground"
+          bar={Math.min(parseFloat(display.damageAvg) / 500 * 100, 100)}
+          barColor="bg-primary"
+        />
+        <SeasonStatCard
+          label="세이브율"
+          value={`${parseFloat(display.saveRate).toFixed(1)}%`}
+          color={parseFloat(display.saveRate) >= 15 ? "text-toss-green" : "text-foreground"}
+          bar={Math.min(parseFloat(display.saveRate) * 2, 100)}
+          barColor={parseFloat(display.saveRate) >= 15 ? "bg-toss-green" : "bg-primary"}
+        />
+      </div>
+
+      {/* 디버그: API가 예상과 다른 구조일 경우 rawData 확인용 (개발 중에만) */}
+      {rawData && seasons.length <= 1 && !stats && (
+        <p className="text-[10px] text-toss-gray-300 mt-3 break-all">rawKeys: {(rawData.rawKeys as string[])?.join(", ")}</p>
+      )}
     </div>
   );
 }
