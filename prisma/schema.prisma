@@ -209,15 +209,18 @@ model CrawlStatus {
 
 model Vote {
   id           String     @id @default(cuid())
-  hackReportId String
+  hackReportId String?
+  mannerTagId  String?
   userId       String
   voteType     VoteType
   createdAt    DateTime   @default(now())
 
-  hackReport   HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id])
+  hackReport   HackReport? @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+  mannerTag    MannerTag?  @relation(fields: [mannerTagId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id])
 
   @@unique([hackReportId, userId])
+  @@unique([mannerTagId, userId])
   @@map("votes")
 }
 
@@ -279,6 +282,7 @@ model MannerTag {
   createdAt       DateTime      @default(now())
 
   reporter User      @relation(fields: [reporterId], references: [id])
+  votes    Vote[]
   comments Comment[]
 
   @@index([barracksAddress])
