@@ -4,74 +4,100 @@ import { prisma } from "@/lib/prisma";
 
 const CRAWLER_URL = process.env.CRAWLER_URL ?? "http://localhost:3001";
 const CRAWLER_API_KEY = process.env.CRAWLER_API_KEY ?? "";
+const crawlerHeaders = { "x-api-key": CRAWLER_API_KEY };
 
-// 플레이 스타일 분류
-function classifyPlayStyle(stats: {
-  killPerRound: number;
-  deathPerRound: number;
-  assistPerRound: number;
-  savePerRound: number;
-  missionPerRound: number;
-  headshotRate: number;
-}): { style: string; label: string; description: string } {
-  const { killPerRound, deathPerRound, assistPerRound, savePerRound, missionPerRound } = stats;
-
-  const scores = [
-    { style: "killer", label: "학살자", description: "킬 수가 압도적으로 높은 공격형 플레이어", score: killPerRound },
-    { style: "death", label: "데스왕", description: "적극적으로 교전에 임하는 돌격형 플레이어", score: deathPerRound },
-    { style: "assist", label: "도움왕", description: "팀원의 킬을 돕는 기여형 플레이어", score: assistPerRound },
-    { style: "save", label: "수호자", description: "팀원을 구하는 수비형 플레이어", score: savePerRound },
-    { style: "mission", label: "폭발물 처리반", description: "미션 수행에 집중하는 전략형 플레이어", score: missionPerRound },
-  ];
-
-  // 표준편차 기반 — 모든 스탯이 비슷하면 만능형
-  const values = scores.map(s => s.score);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const stdDev = Math.sqrt(values.reduce((a, b) => a + (b - avg) ** 2, 0) / values.length);
-
-  if (stdDev < avg * 0.3 && avg > 0) {
-    return { style: "balanced", label: "만능형", description: "모든 면에서 균형 잡힌 올라운드 플레이어" };
-  }
-
-  const top = scores.sort((a, b) => b.score - a.score)[0];
-  return top;
+async function crawlerFetch(path: string) {
+  try {
+    const res = await fetch(`${CRAWLER_URL}${path}`, { headers: crawlerHeaders });
+    const data = await res.json();
+    return data?.found ? data : null;
+  } catch { return null; }
 }
 
-// 환산 스탯 계산 (0~100)
-function calculateCombatPower(stats: {
-  killPerRound: number;
-  deathPerRound: number;
-  headshotRate: number;
-  assistPerRound: number;
-  savePerRound: number;
-  damagePerDeath: number;
-  winRate: number;
-}): {
-  total: number;
-  breakdown: { label: string; value: number; max: number }[];
-} {
-  const kill = Math.min(stats.killPerRound * 30, 30);
-  const survive = Math.min((1 - Math.min(stats.deathPerRound, 1)) * 15, 15);
-  const precision = Math.min(stats.headshotRate * 15, 15);
-  const contribution = Math.min((stats.assistPerRound + stats.savePerRound) * 15, 15);
-  const damage = Math.min((stats.damagePerDeath / 500) * 15, 15);
-  const win = Math.min(stats.winRate * 10, 10);
+// ─── 티어 점수 매핑 (25점 만점) ───
+const TIER_SCORES: Record<string, number> = {
+  "에이스": 25, "다이아몬드": 22, "플래티넘": 18,
+  "골드": 14, "실버": 10, "브론즈": 6, "아이언": 3,
+};
 
-  const total = Math.round(kill + survive + precision + contribution + damage + win);
+function getTierScore(tierName: string): number {
+  if (!tierName) return 0;
+  for (const [key, score] of Object.entries(TIER_SCORES)) {
+    if (tierName.includes(key)) return score;
+  }
+  return 0;
+}
+
+// ─── 전투력 계산 v2 (100점 만점) ───
+function calculateCombatPowerV2(params: {
+  tierName: string;
+  tierScore: number;
+  winRate: number;       // 0~100
+  kdRate: number;        // 실수 (1.5 = 1.5 K/D)
+  topPercent: number;    // 0~100 (상위 %)
+  avgMapLevel: number;   // 맵 숙련도 평균 레벨
+  hackReportCount: number;
+  blacklistCount: number;
+}): { total: number; breakdown: { label: string; value: number; max: number; desc: string }[] } {
+  const { tierName, winRate, kdRate, topPercent, avgMapLevel, hackReportCount, blacklistCount } = params;
+
+  // 1. 티어 (25점)
+  const tier = getTierScore(tierName);
+
+  // 2. 승률 (20점) — 50% 기준, 70%면 만점
+  const win = Math.min(Math.max((winRate - 30) / 40, 0) * 20, 20);
+
+  // 3. K/D (20점) — 1.0 기준, 2.5면 만점
+  const kd = Math.min(Math.max((kdRate - 0.5) / 2.0, 0) * 20, 20);
+
+  // 4. 상위 % (15점) — 1%면 만점, 50%면 0점
+  const rank = topPercent > 0 && topPercent <= 100
+    ? Math.min(Math.max((100 - topPercent) / 100, 0) * 15, 15)
+    : 0;
+
+  // 5. 맵 숙련도 (10점) — 평균 레벨 기반
+  const mapSkill = Math.min(avgMapLevel / 10 * 10, 10);
+
+  // 6. 커뮤니티 평판 (10점) — 감점 방식
+  let reputation = 10;
+  if (hackReportCount > 0) reputation -= Math.min(hackReportCount * 2, 5);
+  if (blacklistCount > 0) reputation -= Math.min(blacklistCount, 5);
+  reputation = Math.max(reputation, 0);
+
+  const total = Math.round(Math.min(tier + win + kd + rank + mapSkill + reputation, 100));
 
   return {
-    total: Math.min(total, 100),
+    total,
     breakdown: [
-      { label: "킬", value: Math.round(kill), max: 30 },
-      { label: "생존", value: Math.round(survive), max: 15 },
-      { label: "정밀", value: Math.round(precision), max: 15 },
-      { label: "기여", value: Math.round(contribution), max: 15 },
-      { label: "대미지", value: Math.round(damage), max: 15 },
-      { label: "승률", value: Math.round(win), max: 10 },
+      { label: "티어", value: Math.round(tier), max: 25, desc: tierName || "미배치" },
+      { label: "승률", value: Math.round(win), max: 20, desc: winRate > 0 ? `${winRate.toFixed(1)}%` : "-" },
+      { label: "K/D", value: Math.round(kd), max: 20, desc: kdRate > 0 ? `${kdRate.toFixed(2)}` : "-" },
+      { label: "랭킹", value: Math.round(rank), max: 15, desc: topPercent > 0 ? `상위 ${topPercent.toFixed(1)}%` : "-" },
+      { label: "맵 숙련", value: Math.round(mapSkill), max: 10, desc: avgMapLevel > 0 ? `평균 Lv.${avgMapLevel.toFixed(0)}` : "-" },
+      { label: "평판", value: Math.round(reputation), max: 10, desc: hackReportCount === 0 && blacklistCount === 0 ? "클린" : `신고 ${hackReportCount}건` },
     ],
   };
 }
 
+// ─── 플레이 스타일 ───
+function classifyPlayStyle(params: {
+  winRate: number;
+  kdRate: number;
+  avgDamage: number;
+  topPercent: number;
+}): { style: string; label: string; icon: string; description: string } {
+  const { winRate, kdRate, avgDamage, topPercent } = params;
+
+  if (topPercent > 0 && topPercent <= 5) return { style: "pro", label: "프로급", icon: "👑", description: "최상위 랭커" };
+  if (kdRate >= 2.0 && avgDamage >= 300) return { style: "killer", label: "학살자", icon: "🎯", description: "높은 K/D와 화력의 공격형" };
+  if (winRate >= 60 && kdRate >= 1.5) return { style: "winner", label: "승리 메이커", icon: "🏆", description: "높은 승률의 캐리형" };
+  if (kdRate >= 1.5) return { style: "fighter", label: "전투형", icon: "⚔️", description: "킬 능력이 뛰어난 전투형" };
+  if (winRate >= 55) return { style: "teamplay", label: "팀플레이어", icon: "🤝", description: "팀 기여도가 높은 협력형" };
+  if (avgDamage >= 250) return { style: "damage", label: "딜러", icon: "💥", description: "높은 화력의 데미지 딜러" };
+  return { style: "balanced", label: "균형형", icon: "⭐", description: "안정적인 올라운드 플레이어" };
+}
+
+// ─── 메인 핸들러 ───
 export async function GET(req: NextRequest) {
   const nexonSn = req.nextUrl.searchParams.get("nexonSn");
   if (!nexonSn) {
@@ -85,115 +111,104 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 크롤링 서버에서 프로필 조회 (matches 엔드포인트 → profile fallback)
-    let profile;
-    try {
-      const matchesRes = await fetch(`${CRAWLER_URL}/api/barracks/matches?nexonSn=${nexonSn}`, {
-        headers: { "x-api-key": CRAWLER_API_KEY },
-      });
-      profile = await matchesRes.json();
-    } catch { profile = null; }
+    // 최신 시즌 ID 계산
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(2);
+    const currentSeason = String(Math.ceil((now.getMonth() + 1) / 2)).padStart(2, "0");
+    const latestSeasonId = `${yy}${currentSeason}`;
 
-    // fallback: 기본 프로필 API
-    if (!profile?.found) {
-      const profileRes = await fetch(`${CRAWLER_URL}/api/barracks/profile?nexonSn=${nexonSn}`, {
-        headers: { "x-api-key": CRAWLER_API_KEY },
-      });
-      const basic = await profileRes.json();
-      if (!basic.found) {
-        return NextResponse.json({ error: "유저를 찾을 수 없습니다" }, { status: 404 });
+    // 병렬로 모든 데이터 수집
+    const [
+      profileData,
+      soloRankData,
+      partyRankData,
+      mapSkillData,
+      blacklistCount,
+      hackReportCount,
+    ] = await Promise.all([
+      // 1. 프로필 기본
+      crawlerFetch(`/api/barracks/profile?nexonSn=${nexonSn}`),
+      // 2. 솔로 랭크 (최신 시즌)
+      crawlerFetch(`/api/barracks/season-rank?nexonSn=${nexonSn}&seasonId=${latestSeasonId}&mode=RANK_S`),
+      // 3. 파티 랭크 (최신 시즌)
+      crawlerFetch(`/api/barracks/season-rank?nexonSn=${nexonSn}&seasonId=${latestSeasonId}&mode=RANK`),
+      // 4. 맵 숙련도
+      crawlerFetch(`/api/barracks/map-skill?nexonSn=${nexonSn}`),
+      // 5. 블랙리스트
+      prisma.blacklistEntry.count({ where: { barracksAddress: nexonSn } }),
+      // 6. 핵 신고
+      prisma.hackReport.count({ where: { barracksAddress: nexonSn } }),
+    ]);
+
+    // 솔로 우선, 없으면 파티 데이터 사용
+    const rankData = soloRankData?.data || partyRankData?.data || null;
+    const rankMode = soloRankData?.data ? "solo" : partyRankData?.data ? "party" : null;
+
+    // 랭크 데이터에서 값 추출 (키 이름 유연 처리)
+    const getVal = (obj: Record<string, unknown> | null, ...keys: string[]): string => {
+      if (!obj) return "";
+      for (const k of keys) {
+        const v = obj[k];
+        if (v !== undefined && v !== null && v !== "") return String(v);
       }
-      profile = {
-        found: true,
-        nickname: basic.nickname,
-        nexonSn: basic.nexonSn,
-        level: basic.level ?? 0,
-        seasonLevel: 0,
-        clanName: basic.clanName,
-        rankNo: "-",
-        rankPer: "-",
-        totalRankNo: "-",
-        totalSp: "-",
-        userImg: basic.userImg,
-        userIntro: basic.userIntro ?? "",
-        battleInfo: null,
-      };
-    }
-
-    // 블랙리스트 공유 네트워크 — 이 유저를 몇 명이 블랙리스트에 등록했는지
-    const blacklistCount = await prisma.blacklistEntry.count({
-      where: { barracksAddress: nexonSn },
-    });
-
-    // SALog 핵 신고 수
-    const hackReportCount = await prisma.hackReport.count({
-      where: { barracksAddress: nexonSn },
-    });
-
-    // 시즌 레코드에서 상세 통계 조회 시도
-    let seasonRecord = null;
-    try {
-      const srRes = await fetch(`${CRAWLER_URL}/api/barracks/season-record?nexonSn=${nexonSn}`, {
-        headers: { "x-api-key": CRAWLER_API_KEY },
-      });
-      const srData = await srRes.json();
-      if (srData.found && srData.record) seasonRecord = srData.record;
-    } catch { /* fallback to battleInfo */ }
-
-    // 기본 battleInfo에서 통계 추출
-    const bi = profile.battleInfo;
-    const sr = seasonRecord;
-
-    // 시즌 레코드가 있으면 정밀 통계, 없으면 battleInfo 추정치
-    const winRate = sr ? parseFloat(sr.y_total_win_rate || "0") / 100 : (bi ? parseFloat(bi.win_per) / 100 : 0);
-    const kdRate = sr ? parseFloat(sr.y_total_kill_rate || "0") / 100 : (bi ? parseFloat(bi.kill_death_per) / 100 : 0);
-    const headshotRate = sr ? parseFloat(sr.y_total_headshot_rate || "0") / 100 : 0.25;
-    const saveRate = sr ? parseFloat(sr.y_total_save_rate || "0") / 100 : 0.1;
-    const damageAvg = sr ? parseFloat(sr.y_total_damage_avg || "0") : (kdRate * 300);
-
-    const estimatedStats = {
-      killPerRound: kdRate * 0.8,
-      deathPerRound: 0.8 / (kdRate || 1),
-      headshotRate,
-      assistPerRound: 0.3,
-      savePerRound: saveRate,
-      missionPerRound: 0.1,
-      damagePerDeath: damageAvg,
-      winRate,
+      return "";
     };
 
-    const combatPower = calculateCombatPower(estimatedStats);
-    const playStyle = classifyPlayStyle(estimatedStats);
+    const tierName = getVal(rankData, "tier_name", "tierName", "rank_tier", "season_grade", "tier");
+    const tierScoreRaw = getVal(rankData, "tier_score", "tierScore", "rank_point", "rp", "score", "point");
+    const winRateRaw = getVal(rankData, "win_rate", "winRate", "win_per");
+    const kdRateRaw = getVal(rankData, "kill_death_rate", "kd_rate", "killDeathRate", "kill_death_per");
+    const avgDamageRaw = getVal(rankData, "avg_damage", "damage_avg", "avgDamage", "damage_per_death");
+    const rpRateRaw = getVal(rankData, "rp_rate", "rpRate", "rank_per", "rankPer", "top_rate", "top_per");
+
+    const winRate = parseFloat(winRateRaw) || 0;
+    let kdRate = parseFloat(kdRateRaw) || 0;
+    if (kdRate > 10) kdRate = kdRate / 100; // 퍼센트 형식이면 변환
+    const avgDamage = parseFloat(avgDamageRaw) || 0;
+    const topPercent = parseFloat(rpRateRaw) || 0;
+    const tierScore = parseFloat(tierScoreRaw) || 0;
+
+    // 맵 숙련도 평균 레벨
+    let avgMapLevel = 0;
+    if (mapSkillData?.data) {
+      const maps = Array.isArray(mapSkillData.data) ? mapSkillData.data : (mapSkillData.data.mapList || mapSkillData.data.maps || mapSkillData.data.list || []);
+      if (maps.length > 0) {
+        const levels = maps.slice(0, 5).map((m: Record<string, unknown>) => {
+          const lv = parseFloat(String(m.level || m.map_level || m.skill_level || "0"));
+          return isNaN(lv) ? 0 : lv;
+        });
+        avgMapLevel = levels.reduce((a: number, b: number) => a + b, 0) / levels.length;
+      }
+    }
+
+    // 전투력 계산
+    const combatPower = calculateCombatPowerV2({
+      tierName,
+      tierScore,
+      winRate,
+      kdRate,
+      topPercent,
+      avgMapLevel,
+      hackReportCount,
+      blacklistCount,
+    });
+
+    const playStyle = classifyPlayStyle({ winRate, kdRate, avgDamage, topPercent });
 
     return NextResponse.json({
-      profile: {
-        nickname: profile.nickname,
-        nexonSn: profile.nexonSn,
-        level: profile.level,
-        seasonLevel: profile.seasonLevel,
-        clanName: profile.clanName,
-        rankNo: profile.rankNo,
-        rankPer: profile.rankPer,
-        totalRankNo: profile.totalRankNo,
-        totalSp: profile.totalSp,
-        userImg: profile.userImg,
-        userIntro: profile.userIntro,
-        battleInfo: profile.battleInfo,
-      },
+      profile: profileData ? {
+        nickname: profileData.nickname,
+        nexonSn: profileData.nexonSn,
+        level: profileData.level,
+        clanName: profileData.clanName,
+        userImg: profileData.userImg,
+        userIntro: profileData.userIntro,
+      } : null,
       combatPower,
       playStyle,
-      seasonRecord: seasonRecord ? {
-        winRate: sr ? sr.y_total_win_rate : null,
-        killRate: sr ? sr.y_total_kill_rate : null,
-        headshotRate: sr ? sr.y_total_headshot_rate : null,
-        saveRate: sr ? sr.y_total_save_rate : null,
-        damageAvg: sr ? sr.y_total_damage_avg : null,
-        seasonRank: sr ? sr.y_rank_chart_season_rank : null,
-      } : null,
-      community: {
-        blacklistCount,
-        hackReportCount,
-      },
+      rankMode,
+      latestSeasonId,
+      community: { blacklistCount, hackReportCount },
     });
   } catch (err) {
     console.error("[sa/stats] 에러:", err);

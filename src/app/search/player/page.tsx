@@ -140,6 +140,8 @@ export default function PlayerPage() {
   );
 }
 
+type SalogCombatPower = { total: number; breakdown: { label: string; value: number; max: number; desc: string }[] };
+type SalogPlayStyle = { style: string; label: string; icon: string; description: string };
 type SalogCommunity = { blacklistCount: number; hackReportCount: number; hackReports: { id: string; nickname: string; status: string; createdAt: string }[]; mannerReports: { id: string; nickname: string; tagType: string; tagTypes: string[]; status?: string; createdAt: string }[] };
 
 function PlayerContent() {
@@ -151,6 +153,8 @@ function PlayerContent() {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [meta, setMeta] = useState<MetaData | null>(null);
   const [salog, setSalog] = useState<SalogCommunity | null>(null);
+  const [serverCombatPower, setServerCombatPower] = useState<SalogCombatPower | null>(null);
+  const [serverPlayStyle, setServerPlayStyle] = useState<SalogPlayStyle | null>(null);
   const [barracksProfile, setBarracksProfile] = useState<{ userImg: string | null; userIntro: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -230,12 +234,13 @@ function PlayerContent() {
           mannerReports = data.mannerReports ?? [];
         } catch {}
 
-        // 블랙리스트 카운트 + 시즌 레코드
+        // SALog 전투력 + 커뮤니티 데이터
         try {
           const res = await fetch(`/api/sa/stats?nexonSn=${nexonSn}`);
           const data = await res.json();
           blacklistCount = data.community?.blacklistCount ?? 0;
-          // seasonRecord는 sa/stats API 내부에서 전투력 계산에 사용
+          if (data.combatPower) setServerCombatPower(data.combatPower);
+          if (data.playStyle) setServerPlayStyle(data.playStyle);
         } catch {}
       }
 
@@ -527,47 +532,54 @@ function PlayerContent() {
         </div>
       )}
 
-      {/* ========== SALog 전투력 + 플레이 스타일 ========== */}
-      {combatPower && playStyle && (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-[15px] font-bold text-foreground">SALog 전투력</h2>
-              <span className="px-2.5 py-1 rounded-xl bg-primary/10 text-[12px] font-bold text-primary">
-                {playStyle.icon} {playStyle.label}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[28px] font-bold text-primary tabular-nums">{combatPower.total}</span>
-              <div className="text-right">
-                <span className={`text-[12px] font-bold ${combatPower.total >= 70 ? "text-toss-green" : combatPower.total >= 50 ? "text-primary" : combatPower.total >= 30 ? "text-amber-500" : "text-toss-gray-400"}`}>
-                  {combatPower.total >= 70 ? "상위" : combatPower.total >= 50 ? "평균 이상" : combatPower.total >= 30 ? "평균" : "평균 이하"}
+      {/* ========== SALog 전투력 v2 ========== */}
+      {(() => {
+        const cp = serverCombatPower || combatPower;
+        const ps = serverPlayStyle || playStyle;
+        if (!cp || !ps) return null;
+        return (
+          <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-[15px] font-bold text-foreground">SALog 전투력</h2>
+                <span className="px-2.5 py-1 rounded-xl bg-primary/10 text-[12px] font-bold text-primary">
+                  {ps.icon} {ps.label}
                 </span>
-                <p className="text-[10px] text-toss-gray-400">/100점</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[28px] font-bold text-primary tabular-nums">{cp.total}</span>
+                <div className="text-right">
+                  <span className={`text-[12px] font-bold ${cp.total >= 70 ? "text-toss-green" : cp.total >= 50 ? "text-primary" : cp.total >= 30 ? "text-amber-500" : "text-toss-gray-400"}`}>
+                    {cp.total >= 70 ? "상위" : cp.total >= 50 ? "평균 이상" : cp.total >= 30 ? "평균" : "평균 이하"}
+                  </span>
+                  <p className="text-[10px] text-toss-gray-400">/100점</p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="space-y-3">
-            {combatPower.breakdown.map((b: { label: string; value: number; max: number; desc: string }) => {
-              const pct = b.max > 0 ? (b.value / b.max) * 100 : 0;
-              return (
-                <div key={b.label}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[12px] font-medium text-foreground">{b.label}</span>
-                    <span className="text-[11px] text-toss-gray-400">{b.desc}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
+            {serverPlayStyle?.description && <p className="text-[12px] text-toss-gray-500 mb-4">{serverPlayStyle.description}</p>}
+            <div className="space-y-3">
+              {cp.breakdown.map((b: { label: string; value: number; max: number; desc?: string }) => {
+                const pct = b.max > 0 ? (b.value / b.max) * 100 : 0;
+                return (
+                  <div key={b.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[12px] font-medium text-foreground">{b.label}</span>
+                      <div className="flex items-center gap-2">
+                        {b.desc && <span className="text-[11px] text-toss-gray-400">{b.desc}</span>}
+                        <span className="text-[11px] font-bold text-foreground tabular-nums">{b.value}/{b.max}</span>
+                      </div>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
                       <div className={`h-full rounded-full transition-all duration-700 ${pct >= 70 ? "bg-toss-green" : pct >= 40 ? "bg-primary" : "bg-toss-gray-400"}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[12px] font-bold text-foreground w-6 tabular-nums text-right">{b.value}</span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            {serverCombatPower && <p className="text-[10px] text-toss-gray-300 mt-3 text-right">바라크스 랭크 데이터 기반</p>}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========== 랭크 시즌 상세 통계 ========== */}
       {nexonSn && <RankSeasonStats nexonSn={nexonSn} />}
