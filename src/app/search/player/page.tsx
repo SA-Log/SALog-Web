@@ -160,7 +160,8 @@ function PlayerContent() {
   const [activeTab, setActiveTab] = useState<"overview" | "matches">("overview");
   const [matchPage, setMatchPage] = useState(1);
   const [copied, setCopied] = useState(false);
-  const [mapStats, setMapStats] = useState<{ name: string; total: number; wins: number; winRate: number; avgKills: number; kd: number }[] | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [mapSkills, setMapSkills] = useState<any[] | null>(null);
   const MATCHES_PER_PAGE = 20;
 
   useEffect(() => {
@@ -263,23 +264,20 @@ function PlayerContent() {
     loadSalog();
   }, [nexonSn, name]);
 
-  // 맵 숙련도 (최근 매치 상세에서 추출)
-  const [mapMatchCount, setMapMatchCount] = useState(0);
+  // 맵 숙련도 (바라크스 Maps/GetMapSkillLevel API)
   useEffect(() => {
-    if (!player?.matches || player.matches.length === 0 || !player.basic) return;
-    const recent = player.matches.slice(0, 30);
-    fetch("/api/sa/map-stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        matches: recent.map(m => ({ match_id: m.match_id, match_mode: m.match_mode })),
-        playerName: player.basic.user_name,
-      }),
-    })
+    if (!nexonSn) return;
+    fetch(`/api/sa/map-skill?nexonSn=${nexonSn}`)
       .then(r => r.json())
-      .then(d => { if (d.maps) { setMapStats(d.maps); setMapMatchCount(d.matchCount ?? recent.length); } })
+      .then(d => {
+        if (d.found && d.data) {
+          // data가 배열이면 그대로, 아니면 내부 배열 탐색
+          const list = Array.isArray(d.data) ? d.data : (d.data.mapList || d.data.maps || d.data.list || []);
+          setMapSkills(list);
+        }
+      })
       .catch(() => {});
-  }, [player]);
+  }, [nexonSn]);
 
   const loadMatchDetail = useCallback(async (matchId: string, matchMode: string) => {
     if (matchDetails[matchId]) {
@@ -711,46 +709,59 @@ function PlayerContent() {
             </div>
           </div>
 
-          {/* 맵 숙련도 TOP 3 */}
-          {mapStats && mapStats.length > 0 && (
+          {/* 맵 숙련도 (바라크스 API) */}
+          {mapSkills && mapSkills.length > 0 && (
             <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[14px] font-semibold text-foreground">맵 숙련도</h2>
-                <span className="text-[11px] text-toss-gray-400">최근 {mapMatchCount}판 기준</span>
-              </div>
+              <h2 className="text-[14px] font-semibold text-foreground mb-4">맵 숙련도</h2>
               <div className="space-y-3">
-                {mapStats.slice(0, 3).map((m, i) => {
-                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉";
+                {mapSkills.slice(0, 5).map((m, i) => {
+                  const mapName = m.map_name || m.mapName || m.name || `맵 ${i + 1}`;
+                  const mapImg = m.map_img || m.mapImg || m.image || null;
+                  const level = m.level || m.map_level || m.skill_level || "";
+                  const proficiency = m.proficiency || m.skill_point || m.point || "";
+                  const winRate = m.win_rate || m.winRate || m.win_per || "";
+                  const kdRate = m.kill_death_rate || m.kd_rate || m.kdRate || m.kill_death_per || "";
+                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
+
                   return (
-                    <div key={m.name} className="flex items-center gap-3">
-                      <span className="text-[16px] w-6 text-center shrink-0">{medal}</span>
+                    <div key={mapName + i} className="flex items-center gap-3">
+                      {mapImg ? (
+                        <img src={mapImg} alt={mapName} className="w-10 h-10 rounded-lg object-cover shrink-0 bg-toss-gray-100 dark:bg-toss-gray-800" />
+                      ) : (
+                        <span className="text-[16px] w-10 text-center shrink-0">{medal || `${i + 1}`}</span>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[13px] font-semibold text-foreground truncate">{m.name}</span>
-                          <span className="text-[11px] text-toss-gray-400 shrink-0 ml-2">{m.total}판</span>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[13px] font-semibold text-foreground truncate">{mapName}</span>
+                            {level && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">Lv.{level}</span>}
+                          </div>
                         </div>
                         <div className="flex items-center gap-3 text-[11px]">
-                          <span className={`font-semibold ${m.winRate >= 60 ? "text-toss-green" : m.winRate >= 40 ? "text-foreground" : "text-toss-red"}`}>
-                            승률 {m.winRate}%
-                          </span>
-                          <span className="text-toss-gray-400">평균 {m.avgKills}킬</span>
-                          <span className="text-toss-gray-400">K/D {m.kd}</span>
-                        </div>
-                        <div className="mt-1.5 h-1.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ${m.winRate >= 60 ? "bg-toss-green" : m.winRate >= 40 ? "bg-primary" : "bg-toss-red"}`}
-                            style={{ width: `${m.winRate}%` }}
-                          />
+                          {proficiency && <span className="text-toss-gray-500 font-medium tabular-nums">{proficiency}</span>}
+                          {winRate && (
+                            <span className={`font-semibold ${parseFloat(winRate) >= 55 ? "text-toss-green" : parseFloat(winRate) >= 45 ? "text-foreground" : "text-toss-red"}`}>
+                              승률 {parseFloat(winRate).toFixed(1)}%
+                            </span>
+                          )}
+                          {kdRate && <span className="text-toss-gray-400">K/D {parseFloat(kdRate) > 10 ? (parseFloat(kdRate) / 100).toFixed(2) : parseFloat(kdRate).toFixed(2)}</span>}
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              {mapStats.length > 3 && (
+              {mapSkills.length > 5 && (
                 <p className="text-[11px] text-toss-gray-400 text-center mt-3">
-                  외 {mapStats.length - 3}개 맵에서 플레이
+                  외 {mapSkills.length - 5}개 맵
                 </p>
+              )}
+              {/* 디버그: API 응답 키 확인 */}
+              {mapSkills.length > 0 && (
+                <details className="mt-2">
+                  <summary className="text-[10px] text-toss-gray-300 cursor-pointer">맵 API 응답</summary>
+                  <pre className="text-[9px] text-toss-gray-300 mt-1 break-all whitespace-pre-wrap max-h-40 overflow-y-auto">{JSON.stringify(mapSkills[0], null, 2)}</pre>
+                </details>
               )}
             </div>
           )}
@@ -1100,7 +1111,13 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
       .then(r => r.json())
       .then(d => {
         if (d.found && d.data) {
-          setData(d.data);
+          // API 응답이 중첩될 수 있음 — 최상위 또는 하위 객체에서 데이터 탐색
+          const raw = d.data;
+          // result가 있으면 그 안의 데이터 사용, 아니면 최상위
+          const resolved = (typeof raw === "object" && raw !== null)
+            ? (raw.recordInfo || raw.rankInfo || raw.seasonInfo || raw)
+            : raw;
+          setData(resolved);
         } else {
           setNoData(true);
         }
@@ -1224,7 +1241,7 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
           </div>
 
           {/* 디버그: 개발 중 API 응답 키 확인 */}
-          {data && process.env.NODE_ENV === "development" && (
+          {data && (
             <details className="mt-2">
               <summary className="text-[10px] text-toss-gray-300 cursor-pointer">API 응답 키</summary>
               <pre className="text-[9px] text-toss-gray-300 mt-1 break-all whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
