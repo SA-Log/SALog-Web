@@ -696,7 +696,6 @@ function PlayerContent() {
                           {/* 스탯 */}
                           <div className="flex items-center gap-4 text-[11px]">
                             <span className="text-toss-gray-500"><span className={`font-semibold ${killRate >= 55 ? "text-toss-green" : killRate >= 45 ? "text-foreground" : "text-toss-red"}`}>{killRate.toFixed(1)}%</span> K/D</span>
-                            {proficiency && <span className="text-toss-gray-400 tabular-nums">{proficiency}P</span>}
                             {m.map_mode && <span className="text-toss-gray-400">{m.map_mode}</span>}
                           </div>
                         </div>
@@ -1123,8 +1122,12 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
           const rpGain = info.y_rank_rp_gain ? parseInt(String(info.y_rank_rp_gain).replace(/,/g, "")) : 0;
           let topPercent = "";
           if (raw.rp_list && Array.isArray(raw.rp_list) && rpGain > 0) {
-            const entry = raw.rp_list.find((r: { lable: string }) => parseInt(String(r.lable).replace(/,/g, "")) === rpGain);
-            if (entry) topPercent = String(entry.rate);
+            // 정확히 일치하는 항목 먼저, 없으면 RP 이하 가장 가까운 항목
+            const sorted = [...raw.rp_list].sort((a: { lable: string }, b: { lable: string }) =>
+              parseInt(String(b.lable).replace(/,/g, "")) - parseInt(String(a.lable).replace(/,/g, ""))
+            );
+            const match = sorted.find((r: { lable: string }) => parseInt(String(r.lable).replace(/,/g, "")) <= rpGain);
+            if (match) topPercent = String(match.rate);
           }
           setData({ ...info, _topPercent: topPercent });
         } else {
@@ -1201,7 +1204,7 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
           {(tierName || tierScore) && (
             <div className="flex items-center justify-between bg-secondary/60 rounded-xl px-4 py-3">
               <div className="flex items-center gap-2.5">
-                {tierImg && <img src={tierImg} alt={tierName} className="w-8 h-8 object-contain" />}
+                {tierImg && <img src={tierImg} alt={tierName} className="w-8 h-8 object-contain" loading="eager" decoding="async" />}
                 <div>
                   {tierName && <p className="text-[15px] font-bold text-foreground">{tierName}</p>}
                   {tierScore && <p className="text-[12px] text-primary font-semibold tabular-nums">{tierScore} RP</p>}
@@ -1217,26 +1220,15 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
           <div className="grid grid-cols-2 gap-3">
             {winRate && (() => {
               const v = parseFloat(winRate);
-              return (
-                <SeasonStatCard label="승률" value={`${v.toFixed(1)}%`}
-                  color={v >= 55 ? "text-toss-green" : v >= 45 ? "text-foreground" : "text-toss-red"}
-                  bar={v} barColor={v >= 55 ? "bg-toss-green" : v >= 45 ? "bg-primary" : "bg-toss-red"} />
-              );
+              return <SeasonStatCard label="승률" value={`${v.toFixed(1)}%`} bar={v} />;
             })()}
             {kdRate && (() => {
               const v = parseFloat(kdRate);
-              return (
-                <SeasonStatCard label="K/D" value={`${v.toFixed(1)}%`}
-                  color={v >= 65 ? "text-toss-green" : v >= 50 ? "text-foreground" : "text-toss-red"}
-                  bar={v} barColor={v >= 65 ? "bg-toss-green" : v >= 50 ? "bg-primary" : "bg-toss-red"} />
-              );
+              return <SeasonStatCard label="K/D" value={`${v.toFixed(1)}%`} bar={v} />;
             })()}
             {avgDamage && (() => {
               const v = parseFloat(avgDamage.replace(/,/g, ""));
-              return (
-                <SeasonStatCard label="평균 데미지" value={v.toLocaleString()}
-                  color="text-foreground" bar={Math.min(v / 2000 * 100, 100)} barColor="bg-primary" />
-              );
+              return <SeasonStatCard label="평균 데미지" value={v.toLocaleString()} bar={Math.min(v / 2000 * 100, 100)} />;
             })()}
             {totalGame && (
               <div className="bg-secondary/50 rounded-xl p-3">
@@ -1267,13 +1259,23 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
   );
 }
 
-function SeasonStatCard({ label, value, color, bar, barColor }: { label: string; value: string; color: string; bar: number; barColor: string }) {
+// 수치별 색상: 1~20 흰색, 21~30 초록, 31~50 노랑, 51~60 주황, 61~ 빨강
+function statColor(v: number): { text: string; bar: string } {
+  if (v >= 61) return { text: "text-toss-red", bar: "bg-toss-red" };
+  if (v >= 51) return { text: "text-toss-orange", bar: "bg-toss-orange" };
+  if (v >= 31) return { text: "text-amber-500", bar: "bg-amber-400" };
+  if (v >= 21) return { text: "text-toss-green", bar: "bg-toss-green" };
+  return { text: "text-foreground", bar: "bg-toss-gray-400" };
+}
+
+function SeasonStatCard({ label, value, bar }: { label: string; value: string; bar: number; color?: string; barColor?: string }) {
+  const c = statColor(bar);
   return (
     <div className="bg-secondary/50 rounded-xl p-3">
       <p className="text-[11px] text-toss-gray-500 mb-1">{label}</p>
-      <p className={`text-[18px] font-bold tabular-nums ${color}`}>{value}</p>
+      <p className={`text-[18px] font-bold tabular-nums ${c.text}`}>{value}</p>
       <div className="mt-2 h-1.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${Math.min(bar, 100)}%` }} />
+        <div className={`h-full rounded-full transition-all duration-700 ${c.bar}`} style={{ width: `${Math.min(bar, 100)}%` }} />
       </div>
     </div>
   );
