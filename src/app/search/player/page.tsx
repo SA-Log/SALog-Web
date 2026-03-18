@@ -727,12 +727,12 @@ function PlayerContent() {
               <h2 className="text-[14px] font-semibold text-foreground mb-4">맵 숙련도</h2>
               <div className="space-y-3">
                 {mapSkills.slice(0, 5).map((m, i) => {
-                  const mapName = m.map_name || m.mapName || m.name || `맵 ${i + 1}`;
-                  const mapImg = m.map_img || m.mapImg || m.image || null;
-                  const level = m.level || m.map_level || m.skill_level || "";
-                  const proficiency = m.proficiency || m.skill_point || m.point || "";
-                  const winRate = m.win_rate || m.winRate || m.win_per || "";
-                  const kdRate = m.kill_death_rate || m.kd_rate || m.kdRate || m.kill_death_per || "";
+                  const mapName = m.map_name || `맵 ${i + 1}`;
+                  const mapImg = m.map_img || null;
+                  const level = m.map_level || "";
+                  const proficiency = m.workmanship || "";
+                  const proficiencyRate = m.workmanship_rate || "";
+                  const kdRate = m.kill_rate || "";
                   const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
 
                   return (
@@ -751,12 +751,8 @@ function PlayerContent() {
                         </div>
                         <div className="flex items-center gap-3 text-[11px]">
                           {proficiency && <span className="text-toss-gray-500 font-medium tabular-nums">{proficiency}</span>}
-                          {winRate && (
-                            <span className={`font-semibold ${parseFloat(winRate) >= 55 ? "text-toss-green" : parseFloat(winRate) >= 45 ? "text-foreground" : "text-toss-red"}`}>
-                              승률 {parseFloat(winRate).toFixed(1)}%
-                            </span>
-                          )}
-                          {kdRate && <span className="text-toss-gray-400">K/D {parseFloat(kdRate) > 10 ? (parseFloat(kdRate) / 100).toFixed(2) : parseFloat(kdRate).toFixed(2)}</span>}
+                          {proficiencyRate && <span className="font-semibold text-toss-green">{proficiencyRate}%</span>}
+                          {kdRate && <span className="text-toss-gray-400">K/D {kdRate}%</span>}
                         </div>
                       </div>
                     </div>
@@ -1123,13 +1119,17 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
       .then(r => r.json())
       .then(d => {
         if (d.found && d.data) {
-          // API 응답이 중첩될 수 있음 — 최상위 또는 하위 객체에서 데이터 탐색
+          // 실제 구조: { rankMatchRecordInfo: {...}, rp_list: [...] }
           const raw = d.data;
-          // result가 있으면 그 안의 데이터 사용, 아니면 최상위
-          const resolved = (typeof raw === "object" && raw !== null)
-            ? (raw.recordInfo || raw.rankInfo || raw.seasonInfo || raw)
-            : raw;
-          setData(resolved);
+          const info = raw.rankMatchRecordInfo || raw;
+          // rp_list에서 유저 RP에 해당하는 상위 % 추출
+          const rpGain = info.y_rank_rp_gain ? parseInt(String(info.y_rank_rp_gain).replace(/,/g, "")) : 0;
+          let topPercent = "";
+          if (raw.rp_list && Array.isArray(raw.rp_list) && rpGain > 0) {
+            const entry = raw.rp_list.find((r: { lable: string }) => parseInt(String(r.lable).replace(/,/g, "")) === rpGain);
+            if (entry) topPercent = String(entry.rate);
+          }
+          setData({ ...info, _topPercent: topPercent });
         } else {
           setNoData(true);
         }
@@ -1138,20 +1138,21 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
       .finally(() => setLoading(false));
   }, [nexonSn, seasonId, modeTab]);
 
-  // 데이터에서 표시할 값 추출
-  const winRate = data ? getVal(data, "win_rate", "winRate", "win_per") : "";
-  const kdRate = data ? getVal(data, "kill_death_rate", "kd_rate", "killDeathRate", "kill_death_per") : "";
-  const avgDamage = data ? getVal(data, "avg_damage", "damage_avg", "avgDamage", "damage_per_death") : "";
-  const tierName = data ? getVal(data, "tier_name", "tierName", "rank_tier", "season_grade", "tier") : "";
-  const tierScore = data ? getVal(data, "tier_score", "tierScore", "rank_point", "rp", "score", "point") : "";
-  const ranking = data ? getVal(data, "ranking", "rank_no", "rankNo", "rank") : "";
-  const winCnt = data ? getVal(data, "win_cnt", "winCnt", "win") : "";
-  const loseCnt = data ? getVal(data, "lose_cnt", "loseCnt", "lose") : "";
-  const totalGame = data ? getVal(data, "total_game", "totalGame", "game_cnt", "total_cnt") : "";
-  const playTime = data ? getVal(data, "play_time", "playTime", "total_play_time", "playtime") : "";
-  const rpRate = data ? getVal(data, "rp_rate", "rpRate", "rank_per", "rankPer", "top_rate", "top_per") : "";
+  // 실제 바라크스 API 키에서 값 추출
+  const winRate = data ? getVal(data, "y_rank_combine_combat_rate") : "";
+  const kdRate = data ? getVal(data, "y_rank_combine_kill_rate") : "";
+  const avgDamage = data ? getVal(data, "y_rank_combine_damage_avg") : "";
+  const tierName = data ? getVal(data, "y_rank_class_name") : "";
+  const tierImg = data ? getVal(data, "y_rank_class_image") : "";
+  const tierScore = data ? getVal(data, "y_rank_rp_gain") : "";
+  const ranking = data ? getVal(data, "y_rank_rank") : "";
+  const totalGame = data ? getVal(data, "y_rank_combine_combat_cnt") : "";
+  const winCnt = data ? getVal(data, "y_rank_combine_combat_win") : "";
+  const playTimeRaw = data ? getVal(data, "y_rank_play_time") : "";
+  const rpRate = data ? getVal(data, "_topPercent") : "";
 
-  const hasData = !!(winRate || kdRate || tierName || ranking);
+  const hasData = !!(winRate || kdRate || tierName);
+  const loseCnt = totalGame && winCnt ? String(parseInt(totalGame) - parseInt(winCnt)) : "";
   const record = winCnt && loseCnt ? `${winCnt}승 ${loseCnt}패` : totalGame ? `${totalGame}판` : "";
 
   // 플레이 시간 포맷
@@ -1200,14 +1201,17 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
       ) : hasData ? (
         <div className="space-y-3">
           {/* 티어 + 랭킹 헤더 */}
-          {(tierName || ranking) && (
+          {(tierName || tierScore) && (
             <div className="flex items-center justify-between bg-secondary/60 rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2">
-                {tierName && <span className="text-[15px] font-bold text-foreground">{tierName}</span>}
-                {tierScore && <span className="text-[13px] text-primary font-semibold tabular-nums">{parseFloat(tierScore).toLocaleString()} RP</span>}
+              <div className="flex items-center gap-2.5">
+                {tierImg && <img src={tierImg} alt={tierName} className="w-8 h-8 object-contain" />}
+                <div>
+                  {tierName && <p className="text-[15px] font-bold text-foreground">{tierName}</p>}
+                  {tierScore && <p className="text-[12px] text-primary font-semibold tabular-nums">{tierScore} RP</p>}
+                </div>
               </div>
               <div className="text-right">
-                {ranking && <p className="text-[13px] font-bold text-foreground tabular-nums">{Number(ranking).toLocaleString()}위</p>}
+                {ranking && ranking !== "-" && <p className="text-[13px] font-bold text-foreground tabular-nums">{Number(ranking.replace(/,/g, "")).toLocaleString()}위</p>}
                 {rpRate && <p className="text-[11px] text-toss-gray-400">상위 {parseFloat(rpRate).toFixed(1)}%</p>}
               </div>
             </div>
@@ -1234,20 +1238,23 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
                   bar={Math.min(normalized / 2, 100)} barColor={normalized >= 150 ? "bg-toss-green" : normalized >= 100 ? "bg-primary" : "bg-toss-red"} />
               );
             })()}
-            {avgDamage && (
-              <SeasonStatCard label="평균 데미지" value={parseFloat(avgDamage).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                color="text-foreground" bar={Math.min(parseFloat(avgDamage) / 500 * 100, 100)} barColor="bg-primary" />
-            )}
+            {avgDamage && (() => {
+              const v = parseFloat(avgDamage.replace(/,/g, ""));
+              return (
+                <SeasonStatCard label="평균 데미지" value={v.toLocaleString()}
+                  color="text-foreground" bar={Math.min(v / 2000 * 100, 100)} barColor="bg-primary" />
+              );
+            })()}
             {record && (
               <div className="bg-secondary/50 rounded-xl p-3">
                 <p className="text-[11px] text-toss-gray-500 mb-1">전적</p>
                 <p className="text-[15px] font-bold text-foreground tabular-nums">{record}</p>
               </div>
             )}
-            {playTime && (
+            {playTimeRaw && (
               <div className="bg-secondary/50 rounded-xl p-3">
                 <p className="text-[11px] text-toss-gray-500 mb-1">플레이 시간</p>
-                <p className="text-[15px] font-bold text-foreground">{formatPlayTime(playTime)}</p>
+                <p className="text-[15px] font-bold text-foreground">{formatPlayTime(playTimeRaw)}</p>
               </div>
             )}
           </div>

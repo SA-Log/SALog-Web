@@ -141,40 +141,38 @@ export async function GET(req: NextRequest) {
     ]);
 
     // 솔로 우선, 없으면 파티 데이터 사용
-    const rankData = soloRankData?.data || partyRankData?.data || null;
-    const rankMode = soloRankData?.data ? "solo" : partyRankData?.data ? "party" : null;
+    // 실제 구조: { rankMatchRecordInfo: {...}, rp_list: [...] }
+    const soloRaw = soloRankData?.data;
+    const partyRaw = partyRankData?.data;
+    const rankRaw = soloRaw || partyRaw || null;
+    const rankData = rankRaw?.rankMatchRecordInfo || rankRaw || null;
+    const rankMode = soloRaw ? "solo" : partyRaw ? "party" : null;
 
-    // 랭크 데이터에서 값 추출 (키 이름 유연 처리)
-    const getVal = (obj: Record<string, unknown> | null, ...keys: string[]): string => {
-      if (!obj) return "";
-      for (const k of keys) {
-        const v = obj[k];
-        if (v !== undefined && v !== null && v !== "") return String(v);
-      }
-      return "";
-    };
+    // 실제 바라크스 API 키로 값 추출
+    const tierName = rankData?.y_rank_class_name || "";
+    const tierScoreStr = rankData?.y_rank_rp_gain || "";
+    const tierScore = parseFloat(String(tierScoreStr).replace(/,/g, "")) || 0;
+    const winRate = parseFloat(rankData?.y_rank_combine_combat_rate || "0") || 0;
+    let kdRate = parseFloat(rankData?.y_rank_combine_kill_rate || "0") || 0;
+    if (kdRate > 10) kdRate = kdRate / 100; // 62.3 → 0.623
+    const avgDamageStr = rankData?.y_rank_combine_damage_avg || "0";
+    const avgDamage = parseFloat(String(avgDamageStr).replace(/,/g, "")) || 0;
 
-    const tierName = getVal(rankData, "tier_name", "tierName", "rank_tier", "season_grade", "tier");
-    const tierScoreRaw = getVal(rankData, "tier_score", "tierScore", "rank_point", "rp", "score", "point");
-    const winRateRaw = getVal(rankData, "win_rate", "winRate", "win_per");
-    const kdRateRaw = getVal(rankData, "kill_death_rate", "kd_rate", "killDeathRate", "kill_death_per");
-    const avgDamageRaw = getVal(rankData, "avg_damage", "damage_avg", "avgDamage", "damage_per_death");
-    const rpRateRaw = getVal(rankData, "rp_rate", "rpRate", "rank_per", "rankPer", "top_rate", "top_per");
-
-    const winRate = parseFloat(winRateRaw) || 0;
-    let kdRate = parseFloat(kdRateRaw) || 0;
-    if (kdRate > 10) kdRate = kdRate / 100; // 퍼센트 형식이면 변환
-    const avgDamage = parseFloat(avgDamageRaw) || 0;
-    const topPercent = parseFloat(rpRateRaw) || 0;
-    const tierScore = parseFloat(tierScoreRaw) || 0;
+    // RP 분포에서 유저 상위 % 추출
+    let topPercent = 0;
+    const rpList = rankRaw?.rp_list;
+    if (rpList && Array.isArray(rpList) && tierScore > 0) {
+      const entry = rpList.find((r: { lable: string }) => parseInt(String(r.lable).replace(/,/g, "")) === tierScore);
+      if (entry) topPercent = parseFloat(entry.rate) || 0;
+    }
 
     // 맵 숙련도 평균 레벨
     let avgMapLevel = 0;
     if (mapSkillData?.data) {
-      const maps = Array.isArray(mapSkillData.data) ? mapSkillData.data : (mapSkillData.data.mapList || mapSkillData.data.maps || mapSkillData.data.list || []);
+      const maps = Array.isArray(mapSkillData.data) ? mapSkillData.data : [];
       if (maps.length > 0) {
         const levels = maps.slice(0, 5).map((m: Record<string, unknown>) => {
-          const lv = parseFloat(String(m.level || m.map_level || m.skill_level || "0"));
+          const lv = parseFloat(String(m.map_level || "0"));
           return isNaN(lv) ? 0 : lv;
         });
         avgMapLevel = levels.reduce((a: number, b: number) => a + b, 0) / levels.length;
