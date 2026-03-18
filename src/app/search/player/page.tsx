@@ -532,55 +532,6 @@ function PlayerContent() {
         </div>
       )}
 
-      {/* ========== SALog 전투력 v2 ========== */}
-      {(() => {
-        const cp = serverCombatPower || combatPower;
-        const ps = serverPlayStyle || playStyle;
-        if (!cp || !ps) return null;
-        return (
-          <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-[15px] font-bold text-foreground">SALog 전투력</h2>
-                <span className="px-2.5 py-1 rounded-xl bg-primary/10 text-[12px] font-bold text-primary">
-                  {ps.icon} {ps.label}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[28px] font-bold text-primary tabular-nums">{cp.total}</span>
-                <div className="text-right">
-                  <span className={`text-[12px] font-bold ${cp.total >= 70 ? "text-toss-green" : cp.total >= 50 ? "text-primary" : cp.total >= 30 ? "text-amber-500" : "text-toss-gray-400"}`}>
-                    {cp.total >= 70 ? "상위" : cp.total >= 50 ? "평균 이상" : cp.total >= 30 ? "평균" : "평균 이하"}
-                  </span>
-                  <p className="text-[10px] text-toss-gray-400">/100점</p>
-                </div>
-              </div>
-            </div>
-            {serverPlayStyle?.description && <p className="text-[12px] text-toss-gray-500 mb-4">{serverPlayStyle.description}</p>}
-            <div className="space-y-3">
-              {cp.breakdown.map((b: { label: string; value: number; max: number; desc?: string }) => {
-                const pct = b.max > 0 ? (b.value / b.max) * 100 : 0;
-                return (
-                  <div key={b.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[12px] font-medium text-foreground">{b.label}</span>
-                      <div className="flex items-center gap-2">
-                        {b.desc && <span className="text-[11px] text-toss-gray-400">{b.desc}</span>}
-                        <span className="text-[11px] font-bold text-foreground tabular-nums">{b.value}/{b.max}</span>
-                      </div>
-                    </div>
-                    <div className="h-2.5 rounded-full bg-toss-gray-100 dark:bg-toss-gray-800 overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-700 ${pct >= 70 ? "bg-toss-green" : pct >= 40 ? "bg-primary" : "bg-toss-gray-400"}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {serverCombatPower && <p className="text-[10px] text-toss-gray-300 mt-3 text-right">바라크스 랭크 데이터 기반</p>}
-          </div>
-        );
-      })()}
-
       {/* ========== 랭크 시즌 상세 통계 ========== */}
       {nexonSn && <RankSeasonStats nexonSn={nexonSn} />}
 
@@ -723,54 +674,46 @@ function PlayerContent() {
 
           {/* 맵 숙련도 (바라크스 API) */}
           {mapSkills && mapSkills.length > 0 && (
-            <div className="bg-card rounded-2xl border border-border/50 shadow-toss p-5">
-              <h2 className="text-[14px] font-semibold text-foreground mb-4">맵 숙련도</h2>
-              <div className="space-y-3">
-                {mapSkills.slice(0, 5).map((m, i) => {
+            <div className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
+              <div className="px-5 pt-4 pb-3">
+                <h2 className="text-[14px] font-semibold text-foreground">맵 숙련도</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-px bg-border/30">
+                {mapSkills.slice(0, 6).map((m, i) => {
                   const mapName = m.map_name || `맵 ${i + 1}`;
                   const mapImg = m.map_img || null;
-                  const level = m.map_level || "";
+                  const level = m.map_level || 0;
                   const proficiency = m.workmanship || "";
                   const proficiencyRate = m.workmanship_rate || "";
-                  const kdRate = m.kill_rate || "";
-                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
+                  const killRate = m.kill_rate || "";
 
                   return (
-                    <div key={mapName + i} className="flex items-center gap-3">
-                      {mapImg ? (
-                        <img src={mapImg} alt={mapName} className="w-10 h-10 rounded-lg object-cover shrink-0 bg-toss-gray-100 dark:bg-toss-gray-800" />
-                      ) : (
-                        <span className="text-[16px] w-10 text-center shrink-0">{medal || `${i + 1}`}</span>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[13px] font-semibold text-foreground truncate">{mapName}</span>
-                            {level && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">Lv.{level}</span>}
+                    <div key={mapName + i} className="bg-card p-3 flex flex-col">
+                      {mapImg && (
+                        <div className="relative rounded-lg overflow-hidden mb-2 aspect-[16/9] bg-toss-gray-100 dark:bg-toss-gray-800">
+                          <img src={mapImg} alt={mapName} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-white drop-shadow-sm truncate">{mapName}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/40 backdrop-blur-sm text-white font-bold shrink-0">Lv.{level}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 text-[11px]">
-                          {proficiency && <span className="text-toss-gray-500 font-medium tabular-nums">{proficiency}</span>}
-                          {proficiencyRate && <span className="font-semibold text-toss-green">{proficiencyRate}%</span>}
-                          {kdRate && <span className="text-toss-gray-400">K/D {kdRate}%</span>}
+                      )}
+                      {!mapImg && (
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[12px] font-semibold text-foreground truncate">{mapName}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold shrink-0">Lv.{level}</span>
                         </div>
+                      )}
+                      <div className="flex items-center justify-between text-[11px]">
+                        {proficiencyRate && <span className="font-bold text-toss-green tabular-nums">{proficiencyRate}%</span>}
+                        {killRate && <span className="text-toss-gray-400 tabular-nums">K/D {killRate}%</span>}
                       </div>
+                      {proficiency && <p className="text-[10px] text-toss-gray-400 mt-0.5 tabular-nums">{proficiency}</p>}
                     </div>
                   );
                 })}
               </div>
-              {mapSkills.length > 5 && (
-                <p className="text-[11px] text-toss-gray-400 text-center mt-3">
-                  외 {mapSkills.length - 5}개 맵
-                </p>
-              )}
-              {/* 디버그: API 응답 키 확인 */}
-              {mapSkills.length > 0 && (
-                <details className="mt-2">
-                  <summary className="text-[10px] text-toss-gray-300 cursor-pointer">맵 API 응답</summary>
-                  <pre className="text-[9px] text-toss-gray-300 mt-1 break-all whitespace-pre-wrap max-h-40 overflow-y-auto">{JSON.stringify(mapSkills[0], null, 2)}</pre>
-                </details>
-              )}
             </div>
           )}
 
@@ -997,12 +940,19 @@ function MatchRow({ match, playerName, onExpand, expanded, detail, loading }: {
                                         const data = await res.json();
                                         const found = data.barracksUsers?.[0];
                                         if (found?.nexonSn) {
-                                          window.open(`https://barracks.sa.nexon.com/${found.nexonSn}/match`, "_blank");
+                                          // SALog 유저 상세 프로필로 이동
+                                          const ouidRes = await fetch(`/api/sa/search?user_name=${encodeURIComponent(p.user_name)}`);
+                                          const ouidData = await ouidRes.json();
+                                          if (ouidData.ouid) {
+                                            window.location.href = `/search/player?ouid=${ouidData.ouid}&name=${encodeURIComponent(p.user_name)}&nexonSn=${found.nexonSn}`;
+                                          } else {
+                                            window.location.href = `/search/player?ouid=&name=${encodeURIComponent(p.user_name)}&nexonSn=${found.nexonSn}`;
+                                          }
                                         } else {
-                                          window.open(`https://barracks.sa.nexon.com/search?searchType=user&searchText=${encodeURIComponent(p.user_name)}`, "_blank");
+                                          window.location.href = `/search?q=${encodeURIComponent(p.user_name)}`;
                                         }
                                       } catch {
-                                        window.open(`https://barracks.sa.nexon.com/search?searchType=user&searchText=${encodeURIComponent(p.user_name)}`, "_blank");
+                                        window.location.href = `/search?q=${encodeURIComponent(p.user_name)}`;
                                       }
                                       btn.textContent = original;
                                     }}
@@ -1229,13 +1179,10 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
             })()}
             {kdRate && (() => {
               const v = parseFloat(kdRate);
-              // API가 퍼센트(150=1.5) or 실수(1.5) 중 어떤 형태인지 판단
-              const display = v > 10 ? (v / 100).toFixed(2) : v.toFixed(2);
-              const normalized = v > 10 ? v : v * 100;
               return (
-                <SeasonStatCard label="K/D" value={display}
-                  color={normalized >= 150 ? "text-toss-green" : normalized >= 100 ? "text-foreground" : "text-toss-red"}
-                  bar={Math.min(normalized / 2, 100)} barColor={normalized >= 150 ? "bg-toss-green" : normalized >= 100 ? "bg-primary" : "bg-toss-red"} />
+                <SeasonStatCard label="K/D" value={`${v.toFixed(1)}%`}
+                  color={v >= 65 ? "text-toss-green" : v >= 50 ? "text-foreground" : "text-toss-red"}
+                  bar={v} barColor={v >= 65 ? "bg-toss-green" : v >= 50 ? "bg-primary" : "bg-toss-red"} />
               );
             })()}
             {avgDamage && (() => {
@@ -1245,10 +1192,10 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
                   color="text-foreground" bar={Math.min(v / 2000 * 100, 100)} barColor="bg-primary" />
               );
             })()}
-            {record && (
+            {totalGame && (
               <div className="bg-secondary/50 rounded-xl p-3">
                 <p className="text-[11px] text-toss-gray-500 mb-1">전적</p>
-                <p className="text-[15px] font-bold text-foreground tabular-nums">{record}</p>
+                <p className="text-[15px] font-bold text-foreground tabular-nums">{totalGame}전 {winCnt}승 {loseCnt}패</p>
               </div>
             )}
             {playTimeRaw && (
@@ -1257,15 +1204,13 @@ function RankSeasonStats({ nexonSn }: { nexonSn: string }) {
                 <p className="text-[15px] font-bold text-foreground">{formatPlayTime(playTimeRaw)}</p>
               </div>
             )}
+            {rpRate && (
+              <div className="bg-secondary/50 rounded-xl p-3">
+                <p className="text-[11px] text-toss-gray-500 mb-1">RP 분포</p>
+                <p className={`text-[15px] font-bold tabular-nums ${parseFloat(rpRate) <= 10 ? "text-toss-green" : parseFloat(rpRate) <= 30 ? "text-primary" : "text-foreground"}`}>상위 {parseFloat(rpRate).toFixed(1)}%</p>
+              </div>
+            )}
           </div>
-
-          {/* 디버그: 개발 중 API 응답 키 확인 */}
-          {data && (
-            <details className="mt-2">
-              <summary className="text-[10px] text-toss-gray-300 cursor-pointer">API 응답 키</summary>
-              <pre className="text-[9px] text-toss-gray-300 mt-1 break-all whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
-            </details>
-          )}
         </div>
       ) : (
         <div className="text-center py-8">
