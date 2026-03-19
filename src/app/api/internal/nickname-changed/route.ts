@@ -42,5 +42,23 @@ export async function POST(req: NextRequest) {
   // 4. SALog 디스코드 알림
   notifyNicknameChange({ oldNickname, newNickname, barracksAddress }).catch(() => {});
 
+  // 5. 블랙리스트 등록 유저에게 이메일 알림
+  const blacklistUsers = await prisma.blacklistEntry.findMany({
+    where: { barracksAddress },
+    select: {
+      user: { select: { email: true, notificationEmail: true } },
+    },
+  });
+
+  if (blacklistUsers.length > 0) {
+    const { sendNicknameChangeAlert } = await import("@/lib/email");
+    for (const entry of blacklistUsers) {
+      const email = entry.user.notificationEmail || entry.user.email;
+      if (email) {
+        sendNicknameChangeAlert({ to: email, oldNickname, newNickname, barracksAddress }).catch(() => {});
+      }
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
