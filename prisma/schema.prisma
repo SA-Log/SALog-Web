@@ -39,7 +39,8 @@ model User {
   comments         Comment[]
   blacklist        BlacklistEntry[]
   mannerTags       MannerTag[]
-  creatorProfile   CreatorProfile?
+  creatorProfile       CreatorProfile?
+  additionalEvidence   AdditionalEvidence[]
   saVerifications  SaVerification[]
   bans             Ban[]
   following        Follow[]  @relation("follower")
@@ -162,15 +163,31 @@ model HackReport {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  reporter        User        @relation(fields: [reporterId], references: [id])
-  votes           Vote[]
-  comments        Comment[]
-  nicknameHistory NicknameHistory[]
+  reporter           User        @relation(fields: [reporterId], references: [id])
+  votes              Vote[]
+  comments           Comment[]
+  nicknameHistory    NicknameHistory[]
+  additionalEvidence AdditionalEvidence[]
 
   @@index([barracksAddress])
   @@index([nickname])
   @@index([status])
   @@map("hack_reports")
+}
+
+// 추가 증거 (다른 유저가 기존 신고에 증거 추가)
+model AdditionalEvidence {
+  id           String     @id @default(cuid())
+  hackReportId String
+  userId       String
+  evidences    Json       // [{type, url, name}]
+  description  String?    @db.Text
+  createdAt    DateTime   @default(now())
+
+  hackReport   HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@map("additional_evidences")
 }
 
 enum HackStatus {

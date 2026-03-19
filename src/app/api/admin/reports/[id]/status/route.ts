@@ -48,13 +48,29 @@ export async function PATCH(
     select: { id: true, status: true, nickname: true },
   });
 
-  // 핵 확정/유력 시 신고자 경험치 + 디스코드 알림
+  // 핵 확정/유력 시 경험치 + 디스코드 알림
   if (parsed.data.status === "CONFIRMED" || parsed.data.status === "PROBABLE") {
     const { grantExp, EXP_TABLE } = await import("@/lib/exp");
-    const expAmount = parsed.data.status === "CONFIRMED" ? EXP_TABLE.reporterConfirmed : EXP_TABLE.reporterProbable;
-    grantExp(report.reporterId, expAmount).catch(() => {});
+    const isConfirmed = parsed.data.status === "CONFIRMED";
 
-    if (parsed.data.status === "CONFIRMED") {
+    // 최초 신고자 경험치
+    const reporterExp = isConfirmed ? EXP_TABLE.reporterConfirmed : EXP_TABLE.reporterProbable;
+    grantExp(report.reporterId, reporterExp).catch(() => {});
+
+    // 추가 증거 제출자 경험치
+    const contributorExp = isConfirmed ? EXP_TABLE.contributorConfirmed : EXP_TABLE.contributorProbable;
+    const contributors = await prisma.additionalEvidence.findMany({
+      where: { hackReportId: id },
+      select: { userId: true },
+      distinct: ["userId"],
+    });
+    for (const c of contributors) {
+      if (c.userId !== report.reporterId) {
+        grantExp(c.userId, contributorExp).catch(() => {});
+      }
+    }
+
+    if (isConfirmed) {
       notifyHackConfirmed({
         nickname: report.nickname,
         reportId: report.id,

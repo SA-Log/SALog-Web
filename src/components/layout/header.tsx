@@ -54,9 +54,7 @@ export function Header() {
       <div className="mx-auto max-w-screen-lg flex h-14 items-center px-5">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 mr-4 sm:mr-8">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-white text-xs font-bold">SA</span>
-          </div>
+          <img src="/icon-192.png" alt="SALog" className="w-7 h-7 rounded-lg" />
           <span className="font-bold text-foreground text-[15px]">SALog</span>
         </Link>
 
