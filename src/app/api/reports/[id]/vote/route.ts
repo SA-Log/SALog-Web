@@ -64,5 +64,9 @@ export async function POST(
     },
   });
 
+  // 투표 경험치
+  const { grantExp } = await import("@/lib/exp");
+  grantExp(session.user.id, 3).catch(() => {});
+
   return NextResponse.json({ success: true });
 }

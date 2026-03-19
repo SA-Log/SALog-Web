@@ -23,6 +23,9 @@ model User {
   verificationCode  String?
   isProfileComplete Boolean   @default(false)
   bio               String?
+  exp               Int       @default(0)
+  lastCheckIn       DateTime?
+  checkInStreak     Int       @default(0)
   isProfilePublic   Boolean   @default(true)
   notificationEmail String?
   deletedAt         DateTime?

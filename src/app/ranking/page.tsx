@@ -1,30 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { TitleBadge, RankBadge, AccuracyBadge } from "@/components/common/title-badge";
+import { TitleBadge, RankBadge } from "@/components/common/title-badge";
 import {
-  mockUsers,
-  getAccuracyColor,
   getExpProgress,
+  getRankForExp,
   USER_TITLES,
   MILITARY_RANKS,
-  EXP_TABLE,
 } from "@/lib/mock-data";
+import { EXP_TABLE } from "@/lib/exp-table";
 
-type SortMode = "accuracy" | "exp" | "kills";
+type RankedUser = {
+  id: string;
+  rank: number;
+  nickname: string | null;
+  image: string | null;
+  exp: number;
+  barracksVerified: boolean;
+  role: string;
+  checkInStreak: number;
+  _count: { hackReports: number; votes: number; comments: number };
+};
 
 export default function RankingPage() {
-  const [sortMode, setSortMode] = useState<SortMode>("accuracy");
   const [showGuide, setShowGuide] = useState(false);
+  const [users, setUsers] = useState<RankedUser[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const sortedUsers = [...mockUsers].sort((a, b) => {
-    if (sortMode === "accuracy") return b.accuracy - a.accuracy;
-    if (sortMode === "exp") return b.exp - a.exp;
-    return b.kills - a.kills;
-  });
+  useEffect(() => {
+    fetch("/api/ranking")
+      .then(r => r.json())
+      .then(d => setUsers(d.users ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-  const top3 = sortedUsers.slice(0, 3);
+  const top3 = users.slice(0, 3);
 
   return (
     <div className="mx-auto max-w-screen-lg px-5 py-6">
@@ -213,106 +225,105 @@ export default function RankingPage() {
         </div>
       )}
 
-      {/* Sort tabs */}
-      <div className="flex gap-1 mb-5 bg-secondary rounded-xl p-1">
-        {([
-          { value: "accuracy" as SortMode, label: "명중률순" },
-          { value: "exp" as SortMode, label: "경험치순" },
-          { value: "kills" as SortMode, label: "킬 수순" },
-        ]).map((tab) => (
-          <button key={tab.value} onClick={() => setSortMode(tab.value)}
-            className={`flex-1 py-2 rounded-lg text-[13px] font-medium btn-chip ${
-              sortMode === tab.value ? "bg-card text-foreground shadow-toss" : "text-toss-gray-500"
-            }`}>
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* 경험치 순위 */}
+      <h2 className="text-[15px] font-bold text-foreground mb-4">경험치 랭킹</h2>
 
-      {/* Top 3 podium */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-        {[top3[1], top3[0], top3[2]].filter(Boolean).map((user, i) => {
-          const actualRank = i === 0 ? 2 : i === 1 ? 1 : 3;
-          const isFirst = actualRank === 1;
-          const emoji = actualRank === 1 ? "🥇" : actualRank === 2 ? "🥈" : "🥉";
-          const { progress } = getExpProgress(user.exp);
-
-          return (
-            <Link key={user.id} href={`/profile/${user.id}`}
-              className={`bg-card rounded-2xl border border-border/50 shadow-toss p-2 sm:p-4 text-center hover:opacity-80 transition-opacity ${isFirst ? "shadow-toss-md -mt-2" : "mt-2"}`}>
-              <span className="text-[16px] sm:text-[24px]">{emoji}</span>
-              <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full mx-auto mt-1 sm:mt-2 flex items-center justify-center ring-2 ${
-                isFirst ? "ring-amber-400 bg-amber-50 dark:bg-amber-950" : "ring-toss-gray-200 bg-toss-gray-100"
-              }`}>
-                <span className={`text-[11px] sm:text-[16px] font-bold ${isFirst ? "text-amber-600 dark:text-amber-400" : "text-toss-gray-500"}`}>{user.name.charAt(0)}</span>
-              </div>
-              <p className="text-[11px] sm:text-[14px] font-semibold text-foreground mt-1 sm:mt-2 truncate">{user.name}</p>
-              <div className="hidden sm:flex items-center justify-center gap-1 mt-1 flex-wrap">
-                <RankBadge rank={user.rank} />
-                <TitleBadge title={user.title} />
-              </div>
-              <p className={`text-[13px] sm:text-[16px] font-bold mt-1 sm:mt-2 ${getAccuracyColor(user.accuracy)}`}>
-                {user.accuracy}%
-              </p>
-              <div className="hidden sm:flex justify-center gap-2 text-[11px] text-toss-gray-500 mt-0.5">
-                <span className="text-toss-red">{user.kills}K</span>
-                <span>/</span>
-                <span className="text-toss-blue">{user.deaths}D</span>
-                <span>/</span>
-                <span className="text-toss-green">{user.assists}A</span>
-              </div>
-              {/* EXP bar */}
-              <div className="mt-1 sm:mt-2">
-                <div className="h-1 rounded-full bg-toss-gray-100 overflow-hidden">
-                  <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${progress * 100}%` }} />
-                </div>
-                <p className="text-[9px] sm:text-[11px] text-toss-gray-500 mt-0.5">{user.exp.toLocaleString()} EXP</p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Full list */}
-      <div className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
-        <div className="px-5 py-3 border-b border-border/50 flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-foreground">전체 랭킹</h2>
-          <span className="text-[12px] text-toss-gray-500">{sortedUsers.length}명</span>
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="h-16 rounded-2xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />)}
         </div>
-        {sortedUsers.map((user, i) => {
-          const rankNum = i + 1;
-          const emoji = rankNum === 1 ? "🥇" : rankNum === 2 ? "🥈" : rankNum === 3 ? "🥉" : null;
-          const { progress } = getExpProgress(user.exp);
+      ) : users.length === 0 ? (
+        <p className="text-[13px] text-toss-gray-400 text-center py-12">아직 랭킹 데이터가 없습니다</p>
+      ) : (
+        <>
+          {/* Top 3 podium */}
+          {top3.length >= 3 && (
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+              {[top3[1], top3[0], top3[2]].filter(Boolean).map((user, i) => {
+                const actualRank = i === 0 ? 2 : i === 1 ? 1 : 3;
+                const isFirst = actualRank === 1;
+                const emoji = actualRank === 1 ? "🥇" : actualRank === 2 ? "🥈" : "🥉";
+                const militaryRank = getRankForExp(user.exp);
+                const { progress } = getExpProgress(user.exp);
 
-          return (
-            <Link key={user.id} href={`/profile/${user.id}`}
-              className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 ${i < sortedUsers.length - 1 ? "border-b border-border/30" : ""} hover:bg-secondary transition-toss`}>
-              <div className="w-6 sm:w-8 text-center shrink-0">
-                {emoji ? <span className="text-[16px] sm:text-[18px]">{emoji}</span> : <span className="text-[13px] sm:text-[14px] font-bold text-toss-gray-400">{rankNum}</span>}
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-toss-gray-200 flex items-center justify-center shrink-0">
-                <span className="text-[12px] sm:text-[14px] font-bold text-toss-gray-500">{user.name.charAt(0)}</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                  <span className="text-[13px] sm:text-[14px] font-semibold text-foreground truncate">{user.name}</span>
-                  <RankBadge rank={user.rank} />
-                  <span className="hidden sm:inline"><TitleBadge title={user.title} /></span>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[11px] sm:text-[12px] text-toss-gray-500">
-                  <AccuracyBadge accuracy={user.accuracy} kills={user.kills} deaths={user.deaths} />
-                  <span className="hidden sm:inline text-toss-green">{user.assists}A</span>
-                  <span className="hidden sm:inline">{user.exp.toLocaleString()} EXP</span>
-                  {user.streak >= 3 && <span className="hidden sm:inline text-toss-orange">🔥 {user.streak}일</span>}
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <p className={`text-[16px] sm:text-[18px] font-bold ${getAccuracyColor(user.accuracy)}`}>{user.accuracy}%</p>
-              </div>
-            </Link>
-          );
+                return (
+                  <Link key={user.id} href={`/profile/${user.id}`}
+                    className={`bg-card rounded-2xl border border-border/50 shadow-toss p-2 sm:p-4 text-center hover:opacity-80 transition-opacity ${isFirst ? "shadow-toss-md -mt-2" : "mt-2"}`}>
+                    <span className="text-[16px] sm:text-[24px]">{emoji}</span>
+                    <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full mx-auto mt-1 sm:mt-2 flex items-center justify-center overflow-hidden ring-2 ${
+                      isFirst ? "ring-amber-400 bg-amber-50 dark:bg-amber-950" : "ring-toss-gray-200 bg-toss-gray-100"
+                    }`}>
+                      {user.image ? (
+                        <img src={user.image} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className={`text-[11px] sm:text-[16px] font-bold ${isFirst ? "text-amber-600 dark:text-amber-400" : "text-toss-gray-500"}`}>{(user.nickname ?? "?").charAt(0)}</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] sm:text-[14px] font-semibold text-foreground mt-1 sm:mt-2 truncate">{user.nickname}</p>
+                    <div className="hidden sm:flex items-center justify-center gap-1 mt-1">
+                      <RankBadge rank={militaryRank} />
+                    </div>
+                    <div className="mt-1 sm:mt-2">
+                      <div className="h-1 rounded-full bg-toss-gray-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${progress * 100}%` }} />
+                      </div>
+                      <p className="text-[9px] sm:text-[11px] text-toss-gray-500 mt-0.5">{user.exp.toLocaleString()} EXP</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Full list */}
+          <div className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
+            <div className="px-5 py-3 border-b border-border/50 flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-foreground">전체 랭킹</h2>
+              <span className="text-[12px] text-toss-gray-500">{users.length}명</span>
+            </div>
+            {users.map((user, i) => {
+              const rankNum = user.rank;
+              const emoji = rankNum === 1 ? "🥇" : rankNum === 2 ? "🥈" : rankNum === 3 ? "🥉" : null;
+              const militaryRank = getRankForExp(user.exp);
+              const { progress } = getExpProgress(user.exp);
+
+              return (
+                <Link key={user.id} href={`/profile/${user.id}`}
+                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 ${i < users.length - 1 ? "border-b border-border/30" : ""} hover:bg-secondary transition-toss`}>
+                  <div className="w-6 sm:w-8 text-center shrink-0">
+                    {emoji ? <span className="text-[16px] sm:text-[18px]">{emoji}</span> : <span className="text-[13px] sm:text-[14px] font-bold text-toss-gray-400">{rankNum}</span>}
+                  </div>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-toss-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
+                    {user.image ? (
+                      <img src={user.image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[12px] sm:text-[14px] font-bold text-toss-gray-500">{(user.nickname ?? "?").charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                      <span className="text-[13px] sm:text-[14px] font-semibold text-foreground truncate">{user.nickname}</span>
+                      <RankBadge rank={militaryRank} />
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[11px] sm:text-[12px] text-toss-gray-500">
+                      <span>{user.exp.toLocaleString()} EXP</span>
+                      <span>신고 {user._count.hackReports}</span>
+                      <span className="hidden sm:inline">투표 {user._count.votes}</span>
+                      {user.checkInStreak >= 3 && <span className="text-toss-orange">🔥 {user.checkInStreak}일</span>}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="h-1 w-16 rounded-full bg-toss-gray-100 overflow-hidden">
+                      <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${progress * 100}%` }} />
+                    </div>
+                    <p className="text-[10px] text-toss-gray-400 mt-0.5">{militaryRank.shortName}</p>
+                  </div>
+                </Link>
+              );
         })}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

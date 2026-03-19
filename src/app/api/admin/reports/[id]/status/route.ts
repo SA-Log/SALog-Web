@@ -36,7 +36,7 @@ export async function PATCH(
 
   const report = await prisma.hackReport.findUnique({
     where: { id },
-    select: { id: true, nickname: true, barracksAddress: true },
+    select: { id: true, nickname: true, barracksAddress: true, reporterId: true },
   });
   if (!report) {
     return NextResponse.json({ error: "게시글을 찾을 수 없습니다" }, { status: 404 });
@@ -48,13 +48,19 @@ export async function PATCH(
     select: { id: true, status: true, nickname: true },
   });
 
-  // 핵 확정 시 디스코드 알림
-  if (parsed.data.status === "CONFIRMED") {
-    notifyHackConfirmed({
-      nickname: report.nickname,
-      reportId: report.id,
-      barracksAddress: report.barracksAddress,
-    }).catch(() => {});
+  // 핵 확정/유력 시 신고자 경험치 + 디스코드 알림
+  if (parsed.data.status === "CONFIRMED" || parsed.data.status === "PROBABLE") {
+    const { grantExp, EXP_TABLE } = await import("@/lib/exp");
+    const expAmount = parsed.data.status === "CONFIRMED" ? EXP_TABLE.reporterConfirmed : EXP_TABLE.reporterProbable;
+    grantExp(report.reporterId, expAmount).catch(() => {});
+
+    if (parsed.data.status === "CONFIRMED") {
+      notifyHackConfirmed({
+        nickname: report.nickname,
+        reportId: report.id,
+        barracksAddress: report.barracksAddress,
+      }).catch(() => {});
+    }
   }
 
   return NextResponse.json(updated);
