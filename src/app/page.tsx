@@ -1,6 +1,19 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-export default function HomePage() {
+async function getStats() {
+  const [hackReports, mannerReports, nicknameChanges, users] = await Promise.all([
+    prisma.hackReport.count(),
+    prisma.mannerTag.count(),
+    prisma.nicknameHistory.count(),
+    prisma.user.count({ where: { deletedAt: null } }),
+  ]);
+  return { hackReports, mannerReports, nicknameChanges, users };
+}
+
+export default async function HomePage() {
+  const stats = await getStats();
+
   return (
     <div className="mx-auto max-w-screen-lg px-5">
       {/* Hero */}
@@ -34,11 +47,12 @@ export default function HomePage() {
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-3 gap-3 sm:gap-4 py-8">
+      <section className="grid grid-cols-4 gap-3 sm:gap-4 py-8">
         {[
-          { value: "1,247", label: "추적 중인 핵 유저" },
-          { value: "6시간", label: "크롤링 주기" },
-          { value: "324", label: "닉변 감지 건수" },
+          { value: stats.hackReports.toLocaleString(), label: "핵 신고" },
+          { value: stats.mannerReports.toLocaleString(), label: "비매너 신고" },
+          { value: stats.nicknameChanges.toLocaleString(), label: "닉변 감지" },
+          { value: stats.users.toLocaleString(), label: "가입 유저" },
         ].map((stat) => (
           <div key={stat.label} className="bg-card rounded-2xl p-4 sm:p-6 text-center shadow-toss border border-border/50">
             <p className="text-[20px] sm:text-[24px] font-bold text-foreground">{stat.value}</p>
