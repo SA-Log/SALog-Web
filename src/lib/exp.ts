@@ -12,6 +12,21 @@ export async function grantExp(userId: string, amount: number): Promise<number> 
   return user.exp;
 }
 
+// KST 기준 오늘 날짜 (YYYY-MM-DD)
+function getKSTDate(date: Date): string {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+export async function isCheckedInToday(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { lastCheckIn: true },
+  });
+  if (!user?.lastCheckIn) return false;
+  return getKSTDate(user.lastCheckIn) === getKSTDate(new Date());
+}
+
 export async function dailyCheckIn(userId: string): Promise<{ exp: number; streak: number; bonus: number } | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -19,21 +34,19 @@ export async function dailyCheckIn(userId: string): Promise<{ exp: number; strea
   });
   if (!user) return null;
 
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayKST = getKSTDate(new Date());
 
-  if (user.lastCheckIn) {
-    const lastDate = new Date(user.lastCheckIn.getFullYear(), user.lastCheckIn.getMonth(), user.lastCheckIn.getDate());
-    if (lastDate.getTime() === today.getTime()) return null; // 이미 출석
+  // 이미 출석했는지 확인 (KST 기준)
+  if (user.lastCheckIn && getKSTDate(user.lastCheckIn) === todayKST) {
+    return null;
   }
 
-  // 연속 출석 계산
+  // 연속 출석 계산 (KST 기준)
   let newStreak = 1;
   if (user.lastCheckIn) {
-    const yesterday = new Date(today);
+    const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const lastDate = new Date(user.lastCheckIn.getFullYear(), user.lastCheckIn.getMonth(), user.lastCheckIn.getDate());
-    if (lastDate.getTime() === yesterday.getTime()) {
+    if (getKSTDate(user.lastCheckIn) === getKSTDate(yesterday)) {
       newStreak = user.checkInStreak + 1;
     }
   }
@@ -52,7 +65,7 @@ export async function dailyCheckIn(userId: string): Promise<{ exp: number; strea
     where: { id: userId },
     data: {
       exp: { increment: totalGain },
-      lastCheckIn: now,
+      lastCheckIn: new Date(),
       checkInStreak: newStreak,
     },
     select: { exp: true },

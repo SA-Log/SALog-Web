@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { dailyCheckIn } from "@/lib/exp";
+import { dailyCheckIn, isCheckedInToday } from "@/lib/exp";
+
+// 오늘 출석 여부 확인
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ checkedIn: false });
+  }
+  const checkedIn = await isCheckedInToday(session.user.id);
+  return NextResponse.json({ checkedIn });
+}
 
 export async function POST() {
   const session = await auth();

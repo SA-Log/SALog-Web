@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 import { useAuth } from "@/providers/auth-provider";
 
@@ -29,6 +29,15 @@ export function Header() {
   const [checkInDone, setCheckInDone] = useState(false);
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [checkInResult, setCheckInResult] = useState<{ streak: number; bonus: number } | null>(null);
+
+  // 페이지 로드 시 오늘 출석 여부 확인
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch("/api/checkin")
+      .then(r => r.json())
+      .then(d => { if (d.checkedIn) setCheckInDone(true); })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   const handleCheckIn = useCallback(async () => {
     if (checkInDone || checkInLoading) return;
