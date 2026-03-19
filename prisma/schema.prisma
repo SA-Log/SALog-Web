@@ -180,14 +180,16 @@ enum HackStatus {
 // ==================== 닉네임 변경 이력 ====================
 
 model NicknameHistory {
-  id            String     @id @default(cuid())
-  hackReportId  String
-  oldNickname   String
-  newNickname   String
-  detectedAt    DateTime   @default(now())
+  id              String     @id @default(cuid())
+  barracksAddress String
+  hackReportId    String?
+  oldNickname     String
+  newNickname     String
+  detectedAt      DateTime   @default(now())
 
-  hackReport    HackReport @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
+  hackReport      HackReport? @relation(fields: [hackReportId], references: [id], onDelete: Cascade)
 
+  @@index([barracksAddress])
   @@map("nickname_histories")
 }
 
