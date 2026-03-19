@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { SaVerificationPopup } from "@/components/common/sa-verification-popup";
+import { PageTracker } from "@/components/common/page-tracker";
 
 const BARE_ROUTES = ["/signup", "/login"];
 
@@ -21,6 +22,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
       <Footer />
       <SaVerificationPopup />
+      <PageTracker />
     </div>
   );
 }
