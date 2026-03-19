@@ -147,6 +147,26 @@ export default function NewReportPage() {
         }
       }
 
+      // 추가 증거 모드: 기존 신고에 증거 추가
+      if (submitMode === "evidence" && duplicateReport) {
+        const res = await fetch(`/api/reports/${duplicateReport.id}/evidence`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            evidences: uploadedEvidences.length > 0 ? uploadedEvidences : undefined,
+            description: description.trim() || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setSubmitError(data.error || "증거 제출에 실패했습니다");
+          return;
+        }
+        router.push(`/reports/${duplicateReport.id}`);
+        return;
+      }
+
+      // 새 신고 등록
       const res = await fetch("/api/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
