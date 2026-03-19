@@ -19,6 +19,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id!;
         token.role = user.role ?? "USER";
         token.nickname = user.nickname ?? null;
+        token.image = user.image ?? null;
         token.isProfileComplete = user.isProfileComplete ?? false;
         token.barracksVerified = user.barracksVerified ?? false;
       }
@@ -38,6 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             select: {
               role: true,
               nickname: true,
+              image: true,
               isProfileComplete: true,
               barracksVerified: true,
               deletedAt: true,
@@ -55,6 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
             token.role = dbUser.role;
             token.nickname = dbUser.nickname;
+            token.image = dbUser.image;
             token.isProfileComplete = dbUser.isProfileComplete;
             token.barracksVerified = dbUser.barracksVerified;
           }

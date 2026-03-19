@@ -14,6 +14,7 @@ export const authConfig = {
         token.id = user.id!;
         token.role = user.role ?? "USER";
         token.nickname = user.nickname ?? null;
+        token.image = user.image ?? null;
         token.isProfileComplete = user.isProfileComplete ?? false;
         token.barracksVerified = user.barracksVerified ?? false;
       }
@@ -26,6 +27,7 @@ export const authConfig = {
       session.user.id = token.id ?? token.sub;
       session.user.role = token.role;
       session.user.nickname = token.nickname;
+      session.user.image = (token.image as string) ?? session.user.image ?? null;
       session.user.isProfileComplete = token.isProfileComplete;
       session.user.barracksVerified = token.barracksVerified;
       if (token.banned) {
