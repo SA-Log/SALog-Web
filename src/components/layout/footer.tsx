@@ -36,6 +36,9 @@ export function Footer() {
           <p className="text-[12px] text-toss-gray-600 dark:text-toss-gray-500">
             &copy; {new Date().getFullYear()} SALog. 서든어택은 넥슨의 등록 상표입니다.
           </p>
+          <p className="text-[11px] text-toss-gray-500 dark:text-toss-gray-600 mt-1">
+            Data based on NEXON Open API. This service is not affiliated with or endorsed by NEXON.
+          </p>
         </div>
       </div>
     </footer>
