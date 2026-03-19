@@ -53,6 +53,14 @@ export default function LoginPage() {
         </p>
       )}
 
+      <button
+        onClick={() => { setLoading(true); signIn("kakao", { callbackUrl: "/signup" }, { prompt: "login" }); }}
+        disabled={loading}
+        className="w-full mt-3 text-[13px] text-toss-gray-400 hover:text-toss-gray-600 transition-colors py-2"
+      >
+        다른 카카오 계정으로 로그인
+      </button>
+
       <p className="text-[11px] text-toss-gray-400 text-center mt-6 leading-relaxed">
         로그인 시 <Link href="/terms" className="underline">이용약관</Link> 및{" "}
         <Link href="/privacy" className="underline">개인정보처리방침</Link>에 동의하게 됩니다.
