@@ -43,6 +43,7 @@ model User {
   mannerTags       MannerTag[]
   creatorProfile       CreatorProfile?
   additionalEvidence   AdditionalEvidence[]
+  adminLogs            AdminLog[]
   saVerifications  SaVerification[]
   bans             Ban[]
   following        Follow[]  @relation("follower")
@@ -353,6 +354,23 @@ enum BanType {
   WARNING
   TEMP
   PERMANENT
+}
+
+// ==================== 관리 로그 ====================
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String   // "핵 확정", "비매너 반려", "밴 부여", "역할 변경" 등
+  targetType String  // "hackReport", "mannerTag", "user", "ban"
+  targetId  String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  actor     User     @relation(fields: [actorId], references: [id])
+
+  @@index([createdAt])
+  @@map("admin_logs")
 }
 
 // ==================== 팔로우 ====================

@@ -34,7 +34,7 @@ export async function PATCH(
     return NextResponse.json({ error: "입력값이 올바르지 않습니다" }, { status: 400 });
   }
 
-  const report = await prisma.mannerTag.findUnique({ where: { id }, select: { id: true } });
+  const report = await prisma.mannerTag.findUnique({ where: { id }, select: { id: true, nickname: true } });
   if (!report) {
     return NextResponse.json({ error: "게시글을 찾을 수 없습니다" }, { status: 404 });
   }
@@ -47,6 +47,9 @@ export async function PATCH(
     },
     select: { id: true, status: true, adminNote: true },
   });
+
+  const { logAdminAction } = await import("@/lib/admin-log");
+  logAdminAction({ actorId: session.user.id, action: `비매너 ${parsed.data.status}`, targetType: "mannerTag", targetId: id, detail: report?.nickname });
 
   return NextResponse.json(updated);
 }

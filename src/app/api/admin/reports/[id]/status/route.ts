@@ -48,6 +48,10 @@ export async function PATCH(
     select: { id: true, status: true, nickname: true },
   });
 
+  // 관리 로그
+  const { logAdminAction } = await import("@/lib/admin-log");
+  logAdminAction({ actorId: session.user.id, action: `핵 신고 ${parsed.data.status}`, targetType: "hackReport", targetId: id, detail: report.nickname });
+
   // 핵 확정/유력 시 경험치 + 디스코드 알림
   if (parsed.data.status === "CONFIRMED" || parsed.data.status === "PROBABLE") {
     const { grantExp, EXP_TABLE } = await import("@/lib/exp");
