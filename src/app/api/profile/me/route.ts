@@ -28,6 +28,8 @@ export async function GET() {
       image: true,
       bio: true,
       isProfilePublic: true,
+      notifyBlacklistNickchange: true,
+      notifyFollowBlacklist: true,
       barracksVerified: true,
       barracksAddress: true,
       _count: {
@@ -83,6 +85,16 @@ export async function PATCH(req: Request) {
   // 프로필 공개 설정
   if (isProfilePublic !== null) {
     updateData.isProfilePublic = isProfilePublic === "true";
+  }
+
+  // 알림 설정
+  const notifyBlacklist = formData.get("notifyBlacklistNickchange") as string | null;
+  if (notifyBlacklist !== null) {
+    updateData.notifyBlacklistNickchange = notifyBlacklist === "true";
+  }
+  const notifyFollow = formData.get("notifyFollowBlacklist") as string | null;
+  if (notifyFollow !== null) {
+    updateData.notifyFollowBlacklist = notifyFollow === "true";
   }
 
   // 프로필 사진 업로드

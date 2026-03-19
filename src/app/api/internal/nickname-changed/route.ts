@@ -46,13 +46,14 @@ export async function POST(req: NextRequest) {
   const blacklistUsers = await prisma.blacklistEntry.findMany({
     where: { barracksAddress },
     select: {
-      user: { select: { email: true, notificationEmail: true } },
+      user: { select: { email: true, notificationEmail: true, notifyBlacklistNickchange: true } },
     },
   });
 
   if (blacklistUsers.length > 0) {
     const { sendNicknameChangeAlert } = await import("@/lib/email");
     for (const entry of blacklistUsers) {
+      if (!entry.user.notifyBlacklistNickchange) continue;
       const email = entry.user.notificationEmail || entry.user.email;
       if (email) {
         sendNicknameChangeAlert({ to: email, oldNickname, newNickname, barracksAddress }).catch(() => {});

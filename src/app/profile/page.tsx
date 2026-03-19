@@ -39,6 +39,10 @@ export default function ProfilePage() {
 
   const [isProfilePublic, setIsProfilePublic] = useState(true);
   const [editIsPublic, setEditIsPublic] = useState(true);
+  const [notifyBlacklist, setNotifyBlacklist] = useState(true);
+  const [notifyFollow, setNotifyFollow] = useState(true);
+  const [editNotifyBlacklist, setEditNotifyBlacklist] = useState(true);
+  const [editNotifyFollow, setEditNotifyFollow] = useState(true);
 
   // DB에서 프로필 정보 로드
   useEffect(() => {
@@ -49,6 +53,10 @@ export default function ProfilePage() {
           setBio(data.bio ?? "");
           setIsProfilePublic(data.isProfilePublic ?? true);
           setEditIsPublic(data.isProfilePublic ?? true);
+          setNotifyBlacklist(data.notifyBlacklistNickchange ?? true);
+          setNotifyFollow(data.notifyFollowBlacklist ?? true);
+          setEditNotifyBlacklist(data.notifyBlacklistNickchange ?? true);
+          setEditNotifyFollow(data.notifyFollowBlacklist ?? true);
           if (data.image) setSavedImage(data.image);
           setFollowerCount(data.followerCount ?? 0);
           setFollowingCount(data.followingCount ?? 0);
@@ -106,6 +114,8 @@ export default function ProfilePage() {
   const hasChanges = (() => {
     if (editBio !== bio) return true;
     if (!isCreator && editIsPublic !== isProfilePublic) return true;
+    if (editNotifyBlacklist !== notifyBlacklist) return true;
+    if (editNotifyFollow !== notifyFollow) return true;
     if (avatarFile) return true;
     if (removeAvatar) return true;
     return false;
@@ -123,6 +133,8 @@ export default function ProfilePage() {
       if (!isCreator) {
         fd.append("isProfilePublic", String(editIsPublic));
       }
+      fd.append("notifyBlacklistNickchange", String(editNotifyBlacklist));
+      fd.append("notifyFollowBlacklist", String(editNotifyFollow));
       if (avatarFile) {
         fd.append("avatar", avatarFile);
       }
@@ -140,6 +152,8 @@ export default function ProfilePage() {
 
       setBio(data.bio ?? "");
       if (!isCreator) setIsProfilePublic(data.isProfilePublic ?? true);
+      setNotifyBlacklist(data.notifyBlacklistNickchange ?? true);
+      setNotifyFollow(data.notifyFollowBlacklist ?? true);
       setSavedImage(data.image ?? null);
       setAvatarPreview(null);
       setAvatarFile(null);
@@ -415,9 +429,10 @@ export default function ProfilePage() {
                         <p className="text-[14px] font-medium text-foreground">블랙리스트 닉변 알림</p>
                         <p className="text-[12px] text-toss-gray-400 mt-0.5">등록한 유저가 닉네임을 변경하면 알림</p>
                       </div>
-                      <div className="w-[50px] h-[30px] rounded-full bg-primary p-[3px] cursor-pointer">
-                        <div className="w-6 h-6 rounded-full bg-white shadow-sm translate-x-5 transition-transform duration-200" />
-                      </div>
+                      <button onClick={() => setEditNotifyBlacklist(!editNotifyBlacklist)}
+                        className={`w-[50px] h-[30px] rounded-full p-[3px] transition-colors duration-200 ${editNotifyBlacklist ? "bg-primary" : "bg-toss-gray-200 dark:bg-toss-gray-700"}`}>
+                        <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${editNotifyBlacklist ? "translate-x-5" : "translate-x-0"}`} />
+                      </button>
                     </div>
                   </div>
                   <div className="p-4 rounded-2xl bg-toss-gray-50 dark:bg-secondary border border-border/30">
@@ -426,9 +441,10 @@ export default function ProfilePage() {
                         <p className="text-[14px] font-medium text-foreground">팔로잉 블랙리스트 알림</p>
                         <p className="text-[12px] text-toss-gray-400 mt-0.5">팔로잉한 유저가 블랙리스트를 추가하면 알림</p>
                       </div>
-                      <div className="w-[50px] h-[30px] rounded-full bg-primary p-[3px] cursor-pointer">
-                        <div className="w-6 h-6 rounded-full bg-white shadow-sm translate-x-5 transition-transform duration-200" />
-                      </div>
+                      <button onClick={() => setEditNotifyFollow(!editNotifyFollow)}
+                        className={`w-[50px] h-[30px] rounded-full p-[3px] transition-colors duration-200 ${editNotifyFollow ? "bg-primary" : "bg-toss-gray-200 dark:bg-toss-gray-700"}`}>
+                        <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${editNotifyFollow ? "translate-x-5" : "translate-x-0"}`} />
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -26,8 +26,10 @@ model User {
   exp               Int       @default(0)
   lastCheckIn       DateTime?
   checkInStreak     Int       @default(0)
-  isProfilePublic   Boolean   @default(true)
-  notificationEmail String?
+  isProfilePublic          Boolean   @default(true)
+  notifyBlacklistNickchange Boolean  @default(true)
+  notifyFollowBlacklist    Boolean  @default(true)
+  notificationEmail        String?
   deletedAt         DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
