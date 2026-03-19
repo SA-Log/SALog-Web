@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 import { useAuth } from "@/providers/auth-provider";
 
@@ -26,6 +26,28 @@ export function Header() {
   ];
 
   const displayChar = user?.nickname?.charAt(0) ?? user?.name?.charAt(0) ?? "?";
+  const [checkInDone, setCheckInDone] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [checkInResult, setCheckInResult] = useState<{ streak: number; bonus: number } | null>(null);
+
+  const handleCheckIn = useCallback(async () => {
+    if (checkInDone || checkInLoading) return;
+    setCheckInLoading(true);
+    try {
+      const res = await fetch("/api/checkin", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setCheckInDone(true);
+        setCheckInResult(data);
+        setTimeout(() => setCheckInResult(null), 3000);
+      } else {
+        const data = await res.json().catch(() => null);
+        if (res.status === 409) setCheckInDone(true);
+        else alert(data?.error ?? "출석 체크 실패");
+      }
+    } catch { alert("요청 실패"); }
+    finally { setCheckInLoading(false); }
+  }, [checkInDone, checkInLoading]);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-card/80 backdrop-blur-xl border-b border-border">
@@ -70,6 +92,30 @@ export function Header() {
               </svg>
               크리에이터
             </Link>
+          )}
+
+          {/* 출석 체크 */}
+          {isLoggedIn && (
+            <div className="relative hidden sm:block">
+              <button
+                onClick={handleCheckIn}
+                disabled={checkInDone || checkInLoading}
+                className={`h-8 px-3 rounded-lg text-[12px] font-semibold transition-all active:scale-[0.97] ${
+                  checkInDone
+                    ? "bg-toss-green/10 text-toss-green"
+                    : "bg-primary/10 text-primary hover:bg-primary/15"
+                }`}
+              >
+                {checkInLoading ? "..." : checkInDone ? "✓ 출석 완료" : "출석"}
+              </button>
+              {checkInResult && (
+                <div className="absolute top-full mt-2 right-0 px-3 py-2 rounded-xl bg-card border border-border shadow-toss-md text-[11px] whitespace-nowrap animate-in fade-in slide-in-from-top-1 z-50">
+                  <p className="font-semibold text-toss-green">+10 EXP</p>
+                  {checkInResult.bonus > 0 && <p className="text-toss-orange mt-0.5">연속 보너스 +{checkInResult.bonus}</p>}
+                  <p className="text-toss-gray-400 mt-0.5">🔥 {checkInResult.streak}일 연속</p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Desktop: Auth button — 로딩 시 스켈레톤 표시 */}

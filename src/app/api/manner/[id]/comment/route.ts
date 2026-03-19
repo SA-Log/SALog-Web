@@ -48,5 +48,8 @@ export async function POST(
     },
   });
 
+  const { grantExp } = await import("@/lib/exp");
+  grantExp(session.user.id, 2).catch(() => {});
+
   return NextResponse.json(comment, { status: 201 });
 }
