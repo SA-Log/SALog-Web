@@ -68,5 +68,19 @@ export async function POST(
   const { grantExp } = await import("@/lib/exp");
   grantExp(session.user.id, 3).catch(() => {});
 
+  // 찬성률 70% 이상 + 최소 5표 이상이면 자동 유력 승격
+  const votes = await prisma.vote.findMany({
+    where: { hackReportId: id },
+    select: { voteType: true },
+  });
+  const agreeCount = votes.filter(v => v.voteType === "AGREE").length;
+  const totalVotes = votes.length;
+  if (totalVotes >= 5 && agreeCount / totalVotes >= 0.7) {
+    const current = await prisma.hackReport.findUnique({ where: { id }, select: { status: true } });
+    if (current?.status === "SUSPECT") {
+      await prisma.hackReport.update({ where: { id }, data: { status: "PROBABLE" } });
+    }
+  }
+
   return NextResponse.json({ success: true });
 }

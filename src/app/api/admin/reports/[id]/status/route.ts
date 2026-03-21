@@ -8,6 +8,7 @@ const ADMIN_ROLES = ["MASTER", "VICE_MASTER", "OPERATOR"];
 
 const statusSchema = z.object({
   status: z.enum(["SUSPECT", "PROBABLE", "CONFIRMED", "DISMISSED"]),
+  adminNote: z.string().min(1, "판정 사유를 입력해주세요").max(500),
 });
 
 export async function PATCH(
@@ -31,37 +32,44 @@ export async function PATCH(
   const body = await req.json();
   const parsed = statusSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "입력값이 올바르지 않습니다" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "입력값이 올바르지 않습니다" }, { status: 400 });
   }
 
   const report = await prisma.hackReport.findUnique({
     where: { id },
-    select: { id: true, nickname: true, barracksAddress: true, reporterId: true },
+    select: { id: true, nickname: true, barracksAddress: true, reporterId: true, evidences: true },
   });
   if (!report) {
     return NextResponse.json({ error: "게시글을 찾을 수 없습니다" }, { status: 404 });
   }
 
+  // 확정 시 증거 필수 체크
+  if (parsed.data.status === "CONFIRMED") {
+    const hasEvidence = report.evidences && Array.isArray(report.evidences) && (report.evidences as unknown[]).length > 0;
+    const hasAdditional = await prisma.additionalEvidence.count({ where: { hackReportId: id } });
+    if (!hasEvidence && hasAdditional === 0) {
+      return NextResponse.json({ error: "증거가 없는 신고는 확정할 수 없습니다" }, { status: 400 });
+    }
+  }
+
   const updated = await prisma.hackReport.update({
     where: { id },
-    data: { status: parsed.data.status },
-    select: { id: true, status: true, nickname: true },
+    data: { status: parsed.data.status, adminNote: parsed.data.adminNote },
+    select: { id: true, status: true, nickname: true, adminNote: true },
   });
 
   // 관리 로그
   const { logAdminAction } = await import("@/lib/admin-log");
-  logAdminAction({ actorId: session.user.id, action: `핵 신고 ${parsed.data.status}`, targetType: "hackReport", targetId: id, detail: report.nickname });
+  logAdminAction({ actorId: session.user.id, action: `핵 신고 ${parsed.data.status}`, targetType: "hackReport", targetId: id, detail: `${report.nickname} — ${parsed.data.adminNote}` });
 
   // 핵 확정/유력 시 경험치 + 디스코드 알림
   if (parsed.data.status === "CONFIRMED" || parsed.data.status === "PROBABLE") {
     const { grantExp, EXP_TABLE } = await import("@/lib/exp");
     const isConfirmed = parsed.data.status === "CONFIRMED";
 
-    // 최초 신고자 경험치
     const reporterExp = isConfirmed ? EXP_TABLE.reporterConfirmed : EXP_TABLE.reporterProbable;
     grantExp(report.reporterId, reporterExp).catch(() => {});
 
-    // 추가 증거 제출자 경험치
     const contributorExp = isConfirmed ? EXP_TABLE.contributorConfirmed : EXP_TABLE.contributorProbable;
     const contributors = await prisma.additionalEvidence.findMany({
       where: { hackReportId: id },
@@ -75,11 +83,7 @@ export async function PATCH(
     }
 
     if (isConfirmed) {
-      notifyHackConfirmed({
-        nickname: report.nickname,
-        reportId: report.id,
-        barracksAddress: report.barracksAddress,
-      }).catch(() => {});
+      notifyHackConfirmed({ nickname: report.nickname, reportId: report.id, barracksAddress: report.barracksAddress }).catch(() => {});
     }
   }
 

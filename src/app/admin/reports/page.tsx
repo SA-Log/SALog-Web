@@ -34,6 +34,8 @@ export default function AdminReportsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [actionTarget, setActionTarget] = useState<{ id: string; type: "hack" | "manner"; action: string } | null>(null);
+  const [actionNote, setActionNote] = useState("");
 
   const { role: userRole } = useAdminRole();
   const canDirectConfirm = userRole === "MASTER" || userRole === "VICE_MASTER";
@@ -53,15 +55,15 @@ export default function AdminReportsPage() {
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
-  async function updateStatus(id: string, status: string, type: "hack" | "manner", adminNote?: string) {
+  async function updateStatus(id: string, status: string, type: "hack" | "manner", adminNote: string) {
+    if (!adminNote.trim()) { alert("판정 사유를 입력해주세요"); return; }
     setUpdating(id);
     const path = type === "hack" ? `/api/admin/reports/${id}/status` : `/api/admin/manner/${id}/status`;
-    const body: Record<string, string> = { status };
-    if (adminNote) body.adminNote = adminNote;
     try {
-      const res = await fetch(path, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) fetchReports();
-      else alert("상태 변경에 실패했습니다");
+      const res = await fetch(path, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, adminNote: adminNote.trim() }) });
+      const data = await res.json().catch(() => null);
+      if (res.ok) { fetchReports(); setActionTarget(null); setActionNote(""); }
+      else alert(data?.error ?? "상태 변경에 실패했습니다");
     } catch { alert("요청 실패"); }
     finally { setUpdating(null); }
   }
@@ -141,29 +143,40 @@ export default function AdminReportsPage() {
                   </div>
                 </div>
 
+                {/* 증거 유무 표시 */}
+                {tab === "hack" && (
+                  <div className="shrink-0">
+                    {(r.evidences && Array.isArray(r.evidences) && r.evidences.length > 0) ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-toss-green/10 text-toss-green">증거 {r.evidences.length}건</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-400">증거 없음</span>
+                    )}
+                  </div>
+                )}
+
                 {/* 상태 변경 버튼 */}
                 {canDirectConfirm && (
                   <div className="flex flex-col gap-1 shrink-0">
-                    {tab === "hack" && r.status !== "CONFIRMED" && (
-                      <button onClick={() => updateStatus(r.id, "CONFIRMED", "hack")} disabled={updating === r.id}
-                        className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90 disabled:opacity-50">
+                    {tab === "hack" && r.status !== "CONFIRMED" && r.status !== "DISMISSED" && (
+                      <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "CONFIRMED" }); setActionNote(""); }}
+                        className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90">
                         확정
                       </button>
                     )}
-                    {tab === "hack" && r.status !== "DISMISSED" && (
-                      <button onClick={() => updateStatus(r.id, "DISMISSED", "hack")} disabled={updating === r.id}
-                        className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200 disabled:opacity-50">
+                    {tab === "hack" && r.status !== "DISMISSED" && r.status !== "CONFIRMED" && (
+                      <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "DISMISSED" }); setActionNote(""); }}
+                        className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200">
                         기각
                       </button>
                     )}
                     {tab === "manner" && r.status === "PENDING" && (
                       <>
-                        <button onClick={() => updateStatus(r.id, "CONFIRMED", "manner")} disabled={updating === r.id}
-                          className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90 disabled:opacity-50">
+                        <button onClick={() => { setActionTarget({ id: r.id, type: "manner", action: "CONFIRMED" }); setActionNote(""); }}
+                          className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90">
                           확정
                         </button>
-                        <button onClick={() => { const note = prompt("반려 사유를 입력하세요"); if (note) updateStatus(r.id, "REJECTED", "manner", note); }} disabled={updating === r.id}
-                          className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200 disabled:opacity-50">
+                        <button onClick={() => { setActionTarget({ id: r.id, type: "manner", action: "REJECTED" }); setActionNote(""); }}
+                          className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200">
                           반려
                         </button>
                       </>
@@ -173,6 +186,40 @@ export default function AdminReportsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 판정 사유 입력 패널 */}
+      {actionTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setActionTarget(null)}>
+          <div className="bg-card rounded-2xl border border-border shadow-toss-md p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-bold text-foreground mb-1">
+              {actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : "반려"} 처리
+            </h3>
+            <p className="text-[12px] text-toss-gray-400 mb-4">판정 사유를 입력해주세요 (공개됩니다)</p>
+            <textarea
+              value={actionNote}
+              onChange={e => setActionNote(e.target.value)}
+              placeholder="예: 영상 증거 확인, 에임핵 사용 확인됨"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 resize-none mb-4"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setActionTarget(null)}
+                className="flex-1 h-10 rounded-xl bg-secondary text-[13px] font-semibold text-toss-gray-600">
+                취소
+              </button>
+              <button
+                onClick={() => updateStatus(actionTarget.id, actionTarget.action, actionTarget.type, actionNote)}
+                disabled={!actionNote.trim() || updating === actionTarget.id}
+                className={`flex-1 h-10 rounded-xl text-[13px] font-semibold text-white disabled:opacity-40 ${
+                  actionTarget.action === "CONFIRMED" ? "bg-toss-red" : "bg-toss-gray-500"
+                }`}>
+                {updating === actionTarget.id ? "처리 중..." : actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : "반려"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
