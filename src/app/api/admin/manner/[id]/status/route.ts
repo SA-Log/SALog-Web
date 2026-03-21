@@ -6,7 +6,7 @@ import { z } from "zod";
 const ADMIN_ROLES = ["MASTER", "VICE_MASTER", "OPERATOR"];
 
 const statusSchema = z.object({
-  status: z.enum(["CONFIRMED", "REJECTED"]),
+  status: z.enum(["PENDING", "CONFIRMED", "REJECTED"]),
   adminNote: z.string().max(500).optional(),
 });
 

@@ -157,16 +157,22 @@ export default function AdminReportsPage() {
                 {/* 상태 변경 버튼 */}
                 {canDirectConfirm && (
                   <div className="flex flex-col gap-1 shrink-0">
-                    {tab === "hack" && r.status !== "CONFIRMED" && r.status !== "DISMISSED" && (
-                      <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "CONFIRMED" }); setActionNote(""); }}
-                        className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90">
-                        확정
-                      </button>
+                    {tab === "hack" && (r.status === "SUSPECT" || r.status === "PROBABLE") && (
+                      <>
+                        <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "CONFIRMED" }); setActionNote(""); }}
+                          className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90">
+                          확정
+                        </button>
+                        <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "DISMISSED" }); setActionNote(""); }}
+                          className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200">
+                          기각
+                        </button>
+                      </>
                     )}
-                    {tab === "hack" && r.status !== "DISMISSED" && r.status !== "CONFIRMED" && (
-                      <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "DISMISSED" }); setActionNote(""); }}
-                        className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200">
-                        기각
+                    {tab === "hack" && (r.status === "CONFIRMED" || r.status === "DISMISSED") && (
+                      <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "SUSPECT" }); setActionNote(""); }}
+                        className="px-3 py-1.5 rounded-lg border border-border text-toss-gray-400 text-[10px] font-medium hover:text-toss-gray-600 hover:border-toss-gray-400">
+                        판정 초기화
                       </button>
                     )}
                     {tab === "manner" && r.status === "PENDING" && (
@@ -181,6 +187,12 @@ export default function AdminReportsPage() {
                         </button>
                       </>
                     )}
+                    {tab === "manner" && (r.status === "CONFIRMED" || r.status === "REJECTED") && (
+                      <button onClick={() => { setActionTarget({ id: r.id, type: "manner", action: "PENDING" }); setActionNote(""); }}
+                        className="px-3 py-1.5 rounded-lg border border-border text-toss-gray-400 text-[10px] font-medium hover:text-toss-gray-600 hover:border-toss-gray-400">
+                        판정 초기화
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -194,7 +206,7 @@ export default function AdminReportsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setActionTarget(null)}>
           <div className="bg-card rounded-2xl border border-border shadow-toss-md p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-[16px] font-bold text-foreground mb-1">
-              {actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : "반려"} 처리
+              {actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : actionTarget.action === "SUSPECT" || actionTarget.action === "PENDING" ? "판정 초기화" : "반려"} 처리
             </h3>
             <p className="text-[12px] text-toss-gray-400 mb-4">판정 사유를 입력해주세요 (공개됩니다)</p>
             <textarea
@@ -214,9 +226,9 @@ export default function AdminReportsPage() {
                 onClick={() => updateStatus(actionTarget.id, actionTarget.action, actionTarget.type, actionNote)}
                 disabled={!actionNote.trim() || updating === actionTarget.id}
                 className={`flex-1 h-10 rounded-xl text-[13px] font-semibold text-white disabled:opacity-40 ${
-                  actionTarget.action === "CONFIRMED" ? "bg-toss-red" : "bg-toss-gray-500"
+                  actionTarget.action === "CONFIRMED" ? "bg-toss-red" : actionTarget.action === "SUSPECT" || actionTarget.action === "PENDING" ? "bg-amber-500" : "bg-toss-gray-500"
                 }`}>
-                {updating === actionTarget.id ? "처리 중..." : actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : "반려"}
+                {updating === actionTarget.id ? "처리 중..." : actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : actionTarget.action === "SUSPECT" || actionTarget.action === "PENDING" ? "초기화" : "반려"}
               </button>
             </div>
           </div>
