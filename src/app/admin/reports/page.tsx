@@ -23,6 +23,19 @@ const MANNER_STATUS_FILTERS = [
   { value: "REJECTED", label: "반려" },
 ];
 
+const HACK_ACTIONS = [
+  { value: "SUSPECT", label: "의심", color: "text-amber-500", ring: "ring-amber-500" },
+  { value: "PROBABLE", label: "유력", color: "text-orange-500", ring: "ring-orange-500" },
+  { value: "CONFIRMED", label: "확정", color: "text-toss-red", ring: "ring-toss-red" },
+  { value: "DISMISSED", label: "기각", color: "text-toss-gray-500", ring: "ring-toss-gray-400" },
+];
+
+const MANNER_ACTIONS = [
+  { value: "PENDING", label: "검토 중", color: "text-amber-500", ring: "ring-amber-500" },
+  { value: "CONFIRMED", label: "확정", color: "text-toss-red", ring: "ring-toss-red" },
+  { value: "REJECTED", label: "반려", color: "text-toss-gray-500", ring: "ring-toss-gray-400" },
+];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReportItem = Record<string, any>;
 
@@ -34,7 +47,10 @@ export default function AdminReportsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [actionTarget, setActionTarget] = useState<{ id: string; type: "hack" | "manner"; action: string } | null>(null);
+
+  // 판정 패널 상태
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedAction, setSelectedAction] = useState("");
   const [actionNote, setActionNote] = useState("");
 
   const { role: userRole } = useAdminRole();
@@ -55,20 +71,27 @@ export default function AdminReportsPage() {
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
-  async function updateStatus(id: string, status: string, type: "hack" | "manner", adminNote: string) {
-    if (!adminNote.trim()) { alert("판정 사유를 입력해주세요"); return; }
+  async function submitAction(id: string, status: string, type: "hack" | "manner", note: string) {
+    if (!note.trim()) { alert("판정 사유를 입력해주세요"); return; }
     setUpdating(id);
     const path = type === "hack" ? `/api/admin/reports/${id}/status` : `/api/admin/manner/${id}/status`;
     try {
-      const res = await fetch(path, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, adminNote: adminNote.trim() }) });
+      const res = await fetch(path, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, adminNote: note.trim() }) });
       const data = await res.json().catch(() => null);
-      if (res.ok) { fetchReports(); setActionTarget(null); setActionNote(""); }
+      if (res.ok) { fetchReports(); setExpandedId(null); setSelectedAction(""); setActionNote(""); }
       else alert(data?.error ?? "상태 변경에 실패했습니다");
     } catch { alert("요청 실패"); }
     finally { setUpdating(null); }
   }
 
   const filters = tab === "hack" ? HACK_STATUS_FILTERS : MANNER_STATUS_FILTERS;
+  const actions = tab === "hack" ? HACK_ACTIONS : MANNER_ACTIONS;
+
+  function getEvidenceCount(r: ReportItem): number {
+    const original = (r.evidences && Array.isArray(r.evidences)) ? r.evidences.length : 0;
+    const additional = r._count?.additionalEvidence ?? 0;
+    return original + additional;
+  }
 
   return (
     <div>
@@ -76,11 +99,11 @@ export default function AdminReportsPage() {
 
       {/* Tab */}
       <div className="flex gap-1 mb-4 bg-secondary rounded-xl p-1">
-        <button onClick={() => { setTab("hack"); setStatusFilter("ALL"); setPage(1); }}
+        <button onClick={() => { setTab("hack"); setStatusFilter("ALL"); setPage(1); setExpandedId(null); }}
           className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium ${tab === "hack" ? "bg-card text-foreground shadow-toss" : "text-toss-gray-500"}`}>
           핵 신고
         </button>
-        <button onClick={() => { setTab("manner"); setStatusFilter("ALL"); setPage(1); }}
+        <button onClick={() => { setTab("manner"); setStatusFilter("ALL"); setPage(1); setExpandedId(null); }}
           className={`flex-1 py-2.5 rounded-lg text-[13px] font-medium ${tab === "manner" ? "bg-card text-foreground shadow-toss" : "text-toss-gray-500"}`}>
           비매너 신고
         </button>
@@ -101,137 +124,120 @@ export default function AdminReportsPage() {
       {/* List */}
       {loading ? (
         <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="h-20 rounded-2xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-24 rounded-2xl bg-toss-gray-100 dark:bg-toss-gray-800 animate-pulse" />)}
         </div>
       ) : reports.length === 0 ? (
         <p className="text-[13px] text-toss-gray-400 text-center py-12">해당 조건의 신고가 없습니다</p>
       ) : (
         <div className="space-y-3">
-          {reports.map((r) => (
-            <div key={r.id} className="bg-card rounded-2xl border border-border/50 shadow-toss p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Link href={tab === "hack" ? `/reports/${r.id}` : `/manner/${r.id}`} className="text-[14px] font-bold text-foreground hover:text-primary truncate">
-                      {r.nickname}
-                    </Link>
-                    {tab === "hack" ? (
-                      <StatusBadge status={r.status} />
-                    ) : (
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${r.status === "CONFIRMED" ? "bg-toss-red/10 text-toss-red" : r.status === "REJECTED" ? "bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-500" : "bg-amber-100 dark:bg-amber-500/20 text-amber-600"}`}>
-                        {r.status === "CONFIRMED" ? "확정" : r.status === "REJECTED" ? "반려" : "검토 중"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-toss-gray-400">
-                    <span>{r.reporter?.nickname ?? "유저"}</span>
-                    <span>{formatRelativeTime(r.createdAt)}</span>
-                    {tab === "hack" && r.agreeCount !== undefined && (
-                      <span>찬성 {r.agreeCount} / 반대 {r.disagreeCount}</span>
-                    )}
-                  </div>
-                  {r.description && <p className="text-[12px] text-toss-gray-500 mt-1 line-clamp-1">{r.description}</p>}
-                  {/* 태그 */}
-                  <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {tab === "hack" && r.hackTypes?.map((t: string) => (
-                      <span key={t} className="px-1.5 py-0.5 rounded text-[10px] bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-600 dark:text-toss-gray-300">{t}</span>
-                    ))}
-                    {tab === "manner" && r.tagTypes?.map((t: string) => {
-                      const info = MANNER_TAG_MAP[t as keyof typeof MANNER_TAG_MAP];
-                      return <span key={t} className={`px-1.5 py-0.5 rounded text-[10px] ${info?.bg ?? "bg-gray-100"} ${info?.color ?? "text-gray-600"}`}>{info?.label ?? t}</span>;
-                    })}
+          {reports.map((r) => {
+            const evidenceCount = getEvidenceCount(r);
+            const isExpanded = expandedId === r.id;
+            const detailPath = tab === "hack" ? `/reports/${r.id}` : `/manner/${r.id}`;
+
+            return (
+              <div key={r.id} className="bg-card rounded-2xl border border-border/50 shadow-toss overflow-hidden">
+                {/* 헤더 */}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link href={detailPath} className="text-[14px] font-bold text-foreground hover:text-primary truncate">
+                          {r.nickname}
+                        </Link>
+                        {tab === "hack" ? (
+                          <StatusBadge status={r.status} />
+                        ) : (
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${r.status === "CONFIRMED" ? "bg-toss-red/10 text-toss-red" : r.status === "REJECTED" ? "bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-500" : "bg-amber-100 dark:bg-amber-500/20 text-amber-600"}`}>
+                            {r.status === "CONFIRMED" ? "확정" : r.status === "REJECTED" ? "반려" : "검토 중"}
+                          </span>
+                        )}
+                        {evidenceCount > 0 ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-toss-green/10 text-toss-green">증거 {evidenceCount}</span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-400">증거 없음</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-toss-gray-400">
+                        <span>{r.reporter?.nickname ?? "유저"}</span>
+                        <span>{formatRelativeTime(r.createdAt)}</span>
+                        {tab === "hack" && r.agreeCount !== undefined && (
+                          <span>찬성 {r.agreeCount} / 반대 {r.disagreeCount}</span>
+                        )}
+                      </div>
+                      {r.description && <p className="text-[12px] text-toss-gray-500 mt-1 line-clamp-1">{r.description}</p>}
+                      {r.adminNote && (
+                        <p className="text-[11px] text-toss-gray-400 mt-1 bg-secondary/50 rounded px-2 py-1">판정: {r.adminNote}</p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <Link href={detailPath} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold hover:bg-primary/20 text-center">
+                        상세보기
+                      </Link>
+                      {canDirectConfirm && (
+                        <button
+                          onClick={() => { setExpandedId(isExpanded ? null : r.id); setSelectedAction(r.status); setActionNote(""); }}
+                          className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold text-center ${isExpanded ? "bg-primary text-white" : "border border-border text-toss-gray-500 hover:border-primary hover:text-primary"}`}>
+                          {isExpanded ? "닫기" : "판정"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* 증거 유무 표시 */}
-                {tab === "hack" && (
-                  <div className="shrink-0">
-                    {(r.evidences && Array.isArray(r.evidences) && r.evidences.length > 0) ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-toss-green/10 text-toss-green">증거 {r.evidences.length}건</span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-toss-gray-100 dark:bg-toss-gray-700 text-toss-gray-400">증거 없음</span>
-                    )}
-                  </div>
-                )}
+                {/* 판정 패널 */}
+                {isExpanded && canDirectConfirm && (
+                  <div className="border-t border-border/50 bg-secondary/30 p-4">
+                    {/* 라디오 버튼 */}
+                    <p className="text-[11px] font-semibold text-toss-gray-500 mb-2">상태 변경</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {actions.map(a => (
+                        <button key={a.value}
+                          onClick={() => setSelectedAction(a.value)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all ${
+                            selectedAction === a.value
+                              ? `${a.ring} ring-2 border-transparent ${a.color} bg-card shadow-sm`
+                              : "border-border text-toss-gray-500 hover:border-toss-gray-400"
+                          }`}>
+                          <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                            selectedAction === a.value ? a.ring.replace("ring-", "border-") : "border-toss-gray-300"
+                          }`}>
+                            {selectedAction === a.value && <div className={`w-1.5 h-1.5 rounded-full ${a.color.replace("text-", "bg-")}`} />}
+                          </div>
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
 
-                {/* 상태 변경 버튼 */}
-                {canDirectConfirm && (
-                  <div className="flex flex-col gap-1 shrink-0">
-                    {tab === "hack" && (r.status === "SUSPECT" || r.status === "PROBABLE") && (
+                    {/* 사유 입력 */}
+                    {selectedAction !== r.status && (
                       <>
-                        <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "CONFIRMED" }); setActionNote(""); }}
-                          className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90">
-                          확정
-                        </button>
-                        <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "DISMISSED" }); setActionNote(""); }}
-                          className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200">
-                          기각
+                        <textarea
+                          value={actionNote}
+                          onChange={e => setActionNote(e.target.value)}
+                          placeholder="판정 사유를 입력하세요 (공개됨)"
+                          rows={2}
+                          className="w-full px-3 py-2 rounded-xl bg-card border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 resize-none mb-3"
+                        />
+                        <button
+                          onClick={() => submitAction(r.id, selectedAction, tab, actionNote)}
+                          disabled={!actionNote.trim() || updating === r.id}
+                          className={`w-full h-9 rounded-xl text-[13px] font-semibold text-white disabled:opacity-40 ${
+                            selectedAction === "CONFIRMED" ? "bg-toss-red" : selectedAction === "PROBABLE" ? "bg-orange-500" : selectedAction === "SUSPECT" || selectedAction === "PENDING" ? "bg-amber-500" : "bg-toss-gray-500"
+                          }`}>
+                          {updating === r.id ? "처리 중..." : "적용"}
                         </button>
                       </>
                     )}
-                    {tab === "hack" && (r.status === "CONFIRMED" || r.status === "DISMISSED") && (
-                      <button onClick={() => { setActionTarget({ id: r.id, type: "hack", action: "SUSPECT" }); setActionNote(""); }}
-                        className="px-3 py-1.5 rounded-lg border border-border text-toss-gray-400 text-[10px] font-medium hover:text-toss-gray-600 hover:border-toss-gray-400">
-                        판정 초기화
-                      </button>
-                    )}
-                    {tab === "manner" && r.status === "PENDING" && (
-                      <>
-                        <button onClick={() => { setActionTarget({ id: r.id, type: "manner", action: "CONFIRMED" }); setActionNote(""); }}
-                          className="px-3 py-1.5 rounded-lg bg-toss-red text-white text-[11px] font-semibold hover:bg-toss-red/90">
-                          확정
-                        </button>
-                        <button onClick={() => { setActionTarget({ id: r.id, type: "manner", action: "REJECTED" }); setActionNote(""); }}
-                          className="px-3 py-1.5 rounded-lg bg-toss-gray-100 dark:bg-toss-gray-800 text-toss-gray-600 text-[11px] font-semibold hover:bg-toss-gray-200">
-                          반려
-                        </button>
-                      </>
-                    )}
-                    {tab === "manner" && (r.status === "CONFIRMED" || r.status === "REJECTED") && (
-                      <button onClick={() => { setActionTarget({ id: r.id, type: "manner", action: "PENDING" }); setActionNote(""); }}
-                        className="px-3 py-1.5 rounded-lg border border-border text-toss-gray-400 text-[10px] font-medium hover:text-toss-gray-600 hover:border-toss-gray-400">
-                        판정 초기화
-                      </button>
+                    {selectedAction === r.status && (
+                      <p className="text-[12px] text-toss-gray-400 text-center py-2">현재 상태와 동일합니다. 다른 상태를 선택하세요.</p>
                     )}
                   </div>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 판정 사유 입력 패널 */}
-      {actionTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setActionTarget(null)}>
-          <div className="bg-card rounded-2xl border border-border shadow-toss-md p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[16px] font-bold text-foreground mb-1">
-              {actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : actionTarget.action === "SUSPECT" || actionTarget.action === "PENDING" ? "판정 초기화" : "반려"} 처리
-            </h3>
-            <p className="text-[12px] text-toss-gray-400 mb-4">판정 사유를 입력해주세요 (공개됩니다)</p>
-            <textarea
-              value={actionNote}
-              onChange={e => setActionNote(e.target.value)}
-              placeholder="예: 영상 증거 확인, 에임핵 사용 확인됨"
-              rows={3}
-              className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-[13px] placeholder:text-toss-gray-400 outline-none focus:ring-2 focus:ring-primary/20 resize-none mb-4"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setActionTarget(null)}
-                className="flex-1 h-10 rounded-xl bg-secondary text-[13px] font-semibold text-toss-gray-600">
-                취소
-              </button>
-              <button
-                onClick={() => updateStatus(actionTarget.id, actionTarget.action, actionTarget.type, actionNote)}
-                disabled={!actionNote.trim() || updating === actionTarget.id}
-                className={`flex-1 h-10 rounded-xl text-[13px] font-semibold text-white disabled:opacity-40 ${
-                  actionTarget.action === "CONFIRMED" ? "bg-toss-red" : actionTarget.action === "SUSPECT" || actionTarget.action === "PENDING" ? "bg-amber-500" : "bg-toss-gray-500"
-                }`}>
-                {updating === actionTarget.id ? "처리 중..." : actionTarget.action === "CONFIRMED" ? "확정" : actionTarget.action === "DISMISSED" ? "기각" : actionTarget.action === "SUSPECT" || actionTarget.action === "PENDING" ? "초기화" : "반려"}
-              </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
 

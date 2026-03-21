@@ -58,10 +58,10 @@ export async function GET(req: NextRequest) {
       take: limit,
       select: {
         id: true, nickname: true, barracksAddress: true, status: true,
-        hackTypes: true, description: true, createdAt: true,
+        hackTypes: true, description: true, evidences: true, adminNote: true, createdAt: true,
         reporter: { select: { id: true, nickname: true } },
         votes: { select: { voteType: true } },
-        _count: { select: { comments: true } },
+        _count: { select: { comments: true, additionalEvidence: true } },
       },
     }),
     prisma.hackReport.count({ where }),
