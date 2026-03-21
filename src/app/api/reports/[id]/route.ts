@@ -86,6 +86,19 @@ export async function GET(
       }))
     : false;
 
+  // 관리자 판정 이력
+  const adminHistory = await prisma.adminLog.findMany({
+    where: { targetType: "hackReport", targetId: id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      action: true,
+      detail: true,
+      createdAt: true,
+      actor: { select: { nickname: true, role: true } },
+    },
+  });
+
   return NextResponse.json({
     id: report.id,
     nickname: report.nickname,
@@ -95,6 +108,7 @@ export async function GET(
     description: report.description,
     evidences: report.evidences,
     youtubeUrl: report.youtubeUrl,
+    adminNote: report.adminNote,
     createdAt: report.createdAt,
     reporter: report.reporter,
     reporterId: report.reporterId,
@@ -104,6 +118,7 @@ export async function GET(
     userVote: userVote?.voteType ?? null,
     comments: report.comments,
     nicknameHistory: report.nicknameHistory,
+    adminHistory,
     blacklisted,
   });
 }

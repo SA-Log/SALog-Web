@@ -59,7 +59,19 @@ export async function GET(
       }))
     : false;
 
-  return NextResponse.json({ ...report, blacklisted });
+  const adminHistory = await prisma.adminLog.findMany({
+    where: { targetType: "mannerTag", targetId: id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      action: true,
+      detail: true,
+      createdAt: true,
+      actor: { select: { nickname: true, role: true } },
+    },
+  });
+
+  return NextResponse.json({ ...report, adminHistory, blacklisted });
 }
 
 export async function DELETE(
