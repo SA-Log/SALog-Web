@@ -445,12 +445,13 @@ export function ReportDetailView({ report: initialReport, type }: { report: Repo
         <div className={`rounded-2xl border p-4 mb-4 ${
           report.status === "CONFIRMED" ? "bg-toss-red/5 border-toss-red/20" :
           report.status === "DISMISSED" || report.status === "REJECTED" ? "bg-toss-gray-50 dark:bg-toss-gray-900 border-border/40" :
-          "bg-amber-50/50 dark:bg-amber-500/5 border-amber-500/20"
+          report.status === "PROBABLE" ? "bg-amber-50/50 dark:bg-amber-500/5 border-amber-500/20" :
+          "bg-primary/5 border-primary/20"
         }`}>
           <div className="flex items-center gap-2 mb-2">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1C3.68 1 1 3.68 1 7s2.68 6 6 6 6-2.68 6-6S10.32 1 7 1zm0 9a.75.75 0 110-1.5.75.75 0 010 1.5zm.75-3a.75.75 0 01-1.5 0V4.5a.75.75 0 011.5 0V7z" fill="#6b7684"/></svg>
             <span className="text-[12px] font-semibold text-toss-gray-600 dark:text-toss-gray-400">
-              {report.status === "CONFIRMED" ? "확정 사유" : report.status === "DISMISSED" ? "기각 사유" : report.status === "REJECTED" ? "반려 사유" : "관리자 메모"}
+              {report.status === "CONFIRMED" ? "확정 사유" : report.status === "DISMISSED" ? "기각 사유" : report.status === "REJECTED" ? "반려 사유" : report.status === "PROBABLE" ? "유력 판정 사유" : "판정 초기화 사유"}
             </span>
           </div>
           <p className="text-[13px] text-toss-gray-700 dark:text-toss-gray-300 leading-relaxed">{report.adminNote}</p>
