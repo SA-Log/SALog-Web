@@ -259,7 +259,7 @@ export default function UserProfilePage() {
           {/* 서든어택 전적 보기 */}
           {profile.barracksAddress && (
             <Link
-              href={`/search/player?name=${encodeURIComponent(profile.nickname ?? "")}&nexonSn=${profile.barracksAddress}`}
+              href={`/search/player?nexonSn=${profile.barracksAddress}`}
               className="inline-flex items-center gap-1.5 text-[12px] text-primary hover:text-primary/80 transition-colors mt-3"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v4M4 3l2-2 2 2M1 7.5C1 6.67 1.67 6 2.5 6h7c.83 0 1.5.67 1.5 1.5V10c0 .83-.67 1.5-1.5 1.5h-7C1.67 11.5 1 10.83 1 10V7.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>

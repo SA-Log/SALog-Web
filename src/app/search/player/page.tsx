@@ -373,27 +373,43 @@ function PlayerContent() {
     ? `https://barracks.sa.nexon.com/${nexonSn}/match`
     : null;
 
-  // ouid가 없지만 name이 있으면 ouid 조회 후 리다이렉트
+  // ouid가 없으면 name 또는 nexonSn으로 조회 후 리다이렉트
   const [resolving, setResolving] = useState(false);
   useEffect(() => {
-    if (ouid || !name || resolving) return;
+    if (ouid || resolving) return;
+    if (!name && !nexonSn) return;
     setResolving(true);
-    fetch(`/api/sa/search?q=${encodeURIComponent(name)}`)
-      .then(r => r.json())
-      .then(d => {
+
+    (async () => {
+      try {
+        let resolvedName = name;
+        // nexonSn만 있고 name이 없으면 크롤러에서 닉네임 조회
+        if (!resolvedName && nexonSn) {
+          const profileRes = await fetch(`/api/search?q=${nexonSn}&type=barracks`);
+          const profileData = await profileRes.json();
+          resolvedName = profileData.barracksUsers?.[0]?.nickname ?? null;
+        }
+        if (!resolvedName) { setError(true); setLoading(false); return; }
+
+        // 닉네임으로 ouid 조회
+        const res = await fetch(`/api/sa/search?q=${encodeURIComponent(resolvedName)}`);
+        const d = await res.json();
         if (d.ouid) {
-          const params = new URLSearchParams({ ouid: d.ouid, name });
+          const params = new URLSearchParams({ ouid: d.ouid, name: resolvedName });
           if (nexonSn) params.set("nexonSn", nexonSn);
           window.location.replace(`/search/player?${params}`);
         } else {
           setError(true);
           setLoading(false);
         }
-      })
-      .catch(() => { setError(true); setLoading(false); });
+      } catch {
+        setError(true);
+        setLoading(false);
+      }
+    })();
   }, [ouid, name, nexonSn, resolving]);
 
-  if (!ouid && !name) {
+  if (!ouid && !name && !nexonSn) {
     return (
       <div className="mx-auto max-w-screen-lg px-5 py-16 text-center">
         <p className="text-[14px] text-toss-gray-600 dark:text-toss-gray-400">잘못된 접근입니다</p>
@@ -403,6 +419,14 @@ function PlayerContent() {
   }
 
   if (!ouid) {
+    if (error) {
+      return (
+        <div className="mx-auto max-w-screen-lg px-5 py-16 text-center">
+          <p className="text-[14px] text-toss-gray-600 dark:text-toss-gray-400">유저 정보를 불러올 수 없습니다</p>
+          <Link href="/search" className="text-[13px] text-primary mt-4 inline-block">검색으로 돌아가기</Link>
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-screen-lg px-5 py-16 text-center">
         <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
