@@ -385,9 +385,9 @@ function PlayerContent() {
         let resolvedName = name;
         // nexonSn만 있고 name이 없으면 크롤러에서 닉네임 조회
         if (!resolvedName && nexonSn) {
-          const profileRes = await fetch(`/api/search?q=${nexonSn}&type=barracks`);
+          const profileRes = await fetch(`/api/barracks/profile?nexonSn=${nexonSn}`);
           const profileData = await profileRes.json();
-          resolvedName = profileData.barracksUsers?.[0]?.nickname ?? null;
+          resolvedName = profileData.nickname ?? null;
         }
         if (!resolvedName) { setError(true); setLoading(false); return; }
 
