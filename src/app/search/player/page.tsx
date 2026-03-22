@@ -169,13 +169,26 @@ function PlayerContent() {
   const MATCHES_PER_PAGE = 20;
 
   useEffect(() => {
-    if (!ouid) return;
+    if (!ouid && !nexonSn) return;
     let cancelled = false;
     setLoading(true);
     setError(false);
 
     async function attempt(): Promise<boolean> {
       try {
+        if (!ouid) {
+          // ouid 없음 — 바라크스 데이터만으로 최소 표시
+          const bRes = await fetch(`/api/barracks/profile?nexonSn=${nexonSn}`);
+          const bData = await bRes.json();
+          if (!bData.found) return false;
+          setPlayer({
+            ouid: "",
+            basic: { user_name: bData.nickname, user_date_create: "", title_name: null, clan_name: bData.clanName ?? null, manner_grade: null },
+            rank: null, tier: null, recentInfo: null, matches: [],
+          });
+          setMeta({ grade: [], seasonGrade: [], tier: [] });
+          return true;
+        }
         const [pRes, mRes] = await Promise.all([
           fetch(`/api/sa/player?ouid=${ouid}`),
           fetch("/api/sa/metadata"),
@@ -394,9 +407,11 @@ function PlayerContent() {
         // 닉네임으로 ouid 조회
         const res = await fetch(`/api/sa/search?q=${encodeURIComponent(resolvedName)}`);
         const d = await res.json();
-        if (d.ouid) {
-          const params = new URLSearchParams({ ouid: d.ouid, name: resolvedName });
-          if (nexonSn) params.set("nexonSn", nexonSn);
+        const params = new URLSearchParams({ name: resolvedName });
+        if (d.ouid) params.set("ouid", d.ouid);
+        if (nexonSn) params.set("nexonSn", nexonSn);
+        // ouid가 없어도 nexonSn이 있으면 페이지 표시 가능
+        if (d.ouid || nexonSn) {
           window.location.replace(`/search/player?${params}`);
         } else {
           setError(true);
