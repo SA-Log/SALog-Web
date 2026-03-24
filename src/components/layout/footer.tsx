@@ -7,9 +7,7 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">SA</span>
-              </div>
+              <img src="/icon-192.png" alt="SALog" className="w-6 h-6 rounded-md" />
               <span className="font-bold text-foreground text-sm">SALog</span>
             </div>
             <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-500 leading-relaxed max-w-xs">

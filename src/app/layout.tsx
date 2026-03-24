@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SALog - 서든어택 핵 유저 추적",
+  title: "SALog",
   description: "서든어택 핵 유저 병영주소 추적 및 닉네임 변경 알림 커뮤니티 플랫폼",
   metadataBase: new URL("https://salog.kr"),
   icons: {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "SALog - 서든어택 핵 유저 추적",
+    title: "SALog",
     description: "병영주소 기반 핵 유저 추적, 닉변 감지, 전적 조회, 커뮤니티 검증 플랫폼",
     url: "https://salog.kr",
     siteName: "SALog",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SALog - 서든어택 핵 유저 추적",
+    title: "SALog",
     description: "병영주소 기반 핵 유저 추적, 닉변 감지, 전적 조회, 커뮤니티 검증 플랫폼",
     images: ["/og-image.png"],
   },
