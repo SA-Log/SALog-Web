@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyNicknameChange } from "@/lib/discord";
-
-const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? "";
+import { verifyInternalKey } from "@/lib/internal-auth";
 
 export async function POST(req: NextRequest) {
-  const key = req.headers.get("x-internal-key");
-  if (!INTERNAL_KEY || key !== INTERNAL_KEY) {
+  if (!verifyInternalKey(req.headers.get("x-internal-key"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

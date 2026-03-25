@@ -4,11 +4,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  const userId = req.nextUrl.searchParams.get("userId") ?? session?.user?.id;
+  const targetUserId = req.nextUrl.searchParams.get("userId") ?? session?.user?.id;
 
-  if (!userId) {
+  if (!targetUserId) {
     return NextResponse.json({ error: "userId가 필요합니다" }, { status: 400 });
   }
+
+  // 다른 유저의 활동 조회 시 프라이버시 체크
+  const isOwn = targetUserId === session?.user?.id;
+  if (!isOwn) {
+    const target = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { isProfilePublic: true },
+    });
+    if (!target?.isProfilePublic) {
+      // 맞팔 여부 확인
+      if (!session?.user?.id) return NextResponse.json({ activities: [] });
+      const mutual = await prisma.follow.findFirst({
+        where: { followerId: targetUserId, followingId: session.user.id },
+      });
+      if (!mutual) return NextResponse.json({ activities: [] });
+    }
+  }
+
+  const userId = targetUserId;
 
   const [hackReports, mannerReports] = await Promise.all([
     prisma.hackReport.findMany({

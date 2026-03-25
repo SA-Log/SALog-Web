@@ -11,6 +11,15 @@ export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId") ?? session.user.id;
   const type = req.nextUrl.searchParams.get("type") ?? "followers"; // "followers" | "following"
 
+  // 다른 유저의 팔로우 목록 조회 시 프라이버시 체크
+  if (userId !== session.user.id) {
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { isProfilePublic: true } });
+    if (!target?.isProfilePublic) {
+      const mutual = await prisma.follow.findFirst({ where: { followerId: userId, followingId: session.user.id } });
+      if (!mutual) return NextResponse.json({ users: [] });
+    }
+  }
+
   if (type === "followers") {
     const followers = await prisma.follow.findMany({
       where: { followingId: userId },

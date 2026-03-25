@@ -53,7 +53,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "닉네임 생성에 실패했습니다. 다시 시도해주세요." }, { status: 500 });
   }
 
-  const verificationCode = session.user.id.slice(-4).toUpperCase();
+  const { randomBytes } = await import("crypto");
+  const verificationCode = randomBytes(4).toString("hex").toUpperCase();
 
   try {
     await prisma.user.update({

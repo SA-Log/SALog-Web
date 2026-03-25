@@ -178,8 +178,17 @@ export async function PATCH(
   const body = await req.json();
   const updateData: Record<string, unknown> = {};
   if (body.description !== undefined) updateData.description = (body.description?.trim() || "").slice(0, 1000) || null;
-  if (body.hackTypes !== undefined) updateData.hackTypes = body.hackTypes;
-  if (body.evidences !== undefined) updateData.evidences = body.evidences;
+  if (body.hackTypes !== undefined) {
+    const validTypes = ["aimbot", "wallhack", "speedhack", "norecoil", "other"];
+    const filtered = (Array.isArray(body.hackTypes) ? body.hackTypes : []).filter((t: string) => validTypes.includes(t));
+    if (filtered.length > 0) updateData.hackTypes = filtered;
+  }
+  if (body.evidences !== undefined) {
+    const evArr = Array.isArray(body.evidences) ? body.evidences : [];
+    updateData.evidences = evArr.filter((e: { type?: string; url?: string; name?: string }) =>
+      e && typeof e.url === "string" && /^https?:\/\//.test(e.url) && ["youtube", "link", "screenshot", "video"].includes(e.type ?? "")
+    ).slice(0, 20);
+  }
 
   const updated = await prisma.hackReport.update({
     where: { id },

@@ -46,11 +46,16 @@ export async function POST(
 
   const { id } = await params;
   const body = await req.json();
-  const evidences = body.evidences; // [{type, url, name}]
-  const description = body.description?.trim() || null;
+  const description = (body.description?.trim() || "").slice(0, 1000) || null;
 
-  if (!evidences || !Array.isArray(evidences) || evidences.length === 0) {
-    return NextResponse.json({ error: "증거를 1개 이상 첨부해주세요" }, { status: 400 });
+  // 증거 검증
+  const rawEvidences = Array.isArray(body.evidences) ? body.evidences : [];
+  const evidences = rawEvidences.filter((e: { type?: string; url?: string; name?: string }) =>
+    e && typeof e.url === "string" && /^https?:\/\//.test(e.url) && ["youtube", "link", "screenshot", "video"].includes(e.type ?? "")
+  ).slice(0, 20);
+
+  if (evidences.length === 0) {
+    return NextResponse.json({ error: "유효한 증거를 1개 이상 첨부해주세요" }, { status: 400 });
   }
 
   // 신고 존재 확인

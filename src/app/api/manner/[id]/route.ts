@@ -126,10 +126,16 @@ export async function PATCH(
   const updateData: Record<string, unknown> = {};
   if (body.description !== undefined) updateData.description = (body.description?.trim() || "").slice(0, 1000) || null;
   if (body.tagTypes !== undefined) {
-    updateData.tagTypes = body.tagTypes;
-    updateData.tagType = body.tagTypes[0];
+    const validTypes = ["VERBAL_ABUSE", "BLOCKING", "GRIEFING", "AFK", "TEAM_KILL", "OTHER"];
+    const filtered = (Array.isArray(body.tagTypes) ? body.tagTypes : []).filter((t: string) => validTypes.includes(t));
+    if (filtered.length > 0) { updateData.tagTypes = filtered; updateData.tagType = filtered[0]; }
   }
-  if (body.evidences !== undefined) updateData.evidences = body.evidences;
+  if (body.evidences !== undefined) {
+    const evArr = Array.isArray(body.evidences) ? body.evidences : [];
+    updateData.evidences = evArr.filter((e: { type?: string; url?: string }) =>
+      e && typeof e.url === "string" && /^https?:\/\//.test(e.url) && ["youtube", "link", "screenshot"].includes(e.type ?? "")
+    ).slice(0, 20);
+  }
 
   await prisma.mannerTag.update({ where: { id }, data: updateData });
   return NextResponse.json({ success: true });
