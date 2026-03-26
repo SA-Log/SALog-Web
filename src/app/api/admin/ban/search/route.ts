@@ -1,8 +1,9 @@
+import { requireAdmin } from "@/lib/require-admin";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const ADMIN_ROLES = ["MASTER", "VICE_MASTER", "OPERATOR"];
+
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -10,11 +11,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
 
-  const adminUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  });
-  if (!adminUser || !ADMIN_ROLES.includes(adminUser.role)) {
+  const admin = await requireAdmin(session.user.id);
+  if (!admin) {
     return NextResponse.json({ error: "권한이 없습니다" }, { status: 403 });
   }
 

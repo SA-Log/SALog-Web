@@ -7,5 +7,7 @@ export async function logAdminAction(params: {
   targetId?: string;
   detail?: string;
 }) {
-  await prisma.adminLog.create({ data: params }).catch(() => {});
+  await prisma.adminLog.create({ data: params }).catch((err) => {
+    console.error("[admin-log] 기록 실패:", err);
+  });
 }

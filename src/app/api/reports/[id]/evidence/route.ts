@@ -89,8 +89,8 @@ export async function POST(
   });
 
   // 경험치 지급 (증거 제출)
-  const { grantExp } = await import("@/lib/exp");
-  grantExp(session.user.id, 2).catch(() => {});
+  const { grantExp, EXP_TABLE } = await import("@/lib/exp");
+  grantExp(session.user.id, EXP_TABLE.comment).catch(() => {});
 
   return NextResponse.json(evidence, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireVerified } from "@/lib/require-verified";
 
 export async function POST(
   req: Request,
@@ -12,14 +13,8 @@ export async function POST(
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
 
-  // 미인증 유저 투표 제한
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { barracksVerified: true },
-  });
-  if (!user?.barracksVerified) {
-    return NextResponse.json({ error: "병영수첩 인증 후 투표할 수 있습니다" }, { status: 403 });
-  }
+  const verifyErr = await requireVerified(session.user.id);
+  if (verifyErr) return NextResponse.json({ error: verifyErr }, { status: 403 });
 
   const rl = rateLimit(`vote:${session.user.id}`, { limit: 30, windowSec: 60 });
   if (!rl.success) {
@@ -65,8 +60,8 @@ export async function POST(
   });
 
   // 투표 경험치
-  const { grantExp } = await import("@/lib/exp");
-  grantExp(session.user.id, 3).catch(() => {});
+  const { grantExp, EXP_TABLE } = await import("@/lib/exp");
+  grantExp(session.user.id, EXP_TABLE.vote).catch(() => {});
 
   // 찬성률 70% 이상 + 최소 5표 이상이면 자동 유력 승격
   const votes = await prisma.vote.findMany({

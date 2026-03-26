@@ -48,8 +48,8 @@ export async function POST(
     },
   });
 
-  const { grantExp } = await import("@/lib/exp");
-  grantExp(session.user.id, 2).catch(() => {});
+  const { grantExp, EXP_TABLE } = await import("@/lib/exp");
+  grantExp(session.user.id, EXP_TABLE.comment).catch(() => {});
 
   return NextResponse.json(comment, { status: 201 });
 }
