@@ -8,9 +8,7 @@ export default function SignupPageWrapper() {
   return (
     <Suspense fallback={
       <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col items-center justify-center">
-        <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-          <span className="text-white text-lg font-bold">SA</span>
-        </div>
+        <img src="/icon-192.png" alt="SALog" className="w-14 h-14 rounded-2xl mx-auto mb-4" />
         <p className="text-[13px] text-toss-gray-500 animate-pulse">로딩 중...</p>
       </div>
     }>
@@ -67,9 +65,7 @@ function SignupPage() {
   if (status === "loading") {
     return (
       <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col items-center justify-center">
-        <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-          <span className="text-white text-lg font-bold">SA</span>
-        </div>
+        <img src="/icon-192.png" alt="SALog" className="w-14 h-14 rounded-2xl mx-auto mb-4" />
         <p className="text-[13px] text-toss-gray-500 animate-pulse">로딩 중...</p>
       </div>
     );
@@ -79,9 +75,7 @@ function SignupPage() {
     <div className="mx-auto max-w-sm px-5 py-10 min-h-screen flex flex-col justify-center">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-          <span className="text-white text-lg font-bold">SA</span>
-        </div>
+        <img src="/icon-192.png" alt="SALog" className="w-14 h-14 rounded-2xl mx-auto mb-4" />
         <h1 className="text-[22px] font-bold text-foreground">회원가입</h1>
         <p className="text-[13px] text-toss-gray-600 dark:text-toss-gray-400 mt-2">
           카카오 계정으로 연동되었습니다.

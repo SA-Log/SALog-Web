@@ -13,9 +13,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-screen-lg px-5 py-20 text-center">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
-          <span className="text-primary text-[14px] font-bold">SA</span>
-        </div>
+        <img src="/icon-192.png" alt="SALog" className="w-10 h-10 rounded-xl mx-auto mb-3 animate-pulse" />
         <p className="text-[13px] text-toss-gray-500">로딩 중...</p>
       </div>
     );
