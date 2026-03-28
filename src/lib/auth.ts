@@ -53,7 +53,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // 밴 체크
             const banInfo = await checkUserBan(userId!);
             if (banInfo.banned) {
-              return { ...token, banned: true, banReason: banInfo.reason, banExpiresAt: banInfo.expiresAt?.toISOString() ?? null };
+              return { ...token, banned: true, banReason: "서비스 이용이 제한되었습니다", banExpiresAt: banInfo.expiresAt?.toISOString() ?? null };
             }
             token.role = dbUser.role;
             token.nickname = dbUser.nickname;

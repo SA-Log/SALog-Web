@@ -59,17 +59,20 @@ export async function GET(
       }))
     : false;
 
-  const adminHistory = await prisma.adminLog.findMany({
-    where: { targetType: "mannerTag", targetId: id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      action: true,
-      detail: true,
-      createdAt: true,
-      actor: { select: { nickname: true, role: true } },
-    },
-  });
+  const { requireAdmin } = await import("@/lib/require-admin");
+  const isAdmin = session?.user?.id ? await requireAdmin(session.user.id) : null;
+
+  let adminHistory = null;
+  if (isAdmin) {
+    adminHistory = await prisma.adminLog.findMany({
+      where: { targetType: "mannerTag", targetId: id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, action: true, detail: true, createdAt: true,
+        actor: { select: { nickname: true, role: true } },
+      },
+    });
+  }
 
   return NextResponse.json({ ...report, adminHistory, blacklisted });
 }

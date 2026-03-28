@@ -86,18 +86,21 @@ export async function GET(
       }))
     : false;
 
-  // 관리자 판정 이력
-  const adminHistory = await prisma.adminLog.findMany({
-    where: { targetType: "hackReport", targetId: id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      action: true,
-      detail: true,
-      createdAt: true,
-      actor: { select: { nickname: true, role: true } },
-    },
-  });
+  // 관리자 판정 이력 (관리자에게만 상세 표시, 일반 유저는 최신 사유만)
+  const { requireAdmin } = await import("@/lib/require-admin");
+  const isAdmin = session?.user?.id ? await requireAdmin(session.user.id) : null;
+
+  let adminHistory = null;
+  if (isAdmin) {
+    adminHistory = await prisma.adminLog.findMany({
+      where: { targetType: "hackReport", targetId: id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, action: true, detail: true, createdAt: true,
+        actor: { select: { nickname: true, role: true } },
+      },
+    });
+  }
 
   return NextResponse.json({
     id: report.id,

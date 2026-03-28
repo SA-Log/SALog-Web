@@ -80,6 +80,7 @@ export async function proxy(req: NextRequest) {
     res.headers.set("X-Content-Type-Options", "nosniff");
     res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
     res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
 
   return res;
