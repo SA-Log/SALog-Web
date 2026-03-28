@@ -1,8 +1,8 @@
 import { PrismaClient } from "../src/generated/prisma";
 
 const prisma = new PrismaClient();
-const CRAWLER_URL = process.env.CRAWLER_URL ?? "http://134.185.106.93:3001";
-const CRAWLER_API_KEY = process.env.CRAWLER_API_KEY ?? "38348a0545851c7e359baafd3184539ae0affc9abe711327ba08b185843aad8b";
+const CRAWLER_URL = process.env.CRAWLER_URL ?? "http://localhost:3001";
+const CRAWLER_API_KEY = process.env.CRAWLER_API_KEY ?? "";
 
 async function lookupNickname(nexonSn: string): Promise<string | null> {
   try {
