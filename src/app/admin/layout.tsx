@@ -3,7 +3,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ROLE_MAP, type UserRole } from "@/lib/mock-data";
+import { ROLE_MAP, type UserRole } from "@/lib/status";
 import { useAuth } from "@/providers/auth-provider";
 
 // 역할 테스트용 Context — 전역에서 사용 가능

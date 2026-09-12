@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { EvidenceUpload, type EvidenceItem } from "@/components/common/evidence-upload";
-
-const DAILY_REPORT_LIMIT = 5;
+import { DAILY_REPORT_LIMIT } from "@/lib/constants";
 
 const HACK_TYPES = [
   { value: "aimbot", label: "에임핵 (오토에임)" },

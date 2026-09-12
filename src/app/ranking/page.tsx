@@ -3,12 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { TitleBadge, RankBadge } from "@/components/common/title-badge";
-import {
-  getExpProgress,
-  getRankForExp,
-  USER_TITLES,
-  MILITARY_RANKS,
-} from "@/lib/mock-data";
+import { getExpProgress, getRankForExp, USER_TITLES, MILITARY_RANKS } from "@/lib/progression";
 import { EXP_TABLE } from "@/lib/exp-table";
 
 type RankedUser = {

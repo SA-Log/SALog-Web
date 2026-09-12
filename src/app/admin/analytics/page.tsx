@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatRelativeTime } from "@/lib/mock-data";
+import { formatRelativeTime } from "@/lib/format";
 
 type ViewItem = { id: string; path: string; ip: string | null; userId: string | null; createdAt: string; referer: string | null };
 type TopPage = { path: string; count: number };

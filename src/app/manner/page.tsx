@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { FloatingActionButton } from "@/components/common/floating-action-button";
 import { MannerCard } from "@/components/manner/manner-card";
-import { type MannerTagType } from "@/lib/mock-data";
+import { type MannerTagType } from "@/lib/status";
 
 const TAG_FILTERS: { value: MannerTagType | "ALL"; label: string }[] = [
   { value: "ALL", label: "전체" },

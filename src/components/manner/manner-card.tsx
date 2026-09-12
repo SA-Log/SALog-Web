@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/status";
 
 function formatRelative(dateStr: string) {
   const d = new Date(dateStr);

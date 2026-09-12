@@ -5,8 +5,7 @@ import { requireVerified } from "@/lib/require-verified";
 import { notifyNewReport } from "@/lib/discord";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-const DAILY_REPORT_LIMIT = 5;
+import { DAILY_REPORT_LIMIT } from "@/lib/constants";
 
 const VALID_HACK_TYPES = ["aimbot", "wallhack", "speedhack", "norecoil", "other"] as const;
 

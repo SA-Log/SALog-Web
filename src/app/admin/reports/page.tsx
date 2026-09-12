@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/hack/status-badge";
-import { MANNER_TAG_MAP, formatRelativeTime, type HackStatus } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, type HackStatus } from "@/lib/status";
+import { formatRelativeTime } from "@/lib/format";
 import { useAdminRole } from "../layout";
 
 type ReportTab = "hack" | "manner";

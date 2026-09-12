@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { EvidenceUpload, type EvidenceItem } from "@/components/common/evidence-upload";
-import { MANNER_TAG_MAP, type MannerTagType } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, type MannerTagType } from "@/lib/status";
 
 const TAG_OPTIONS: { value: MannerTagType; label: string; emoji: string }[] = [
   { value: "VERBAL_ABUSE", label: "욕설 / 인신공격", emoji: "🤬" },

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ROLE_MAP, type UserRole } from "@/lib/mock-data";
+import { ROLE_MAP, type UserRole } from "@/lib/status";
 import { useAdminRole } from "../layout";
 
 type AdminUser = {

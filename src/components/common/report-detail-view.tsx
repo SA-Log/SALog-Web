@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { StatusBadge } from "@/components/hack/status-badge";
 import { LoginPrompt } from "@/components/common/login-prompt";
-import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/status";
+import { formatRelativeTime } from "@/lib/format";
 
 interface Evidence {
   type: string;
@@ -49,18 +50,6 @@ const HACK_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   norecoil: { label: "무반동", icon: "🔫" },
   other: { label: "기타", icon: "🔧" },
 };
-
-function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "방금 전";
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}일 전`;
-  return `${Math.floor(days / 30)}개월 전`;
-}
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);

@@ -1,6 +1,6 @@
 "use client";
 
-import { HACK_STATUS_MAP, type HackStatus } from "@/lib/mock-data";
+import { HACK_STATUS_MAP, type HackStatus } from "@/lib/status";
 
 export function StatusBadge({ status }: { status: HackStatus | string }) {
   const info = HACK_STATUS_MAP[status as HackStatus] ?? HACK_STATUS_MAP.SUSPECT;

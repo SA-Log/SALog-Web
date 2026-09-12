@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { LoginPrompt } from "@/components/common/login-prompt";
-import { MANNER_TAG_MAP, HACK_STATUS_MAP } from "@/lib/mock-data";
+import { MANNER_TAG_MAP, HACK_STATUS_MAP } from "@/lib/status";
 
 type SALogUser = {
   id: string;

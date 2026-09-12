@@ -6,14 +6,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { TitleBadge, RankBadge } from "@/components/common/title-badge";
 import { AuthGuard } from "@/components/common/auth-guard";
-import {
-  getExpProgress,
-  getAccuracyColor,
-  getTitleForAccuracy,
-  getRankForExp,
-  ROLE_MAP,
-  type UserRole,
-} from "@/lib/mock-data";
+import { ROLE_MAP, type UserRole } from "@/lib/status";
+import { getExpProgress, getAccuracyColor, getTitleForAccuracy, getRankForExp } from "@/lib/progression";
 
 type ProfileTab = "activity" | "blacklist" | "following" | "followers";
 

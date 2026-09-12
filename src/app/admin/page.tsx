@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAdminRole } from "./layout";
-import { HACK_STATUS_MAP, formatRelativeTime } from "@/lib/mock-data";
+import { HACK_STATUS_MAP } from "@/lib/status";
+import { formatRelativeTime } from "@/lib/format";
 
 type DashboardData = {
   stats: { pendingHackCount: number; confirmedHackCount: number; pendingMannerCount: number; totalUsers: number; totalBans: number };

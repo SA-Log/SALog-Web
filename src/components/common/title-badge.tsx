@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { UserTitle, MilitaryRank } from "@/lib/mock-data";
+import type { UserTitle, MilitaryRank } from "@/lib/progression";
 
 /** 화려한 칭호 뱃지 — 등급별 그라데이션 + 글로우 */
 export function TitleBadge({ title, size = "sm" }: { title: UserTitle; size?: "sm" | "md" | "lg" }) {

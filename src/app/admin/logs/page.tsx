@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ROLE_MAP, formatRelativeTime } from "@/lib/mock-data";
+import { ROLE_MAP } from "@/lib/status";
+import { formatRelativeTime } from "@/lib/format";
 
 type LogFilter = "ALL" | "hackReport" | "mannerTag" | "user" | "ban";
 
