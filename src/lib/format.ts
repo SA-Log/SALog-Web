@@ -9,8 +9,3 @@ export function formatRelativeTime(dateStr: string): string {
   if (days < 30) return `${days}일 전`;
   return `${Math.floor(days / 30)}개월 전`;
 }
-
-export function formatBarracksAddress(url: string): string | null {
-  const match = url.match(/barracks\.sa\.nexon\.com\/(\d+)/);
-  return match ? match[1] : null;
-}
