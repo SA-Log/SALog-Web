@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/status";
+import { getYoutubeThumbnail } from "@/lib/youtube";
 
 function formatRelative(dateStr: string) {
   const d = new Date(dateStr);
@@ -16,11 +17,6 @@ function formatRelative(dateStr: string) {
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}일 전`;
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-}
-
-function getYoutubeThumbnail(url: string): string | null {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
 }
 
 type EvidenceItem = { type: string; url: string; name: string };

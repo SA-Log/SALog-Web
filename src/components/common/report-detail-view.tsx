@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/hack/status-badge";
 import { LoginPrompt } from "@/components/common/login-prompt";
 import { MANNER_TAG_MAP, MANNER_STATUS_MAP, type MannerStatus } from "@/lib/status";
 import { formatRelativeTime } from "@/lib/format";
+import { extractYoutubeId } from "@/lib/youtube";
 
 interface Evidence {
   type: string;
@@ -50,11 +51,6 @@ const HACK_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   norecoil: { label: "무반동", icon: "🔫" },
   other: { label: "기타", icon: "🔧" },
 };
-
-function extractYoutubeId(url: string): string | null {
-  const m = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
-  return m ? m[1] : null;
-}
 
 function EvidenceGallery({ items, links }: { items: Evidence[]; links: Evidence[] }) {
   const [activeIndex, setActiveIndex] = useState(0);

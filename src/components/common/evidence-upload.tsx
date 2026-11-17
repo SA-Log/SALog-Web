@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { extractYoutubeId } from "@/lib/youtube";
 
 export interface EvidenceItem {
   id: string;
@@ -47,11 +48,12 @@ export function EvidenceUpload({
 
     if (activeAdd === "youtube") {
       if (!url.match(/youtube\.com|youtu\.be/)) return;
+      const videoId = extractYoutubeId(url);
       const newItem: EvidenceItem = {
         id: crypto.randomUUID(),
         type: "youtube",
         url,
-        name: extractYoutubeId(url) || url,
+        name: videoId ? `youtube:${videoId}` : url,
       };
       onChange([...items, newItem]);
     } else {
@@ -201,11 +203,6 @@ export function EvidenceUpload({
       </p>
     </div>
   );
-}
-
-function extractYoutubeId(url: string): string | null {
-  const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? `youtube:${match[1]}` : null;
 }
 
 function extractDomain(url: string): string {
